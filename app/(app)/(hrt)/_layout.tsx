@@ -83,6 +83,9 @@ export default function HRTLayout() {
       {/* Hidden stack screens — not shown in tab bar */}
       <Tabs.Screen name="attendance-history" options={{ href: null }} />
       <Tabs.Screen name="reports-approve"    options={{ href: null }} />
+      <Tabs.Screen name="creed"              options={{ href: null }} />
+      <Tabs.Screen name="daybook"            options={{ href: null }} />
+      <Tabs.Screen name="reports"            options={{ href: null }} />
     </Tabs>
   );
 }

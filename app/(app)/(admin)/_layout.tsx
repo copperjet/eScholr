@@ -36,9 +36,11 @@ export default function AdminLayout() {
       <Tabs.Screen name="marks-windows"     options={{ href: null }} />
       <Tabs.Screen name="semesters"         options={{ href: null }} />
       <Tabs.Screen name="promotion-wizard"  options={{ href: null }} />
-      <Tabs.Screen name="student-add"      options={{ href: null }} />
-      <Tabs.Screen name="student-edit"     options={{ href: null }} />
-      <Tabs.Screen name="student-import"   options={{ href: null }} />
+      <Tabs.Screen name="student-add"        options={{ href: null }} />
+      <Tabs.Screen name="student-edit"       options={{ href: null }} />
+      <Tabs.Screen name="student-import"     options={{ href: null }} />
+      <Tabs.Screen name="announcements"      options={{ href: null }} />
+      <Tabs.Screen name="timetable-upload"   options={{ href: null }} />
     </Tabs>
   );
 }

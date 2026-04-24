@@ -42,6 +42,9 @@ export default function ParentLayout() {
           tabBarIcon: ({ color, size }) => <Ionicons name="mail-outline" size={size} color={color} />,
         }}
       />
+      {/* Hidden stack screens */}
+      <Tabs.Screen name="announcements" options={{ href: null }} />
+      <Tabs.Screen name="timetable"     options={{ href: null }} />
     </Tabs>
   );
 }

@@ -1,6 +1,6 @@
 # Scholr — Implementation Status
 
-**Last updated:** 2026-04-23
+**Last updated:** 2026-04-24
 **Pilot target:** Lusaka Oaktree / Cambridge International School
 **Current branch:** SDK 54, reanimated 4.x, aligned dependencies, rebranded from "ETP School" → "Scholr"
 
@@ -50,7 +50,7 @@ Legend: ✅ Production-quality · 🟡 Partial/needs polish · 🔴 Not built
 | Day book / behavior notes | ✅ | 8 categories, 15-min edit window enforced by DB trigger |
 | Cumulative transcripts | 🔴 | Postponed (see ROADMAP) |
 | Predicted grades | 🔴 | Postponed |
-| Timetable viewer | 🔴 | Planned Phase 1 (upload-only) |
+| Timetable viewer | ✅ | Admin upload (PDF/image per grade/stream); all roles view via WebView/Image |
 
 ### Students / Staff / Parents
 | Feature | Status | Notes |
@@ -66,7 +66,7 @@ Legend: ✅ Production-quality · 🟡 Partial/needs polish · 🔴 Not built
 |---------|--------|-------|
 | Push notifications (receive + deep-link) | ✅ | Token registration, listener, routing |
 | Push notifications (send) | 🟡 | Infrastructure ready; no unified send-push edge function yet |
-| Announcements | 🔴 | Planned Phase 1 |
+| Announcements | ✅ | Admin compose + target (school/grade/stream/role) + feed + push delivery + read receipts |
 | SMS delivery | 🔴 | Postponed (cost decision pending) |
 | Inquiry management (front desk) | ✅ | [inquiries.tsx](../app/(app)/(frontdesk)/inquiries.tsx), 398 lines |
 | Parent ↔ teacher chat | 🔴 | Out of scope (handled by igaprep) |
@@ -89,7 +89,7 @@ Legend: ✅ Production-quality · 🟡 Partial/needs polish · 🔴 Not built
 | Dark mode | ✅ | System-preference driven, all screens |
 | School-specific branding (colors) | ✅ | Per-tenant `primary_color` / `secondary_color` |
 | Audit logs | ✅ | `audit_logs` table, fire-and-forget writes |
-| Academic calendar | 🔴 | Planned Phase 1 |
+| Academic calendar | ✅ | Admin CRUD (events/holidays/exam periods/marks windows), filter chips, upcoming/past split |
 | Super-admin school onboarding | 🔴 | Planned Phase 2 (currently SQL-seeded) |
 
 ### Modules explicitly out of scope for Scholr core
@@ -208,12 +208,12 @@ Root: `app/(app)/...`
 |------|----------|-------|
 | 172 `as any` casts across `app/` | High | Supabase types not generated; planned for Phase 0 |
 | Zero tests | High | No jest, no RNTL; planned for Phase 3 |
-| No root ErrorBoundary | High | Per-screen ErrorState only; planned Phase 0 |
+| No root ErrorBoundary | ~~High~~ Done | `components/ErrorBoundary.tsx` wraps root layout |
 | No observability (Sentry / analytics) | High | Planned Phase 0 |
-| Push notification send path | Medium | Receive side works; unified `send-push` edge fn pending |
+| Push notification send path | ~~Medium~~ Done | `send-push` edge fn ships; supports user/role/stream/grade/school targeting |
 | Biometric enrollment UX | Medium | Functional but minimal |
 | No CI pipeline | Medium | EAS config exists; GitHub Actions / pre-submit hooks planned |
-| Grade calculation helper scattered | Low | Logic lives inside report edge fn; extract as shared util |
+| Grade calculation helper scattered | ~~Low~~ Done | Extracted to `lib/grading.ts` with full WeightedPercent, IGCSE, letter-from-%, dev scale |
 | No soft-delete pattern | Low | Hard cascades; acceptable for v1 |
 | No data export / backup runbook | Medium | Supabase auto-backups exist; need documented restore drill |
 

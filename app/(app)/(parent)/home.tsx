@@ -252,6 +252,34 @@ export default function ParentHome() {
           </View>
         )}
 
+        {/* Quick links */}
+        <View style={[styles.sectionRow, { marginTop: Spacing.base }]}>
+          <ThemedText variant="label" color="muted">QUICK LINKS</ThemedText>
+        </View>
+        <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/announcements' as any)}
+            style={[styles.quickLink, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <Ionicons name="megaphone-outline" size={20} color={colors.brand.primary} />
+            <ThemedText variant="caption" style={{ color: colors.brand.primary, fontWeight: '600', marginTop: 4, textAlign: 'center' }}>Announcements</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/timetable' as any)}
+            style={[styles.quickLink, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <Ionicons name="calendar-outline" size={20} color={colors.brand.primary} />
+            <ThemedText variant="caption" style={{ color: colors.brand.primary, fontWeight: '600', marginTop: 4, textAlign: 'center' }}>Timetable</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/notifications' as any)}
+            style={[styles.quickLink, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <Ionicons name="notifications-outline" size={20} color={colors.brand.primary} />
+            <ThemedText variant="caption" style={{ color: colors.brand.primary, fontWeight: '600', marginTop: 4, textAlign: 'center' }}>Notifications</ThemedText>
+          </TouchableOpacity>
+        </View>
+
         <View style={{ height: Spacing['2xl'] }} />
       </ScrollView>
     </SafeAreaView>
@@ -426,4 +454,9 @@ const styles = StyleSheet.create({
   dayBookRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
   dayBookIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   dayBookHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  quickLink: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingVertical: Spacing.md, borderRadius: Radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
 });

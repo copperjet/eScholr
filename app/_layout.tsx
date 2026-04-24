@@ -8,6 +8,7 @@ import { ThemeProvider } from '../lib/theme';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import { StyleSheet } from 'react-native';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -67,14 +68,16 @@ export default function RootLayout() {
     : undefined;
 
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider brand={brand}>
-          <StatusBar style="auto" />
-          <Stack screenOptions={{ headerShown: false }} />
-        </ThemeProvider>
-      </QueryClientProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={styles.root}>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider brand={brand}>
+            <StatusBar style="auto" />
+            <Stack screenOptions={{ headerShown: false }} />
+          </ThemeProvider>
+        </QueryClientProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
 

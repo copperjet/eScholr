@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
@@ -51,9 +51,22 @@ export default function STMore() {
       ],
     },
     {
+      title: 'School',
+      items: [
+        { icon: 'megaphone-outline', label: 'Announcements', sublabel: 'School announcements', onPress: () => router.push('/(app)/announcements' as any) },
+        { icon: 'calendar-outline',  label: 'Timetable',     sublabel: 'View timetable',        onPress: () => router.push('/(app)/timetable' as any) },
+      ],
+    },
+    {
       title: 'Notifications',
       items: [
         { icon: 'notifications-outline', label: 'Notification Inbox', onPress: () => router.push('/(app)/notifications' as any) },
+      ],
+    },
+    {
+      title: 'Resources',
+      items: [
+        { icon: 'library-outline', label: 'igaprep.com', sublabel: 'Homework, past papers & revision', onPress: () => Linking.openURL('https://igaprep.com').catch(() => {}) },
       ],
     },
     {
@@ -117,7 +130,7 @@ export default function STMore() {
           </View>
         ))}
 
-        <ThemedText variant="caption" color="muted" style={styles.version}>ETP School v1.0.0</ThemedText>
+        <ThemedText variant="caption" color="muted" style={styles.version}>Scholr v1.0.0</ThemedText>
       </ScrollView>
     </SafeAreaView>
   );
