@@ -1,22 +1,27 @@
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme';
+import { useAuthStore } from '../../../stores/authStore';
+import { AppTabBar } from '../../../components/ui';
 
 export default function FrontDeskLayout() {
   const { colors } = useTheme();
+  const { user } = useAuthStore();
+  if (user && user.activeRole !== 'front_desk') {
+    return <Redirect href="/" />;
+  }
   return (
     <Tabs
+      tabBar={(props) => <AppTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         tabBarActiveTintColor: colors.brand.primary,
         tabBarInactiveTintColor: colors.icon,
       }}
     >
-      <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} /> }} />
-      <Tabs.Screen name="inquiries" options={{ title: 'Inquiries', tabBarIcon: ({ color, size }) => <Ionicons name="chatbubble-ellipses-outline" size={size} color={color} /> }} />
-      <Tabs.Screen name="more" options={{ title: 'More', tabBarIcon: ({ color, size }) => <Ionicons name="ellipsis-horizontal-outline" size={size} color={color} /> }} />
-      {/* Hidden stack screens */}
+      <Tabs.Screen name="home"      options={{ title: 'Home',      tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} /> }} />
+      <Tabs.Screen name="inquiries" options={{ title: 'Inquiries', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'} size={22} color={color} /> }} />
+      <Tabs.Screen name="more"      options={{ title: 'More',      tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} /> }} />
       <Tabs.Screen name="inquiry-detail" options={{ href: null }} />
     </Tabs>
   );

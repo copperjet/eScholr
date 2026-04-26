@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
 
     const title = `${student.full_name} marked absent`;
     const body  = `Marked at ${timeStr} by ${marked_by_name}. If unexpected, contact the school.`;
-    const deepLink = `educore://attendance/${stream_id}/${date}`;
+    const deepLink = `escholr://attendance/${stream_id}/${date}`;
 
     // ── 4. Send Expo push notifications ───────────────────────
     let pushDeliveryStatus = "delivered";

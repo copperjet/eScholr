@@ -17,14 +17,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  ThemedText, Avatar, Badge, BottomSheet, Skeleton, EmptyState, ErrorState,
+  ThemedText, Avatar, Badge, BottomSheet, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import {
   useAdminReports, useAdminReportCounts, useAdminApproveReport, useReleaseReports,
   STATUS_META, type ReportStatus, type ReportSummary,
 } from '../../../hooks/useReports';
 import { ReportStatusPipeline } from '../../../components/modules/ReportStatusPipeline';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -108,25 +108,24 @@ export default function AdminReportsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4" style={{ flex: 1, textAlign: 'center' }}>Reports</ThemedText>
-        {approvedCount > 0 && (
-          <TouchableOpacity
-            onPress={handleBulkRelease}
-            disabled={releaseMutation.isPending}
-            style={[styles.releaseBtn, { backgroundColor: colors.brand.primary }]}
-          >
-            <Ionicons name="send" size={13} color="#fff" />
-            <ThemedText variant="label" style={{ color: '#fff', marginLeft: 4, fontSize: 11 }}>
-              RELEASE {approvedCount}
-            </ThemedText>
-          </TouchableOpacity>
-        )}
-      </View>
+      <ScreenHeader
+        title="Reports"
+        showBack
+        right={
+          approvedCount > 0 ? (
+            <TouchableOpacity
+              onPress={handleBulkRelease}
+              disabled={releaseMutation.isPending}
+              style={[styles.releaseBtn, { backgroundColor: colors.brand.primary }]}
+            >
+              <Ionicons name="send" size={13} color="#fff" />
+              <ThemedText variant="label" style={{ color: '#fff', marginLeft: 4, fontSize: 11 }}>
+                RELEASE {approvedCount}
+              </ThemedText>
+            </TouchableOpacity>
+          ) : null
+        }
+      />
 
       {/* Pipeline */}
       <ReportStatusPipeline counts={counts} financeGateEnabled={false} />
@@ -312,19 +311,11 @@ export default function AdminReportsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.sm,
-  },
   releaseBtn: {
+    paddingVertical: Spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 5,
     borderRadius: Radius.full,
   },
   tabBar: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
@@ -343,7 +334,7 @@ const styles = StyleSheet.create({
     padding: Spacing.base,
     marginBottom: Spacing.sm,
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
+    ...Shadow.sm,
   },
   statRow: { flexDirection: 'row', padding: Spacing.base },
   statItem: { flex: 1, alignItems: 'center', gap: 2 },

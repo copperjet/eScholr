@@ -62,12 +62,21 @@ Deno.serve(async (req) => {
     const payload = (await req.json()) as SendPushBody;
     const {
       type, school_id, user_ids, roles, stream_id, grade_id,
-      title, body, data = {}, trigger_event = "generic",
+      title, body, data = {}, trigger_event = "app_update",
       is_safeguarding = false, related_student_id = null, deep_link_url = null,
     } = payload;
 
     if (!school_id || !title || !body) {
       return json({ error: "school_id, title, and body are required" }, 400);
+    }
+
+    const VALID_EVENTS = new Set([
+      "attendance_absent", "report_released", "report_updated",
+      "daybook_sent", "marks_unlocked", "marks_complete",
+      "threshold_alert", "app_update",
+    ]);
+    if (!VALID_EVENTS.has(trigger_event)) {
+      return json({ error: `invalid trigger_event '${trigger_event}'` }, 400);
     }
 
     // ── Resolve target user IDs ───────────────────────────────────────────────
@@ -94,30 +103,42 @@ Deno.serve(async (req) => {
       }
     } else if (type === "stream" && stream_id) {
       // Parents of students in the stream
-      const { data: sLinks } = await db
-        .from("student_parent_links")
-        .select("parent:parents(auth_user_id)")
+      const { data: studentRows } = await db
+        .from("students")
+        .select("id")
         .eq("school_id", school_id)
-        .in(
-          "student_id",
-          db.from("students").select("id").eq("school_id", school_id).eq("stream_id", stream_id).eq("status", "active")
-        );
-      targetUserIds = (sLinks ?? [])
-        .map((r: any) => r.parent?.auth_user_id)
-        .filter(Boolean);
+        .eq("stream_id", stream_id)
+        .eq("status", "active");
+      const studentIds = (studentRows ?? []).map((r: any) => r.id);
+      if (studentIds.length) {
+        const { data: sLinks } = await db
+          .from("student_parent_links")
+          .select("parent:parents(auth_user_id)")
+          .eq("school_id", school_id)
+          .in("student_id", studentIds);
+        targetUserIds = (sLinks ?? [])
+          .map((r: any) => r.parent?.auth_user_id)
+          .filter(Boolean);
+      }
     } else if (type === "grade" && grade_id) {
       // Parents of students in all streams of the grade
-      const { data: sLinks } = await db
-        .from("student_parent_links")
-        .select("parent:parents(auth_user_id)")
+      const { data: studentRows } = await db
+        .from("students")
+        .select("id")
         .eq("school_id", school_id)
-        .in(
-          "student_id",
-          db.from("students").select("id").eq("school_id", school_id).eq("grade_id", grade_id).eq("status", "active")
-        );
-      targetUserIds = (sLinks ?? [])
-        .map((r: any) => r.parent?.auth_user_id)
-        .filter(Boolean);
+        .eq("grade_id", grade_id)
+        .eq("status", "active");
+      const studentIds = (studentRows ?? []).map((r: any) => r.id);
+      if (studentIds.length) {
+        const { data: sLinks } = await db
+          .from("student_parent_links")
+          .select("parent:parents(auth_user_id)")
+          .eq("school_id", school_id)
+          .in("student_id", studentIds);
+        targetUserIds = (sLinks ?? [])
+          .map((r: any) => r.parent?.auth_user_id)
+          .filter(Boolean);
+      }
     } else if (type === "school") {
       // All staff + all parents in school
       const [staffRes, parentsRes] = await Promise.all([

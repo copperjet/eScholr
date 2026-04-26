@@ -1,7 +1,8 @@
 import React from 'react';
-import { Text, TextProps, StyleSheet } from 'react-native';
+import { Text, TextProps } from 'react-native';
 import { useTheme } from '../../lib/theme';
 import { Typography } from '../../constants/Typography';
+import { Colors } from '../../constants/Colors';
 
 type Variant = keyof typeof Typography;
 type ColorKey = 'primary' | 'secondary' | 'muted' | 'inverse' | 'brand' | 'success' | 'error' | 'warning';
@@ -15,14 +16,14 @@ export function ThemedText({ variant = 'body', color = 'primary', style, ...prop
   const { colors } = useTheme();
 
   const colorMap: Record<ColorKey, string> = {
-    primary: colors.textPrimary,
+    primary:   colors.textPrimary,
     secondary: colors.textSecondary,
-    muted: colors.textMuted,
-    inverse: colors.textInverse,
-    brand: colors.brand.primary,
-    success: '#10B981',
-    error: '#EF4444',
-    warning: '#F59E0B',
+    muted:     colors.textMuted,
+    inverse:   colors.textInverse,
+    brand:     colors.brand.primary,
+    success:   Colors.semantic.success,
+    error:     Colors.semantic.error,
+    warning:   Colors.semantic.warning,
   };
 
   return (

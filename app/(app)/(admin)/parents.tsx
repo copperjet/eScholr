@@ -15,7 +15,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Avatar, Badge, SearchBar, FAB, BottomSheet,
-  Skeleton, EmptyState, ErrorState,
+  Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -241,16 +241,7 @@ export default function AdminParentsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4">
-          Parents{data ? ` (${data.length})` : ''}
-        </ThemedText>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader title={`Parents${data ? ` (${data.length})` : ''}`} showBack />
 
       {/* Search */}
       <View style={{ paddingHorizontal: Spacing.base, paddingVertical: Spacing.sm }}>

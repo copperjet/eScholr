@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  ThemedText, Avatar, BottomSheet, FAB, Skeleton, EmptyState, ErrorState,
+  ThemedText, Avatar, BottomSheet, FAB, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import {
   CREED_TRAITS, CAMBRIDGE_RATINGS, DEVELOPMENTAL_RATINGS,
@@ -178,19 +178,11 @@ export default function CreedScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <ThemedText variant="h4">CREED Ratings</ThemedText>
-          <ThemedText variant="caption" color="muted">
-            {hrtAssignment?.streams?.name ?? '—'} · {completedCount}/{students.length} complete
-          </ThemedText>
-        </View>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader
+        title="CREED Ratings"
+        subtitle={`${hrtAssignment?.streams?.name ?? '—'} · ${completedCount}/${students.length} complete`}
+        showBack
+      />
 
       {/* Scale badge */}
       <View style={[styles.scaleBadge, { backgroundColor: colors.surfaceSecondary, borderBottomColor: colors.border }]}>
@@ -348,15 +340,6 @@ export default function CreedScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.sm,
-  },
-  headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
   scaleBadge: {
     flexDirection: 'row',
     alignItems: 'center',

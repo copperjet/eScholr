@@ -27,9 +27,9 @@ import { supabase } from '../../../lib/supabase';
 import { triggerAbsenceNotification } from '../../../lib/notifications';
 import {
   ThemedText, Avatar, FAB, BottomSheet,
-  Skeleton, EmptyState, ErrorState,
+  Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { Colors, resolveAttBg, resolveAttColor } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 import type { AttendanceStatus } from '../../../types/database';
@@ -504,25 +504,19 @@ export default function AttendanceScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <ThemedText variant="h4">
-            {data?.streamName ? `${data.streamName} Register` : 'Attendance Register'}
-          </ThemedText>
-          <ThemedText variant="caption" color="muted">{TODAY_DISPLAY}</ThemedText>
-        </View>
-        <TouchableOpacity
-          onPress={() => router.push('/(app)/(hrt)/attendance-history' as any)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          style={[styles.headerIconBtn, { backgroundColor: colors.surfaceSecondary }]}
-        >
-          <Ionicons name="time-outline" size={18} color={colors.brand.primary} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title={data?.streamName ? `${data.streamName} Register` : 'Attendance Register'}
+        subtitle={TODAY_DISPLAY}
+        showBack
+        right={
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/(hrt)/attendance-history' as any)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="time-outline" size={20} color={colors.brand.primary} />
+          </TouchableOpacity>
+        }
+      />
 
       {/* Exam period banner */}
       {examPeriod && (
@@ -983,16 +977,6 @@ function SubmittedView({
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.sm,
-  },
-  headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
-  headerIconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   examBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1036,8 +1020,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     gap: Spacing.md,
+    ...Shadow.sm,
   },
   studentInfo: { flex: 1, gap: 2 },
   statusChip: {

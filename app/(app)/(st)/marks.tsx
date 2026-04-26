@@ -18,10 +18,10 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, ProgressBar, Badge, Skeleton, EmptyState, ErrorState,
+  ThemedText, ProgressBar, Badge, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import { MarksWindowBanner } from '../../../components/modules/MarksWindowBanner';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -115,14 +115,10 @@ export default function STMarksOverview() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <ThemedText variant="h4">My Marks</ThemedText>
-        {data && data.length > 0 && (
-          <ThemedText variant="caption" color="muted">
-            {data.filter((a: any) => a.isComplete).length}/{data.length} complete
-          </ThemedText>
-        )}
-      </View>
+      <ScreenHeader
+        title="My Marks"
+        subtitle={data && data.length > 0 ? `${data.filter((a: any) => a.isComplete).length}/${data.length} complete` : undefined}
+      />
 
       {anyWindowClosed && <MarksWindowBanner isOpen={false} />}
 
@@ -253,21 +249,13 @@ function AssignmentCard({
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
   skeletonList: { padding: 16, gap: 12 },
   list: { padding: 16, gap: 12 },
   card: {
     flexDirection: 'row',
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
+    ...Shadow.sm,
   },
   accentStrip: { width: 4 },
   cardBody: { flex: 1, padding: 14, gap: 10 },

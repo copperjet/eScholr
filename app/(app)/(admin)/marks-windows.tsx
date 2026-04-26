@@ -18,7 +18,7 @@ import { format, parseISO, isAfter, isBefore } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  ThemedText, Skeleton, EmptyState, ErrorState,
+  ThemedText, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import {
   useMarksWindows,
@@ -123,14 +123,7 @@ export default function MarksWindowsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4" style={{ flex: 1, textAlign: 'center' }}>Marks Windows</ThemedText>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader title="Marks Windows" showBack />
 
       {/* Bulk actions */}
       {!isLoading && windows.length > 0 && (

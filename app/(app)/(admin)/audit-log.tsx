@@ -17,7 +17,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, SearchBar, Skeleton, EmptyState, ErrorState,
+  ThemedText, SearchBar, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -114,13 +114,7 @@ export default function AuditLogScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4" style={{ flex: 1, textAlign: 'center' }}>Audit Log</ThemedText>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader title="Audit Log" showBack />
 
       {/* Filter chips */}
       <View style={styles.chips}>

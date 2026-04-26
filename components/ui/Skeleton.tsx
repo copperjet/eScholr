@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, View, ViewStyle, StyleSheet } from 'react-native';
+import { Animated, View, ViewStyle } from 'react-native';
 import { useTheme } from '../../lib/theme';
-import { Radius } from '../../constants/Typography';
+import { Radius, Spacing } from '../../constants/Typography';
 
 interface SkeletonProps {
   width?: number | `${number}%`;
@@ -11,37 +11,65 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ width = '100%', height = 16, radius = Radius.md, style }: SkeletonProps) {
-  const { colors, scheme } = useTheme();
-  const opacity = useRef(new Animated.Value(0.4)).current;
+  const { colors } = useTheme();
+  const opacity = useRef(new Animated.Value(0.35)).current;
 
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.9, duration: 800, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.35, duration: 800, useNativeDriver: true }),
       ])
     );
     anim.start();
     return () => anim.stop();
   }, []);
 
-  const bg = scheme === 'dark' ? colors.surfaceSecondary : colors.surfaceSecondary;
-
   return (
     <Animated.View
-      style={[
-        { width, height, borderRadius: radius, backgroundColor: bg, opacity },
-        style,
-      ]}
+      style={[{ width, height, borderRadius: radius, backgroundColor: colors.surfaceTertiary, opacity }, style]}
     />
   );
 }
 
 export function SkeletonRow({ lines = 2 }: { lines?: number }) {
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: Spacing.sm }}>
       {Array.from({ length: lines }).map((_, i) => (
-        <Skeleton key={i} width={i === lines - 1 ? '60%' : '100%'} height={14} />
+        <Skeleton key={i} width={i === lines - 1 ? '55%' : '100%'} height={14} />
+      ))}
+    </View>
+  );
+}
+
+// Pre-built composite skeletons
+export function ListItemSkeleton() {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.md }}>
+      <Skeleton width={44} height={44} radius={22} />
+      <View style={{ flex: 1, gap: Spacing.sm }}>
+        <Skeleton width="65%" height={14} />
+        <Skeleton width="40%" height={12} />
+      </View>
+    </View>
+  );
+}
+
+export function StatCardSkeleton() {
+  return (
+    <View style={{ gap: Spacing.sm, padding: Spacing.base }}>
+      <Skeleton width={36} height={36} radius={10} />
+      <Skeleton width="50%" height={22} />
+      <Skeleton width="70%" height={13} />
+    </View>
+  );
+}
+
+export function CardSkeleton({ lines = 3 }: { lines?: number }) {
+  return (
+    <View style={{ gap: Spacing.sm, padding: Spacing.base }}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <Skeleton key={i} width={i === lines - 1 ? '45%' : '100%'} height={14} />
       ))}
     </View>
   );

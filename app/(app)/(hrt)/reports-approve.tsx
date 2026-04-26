@@ -22,13 +22,13 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, Avatar, Badge, Skeleton, ErrorState,
+  ThemedText, Avatar, Badge, Skeleton, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import {
   useApproveReport, STATUS_META, type ReportSummary,
 } from '../../../hooks/useReports';
 import { useMarksCompletionForStream } from '../../../hooks/useReports';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -209,16 +209,7 @@ export default function ReportsApproveScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4" style={{ flex: 1, textAlign: 'center' }}>
-          {isLoading ? '—' : report?.student.full_name ?? '—'}
-        </ThemedText>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader title={isLoading ? '—' : report?.student.full_name ?? '—'} showBack />
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -431,8 +422,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    borderRadius: Radius.md,
-    borderWidth: 1,
+    borderRadius: Radius.lg,
+    ...Shadow.sm,
   },
   commentLabel: {
     flexDirection: 'row',

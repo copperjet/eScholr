@@ -1,106 +1,112 @@
 import React from 'react';
 import {
-  TouchableOpacity,
+  Pressable,
   View,
   ActivityIndicator,
   StyleSheet,
-  TouchableOpacityProps,
+  ViewStyle,
+  TextStyle,
 } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { useTheme } from '../../lib/theme';
-import { Radius, Spacing, Typography } from '../../constants/Typography';
+import { Radius, Spacing } from '../../constants/Typography';
 import { haptics } from '../../lib/haptics';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+// primary  — filled with brand green
+// tonal    — light green tint bg, green text (great for secondary actions)
+// secondary— surface bg, border, primary text
+// ghost    — no bg, no border, primary text
+// danger   — filled red
+type Variant = 'primary' | 'tonal' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
-interface ButtonProps extends TouchableOpacityProps {
+interface ButtonProps {
   variant?: Variant;
   size?: Size;
   label: string;
   loading?: boolean;
+  disabled?: boolean;
   iconLeft?: React.ReactNode;
   iconRight?: React.ReactNode;
   fullWidth?: boolean;
+  onPress?: () => void;
+  style?: ViewStyle;
+  textStyle?: TextStyle;
 }
 
 export function Button({
   variant = 'primary',
   size = 'md',
   label,
-  loading,
+  loading = false,
+  disabled = false,
   iconLeft,
   iconRight,
-  fullWidth,
-  style,
+  fullWidth = false,
   onPress,
-  ...props
+  style,
+  textStyle,
 }: ButtonProps) {
   const { colors } = useTheme();
+  const isDisabled = disabled || loading;
 
   const sizeMap = {
-    sm: { height: 36, px: Spacing.md, textVariant: 'bodySm' as const },
-    md: { height: 44, px: Spacing.base, textVariant: 'body' as const },
-    lg: { height: 52, px: Spacing.lg, textVariant: 'bodyLg' as const },
+    sm: { height: 36, px: Spacing.md,   textSize: 13 },
+    md: { height: 46, px: Spacing.base, textSize: 15 },
+    lg: { height: 54, px: Spacing.lg,   textSize: 16 },
   };
 
   const s = sizeMap[size];
 
-  const bgMap: Record<Variant, string> = {
-    primary: colors.brand.primary,
-    secondary: colors.surfaceSecondary,
-    ghost: 'transparent',
-    danger: '#EF4444',
+  const getColors = (): { bg: string; text: string; border?: string } => {
+    switch (variant) {
+      case 'primary':
+        return { bg: colors.brand.primary, text: colors.brand.onPrimary };
+      case 'tonal':
+        return { bg: colors.brand.primarySoft, text: colors.brand.primary };
+      case 'secondary':
+        return { bg: colors.surface, text: colors.textPrimary, border: colors.border };
+      case 'ghost':
+        return { bg: 'transparent', text: colors.brand.primary };
+      case 'danger':
+        return { bg: '#DC2626', text: '#FFFFFF' };
+    }
   };
 
-  const textColorMap: Record<Variant, 'inverse' | 'primary' | 'error'> = {
-    primary: 'inverse',
-    secondary: 'primary',
-    ghost: 'primary',
-    danger: 'inverse',
-  };
-
-  const handlePress = (e: any) => {
-    haptics.light();
-    onPress?.(e);
-  };
+  const c = getColors();
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.75}
-      onPress={handlePress}
-      style={[
+    <Pressable
+      onPress={() => { if (!isDisabled) { haptics.light(); onPress?.(); } }}
+      disabled={isDisabled}
+      style={({ pressed }) => [
         styles.base,
         {
           height: s.height,
           paddingHorizontal: s.px,
-          backgroundColor: bgMap[variant],
+          backgroundColor: c.bg,
           borderRadius: Radius.md,
-          borderWidth: variant === 'secondary' ? StyleSheet.hairlineWidth : 0,
-          borderColor: colors.border,
+          borderWidth: c.border ? 1 : 0,
+          borderColor: c.border,
           alignSelf: fullWidth ? 'stretch' : 'flex-start',
-          opacity: props.disabled ? 0.4 : 1,
+          opacity: isDisabled ? 0.5 : 1,
+          transform: [{ scale: pressed && !isDisabled ? 0.97 : 1 }],
         },
         style,
       ]}
-      {...props}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' || variant === 'danger' ? '#fff' : colors.textPrimary} size="small" />
+        <ActivityIndicator color={c.text} size="small" />
       ) : (
         <>
           {iconLeft && <View style={styles.iconLeft}>{iconLeft}</View>}
-          <ThemedText
-            variant={s.textVariant}
-            color={textColorMap[variant]}
-            style={{ fontWeight: '600' }}
-          >
+          <ThemedText style={[{ color: c.text, fontSize: s.textSize, fontWeight: '600' }, textStyle]}>
             {label}
           </ThemedText>
           {iconRight && <View style={styles.iconRight}>{iconRight}</View>}
         </>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -110,6 +116,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconLeft: { marginRight: Spacing.sm },
+  iconLeft:  { marginRight: Spacing.sm },
   iconRight: { marginLeft: Spacing.sm },
 });

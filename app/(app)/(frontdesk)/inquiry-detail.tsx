@@ -22,7 +22,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, Badge, BottomSheet, Skeleton, ErrorState,
+  ThemedText, Badge, BottomSheet, Skeleton, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import {
   useInquiryNotes,
@@ -33,7 +33,7 @@ import {
   type InquiryStatus,
   type Inquiry,
 } from '../../../hooks/useFrontDesk';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -190,14 +190,7 @@ export default function InquiryDetailScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4" style={{ flex: 1, textAlign: 'center' }}>Inquiry</ThemedText>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader title="Inquiry" showBack />
 
       {isLoading || !inquiry ? (
         <View style={{ padding: Spacing.base, gap: Spacing.md }}>
@@ -233,7 +226,7 @@ export default function InquiryDetailScreen() {
               </View>
 
               {inquiry.notes && (
-                <View style={[styles.notesBox, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+                <View style={[styles.infoCard, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
                   <ThemedText variant="caption" color="muted" style={{ marginBottom: 4, fontSize: 10 }}>INITIAL NOTES</ThemedText>
                   <ThemedText variant="bodySm" color="secondary">{inquiry.notes}</ThemedText>
                 </View>
@@ -402,7 +395,7 @@ const styles = StyleSheet.create({
   infoCard: {
     padding: Spacing.base,
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
+    ...Shadow.sm,
   },
   infoRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: Spacing.sm },
   statusChip: {
@@ -413,11 +406,11 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     borderWidth: 1,
   },
-  notesBox: {
+  notesCard: {
     marginTop: Spacing.md,
     padding: Spacing.md,
     borderRadius: Radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
+    ...Shadow.sm,
   },
   convertBtn: {
     flexDirection: 'row',
@@ -433,7 +426,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     marginBottom: Spacing.sm,
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
+    ...Shadow.sm,
   },
   noteDot: { width: 8, height: 8, borderRadius: 4, marginTop: 5 },
   addNoteRow: {
@@ -441,9 +434,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     padding: Spacing.md,
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     gap: Spacing.sm,
     marginTop: Spacing.sm,
+    ...Shadow.sm,
   },
   noteInput: { flex: 1, fontSize: 14, lineHeight: 20, maxHeight: 80 },
   noteSendBtn: {

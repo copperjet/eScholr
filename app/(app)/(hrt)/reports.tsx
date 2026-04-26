@@ -17,14 +17,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  ThemedText, Avatar, Badge, FAB, Skeleton, EmptyState, ErrorState,
+  ThemedText, Avatar, Badge, FAB, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import {
   useHRTStreamReports, useMarksCompletionForStream,
   STATUS_META, type ReportStatus,
 } from '../../../hooks/useReports';
 import { ReportStatusPipeline } from '../../../components/modules/ReportStatusPipeline';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -78,19 +78,11 @@ export default function HRTReportsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <ThemedText variant="h4">Report Cards</ThemedText>
-          <ThemedText variant="caption" color="muted">
-            {data?.streamName ?? '—'} · {releasedCount}/{reports.length} released
-          </ThemedText>
-        </View>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader
+        title="Report Cards"
+        subtitle={`${data?.streamName ?? '—'} · ${releasedCount}/${reports.length} released`}
+        showBack
+      />
 
       {/* Pipeline */}
       {!isLoading && reports.length > 0 && (
@@ -229,15 +221,6 @@ export default function HRTReportsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.sm,
-  },
-  headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
   warnBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -263,6 +246,6 @@ const styles = StyleSheet.create({
     padding: Spacing.base,
     marginBottom: Spacing.sm,
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
+    ...Shadow.sm,
   },
 });

@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  ThemedText, Skeleton, EmptyState, ErrorState, SearchBar,
+  ThemedText, Skeleton, EmptyState, ErrorState, SearchBar, ScreenHeader,
 } from '../../../components/ui';
 import { useAttendanceOverview, type StreamOverview } from '../../../hooks/useAttendance';
 import { Spacing, Radius } from '../../../constants/Typography';
@@ -66,17 +66,7 @@ export default function AttendanceOverviewScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <ThemedText variant="h4">Attendance Overview</ThemedText>
-          <ThemedText variant="caption" color="muted">{TODAY_DISPLAY}</ThemedText>
-        </View>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader title="Attendance Overview" subtitle={TODAY_DISPLAY} showBack />
 
       {/* Summary banner */}
       {!isLoading && data && (

@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  ThemedText, Avatar, BottomSheet, Skeleton, EmptyState, ErrorState,
+  ThemedText, Avatar, BottomSheet, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import {
   useStudentsForPromotion,
@@ -182,17 +182,11 @@ export default function PromotionWizardScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity
-          onPress={() => step > 1 ? setStep((s) => (s - 1) as Step) : router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4" style={{ flex: 1, textAlign: 'center' }}>Promotion Wizard</ThemedText>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader
+        title="Promotion Wizard"
+        showBack
+        onBack={() => step > 1 ? setStep((s) => (s - 1) as Step) : router.back()}
+      />
 
       <StepIndicator current={step} />
 

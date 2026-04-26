@@ -24,9 +24,9 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Avatar, BottomSheet, FAB,
-  Skeleton, EmptyState, ErrorState,
+  Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -171,17 +171,11 @@ export default function DayBookScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <ThemedText variant="h4">Day Book</ThemedText>
-            <ThemedText variant="caption" color="muted">{format(new Date(), 'EEE, d MMM yyyy')}</ThemedText>
-          </View>
-          <View style={{ width: 36 }} />
-        </View>
+        <ScreenHeader
+          title="Day Book"
+          subtitle={format(new Date(), 'EEE, d MMM yyyy')}
+          showBack
+        />
 
         {/* Segment */}
         <View style={[styles.segmentRow, { backgroundColor: colors.surfaceSecondary }]}>
@@ -421,14 +415,6 @@ export default function DayBookScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
   segmentRow: {
     flexDirection: 'row',
     margin: Spacing.base,
@@ -449,8 +435,8 @@ const styles = StyleSheet.create({
     padding: Spacing.base,
     marginBottom: Spacing.sm,
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     gap: Spacing.sm,
+    ...Shadow.sm,
   },
   catDot: { width: 4, height: '100%', borderRadius: 2, minHeight: 40, marginTop: 2 },
   editChip: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 8 },
@@ -470,8 +456,8 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     marginBottom: Spacing.sm,
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     gap: Spacing.md,
+    ...Shadow.sm,
   },
   fieldLabel: {
     marginBottom: Spacing.sm,

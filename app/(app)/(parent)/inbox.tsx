@@ -21,7 +21,7 @@ import {
 } from '../../../components/ui';
 import { DayBookEntryCard } from '../../../components/modules/DayBookEntryCard';
 import { useParentDayBookInbox } from '../../../hooks/useDayBook';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 
 type TabValue = 'daybook' | 'notifications';
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     marginBottom: Spacing.sm,
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
+    ...Shadow.sm,
   },
   notifDot: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },
 });

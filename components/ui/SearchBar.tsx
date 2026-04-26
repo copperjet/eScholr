@@ -73,10 +73,10 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: Radius.lg,
+    borderRadius: Radius.full,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: Spacing.md,
-    height: 44,
+    height: 46,
   },
   icon: {
     marginRight: Spacing.sm,

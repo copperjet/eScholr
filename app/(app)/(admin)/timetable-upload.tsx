@@ -17,7 +17,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, Skeleton, EmptyState, ErrorState,
+  ThemedText, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -148,13 +148,7 @@ export default function TimetableUploadScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4" style={{ flex: 1, textAlign: 'center' }}>Timetable Upload</ThemedText>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader title="Timetable Upload" showBack />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Upload form */}

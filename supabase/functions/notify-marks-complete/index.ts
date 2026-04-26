@@ -1,10 +1,25 @@
 /**
  * notify-marks-complete
  * Called after all marks for a subject/stream/semester are entered.
- * Notifies the HRT of that stream via push notification.
+ * Notifies the HRT of that stream via Expo push notification.
+ *
+ * POST /functions/v1/notify-marks-complete
+ * Body: { school_id, subject_id, stream_id, semester_id, subject_name, stream_name, entered_by_name }
+ * Auth: Bearer <staff JWT>
  */
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS, 'Content-Type': 'application/json' },
+  });
+}
 
 interface Payload {
   school_id: string;
@@ -16,82 +31,103 @@ interface Payload {
   entered_by_name: string;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+
   try {
-    const payload: Payload = await req.json();
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) return json({ error: 'Unauthorized' }, 401);
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const payload = (await req.json()) as Payload;
     const {
       school_id, subject_id, stream_id, semester_id,
       subject_name, stream_name, entered_by_name,
     } = payload;
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
+    if (!school_id || !subject_id || !stream_id || !semester_id) {
+      return json({ error: 'Missing required fields' }, 400);
+    }
 
-    // Find HRT assignment for this stream
+    // Find HRT staff for this stream
     const { data: hrtData } = await supabase
       .from('hrt_assignments')
       .select('staff_id')
       .eq('school_id', school_id)
       .eq('stream_id', stream_id)
       .eq('semester_id', semester_id)
-      .limit(1)
-      .single();
+      .maybeSingle();
 
     if (!hrtData?.staff_id) {
-      return new Response(JSON.stringify({ ok: true, message: 'No HRT for stream' }), { status: 200 });
+      return json({ ok: true, message: 'No HRT for stream' });
     }
 
-    // Get push token for HRT
-    const { data: tokenData } = await supabase
+    // Resolve staff → auth_user_id
+    const { data: staffRow } = await supabase
+      .from('staff')
+      .select('auth_user_id')
+      .eq('id', hrtData.staff_id)
+      .maybeSingle();
+
+    const hrtUserId = staffRow?.auth_user_id as string | undefined;
+    if (!hrtUserId) {
+      return json({ ok: true, message: 'HRT has no auth account' });
+    }
+
+    // Get push token
+    const { data: tokenRow } = await supabase
       .from('push_tokens')
-      .select('token')
-      .eq('user_id', hrtData.staff_id)
+      .select('push_token')
+      .eq('user_id', hrtUserId)
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (!tokenData?.token) {
-      return new Response(JSON.stringify({ ok: true, message: 'No push token for HRT' }), { status: 200 });
+    const title = 'Marks Entry Complete';
+    const body = `${subject_name} marks for ${stream_name} have been fully entered by ${entered_by_name}.`;
+
+    let deliveryStatus = 'no_device_registered';
+    let pushJson: unknown = null;
+
+    if (tokenRow?.push_token) {
+      const message = {
+        to: tokenRow.push_token,
+        sound: 'default',
+        title,
+        body,
+        data: { type: 'marks_complete', subject_id, stream_id, semester_id },
+      };
+      try {
+        const pushRes = await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(message),
+        });
+        pushJson = await pushRes.json().catch(() => null);
+        deliveryStatus = pushRes.ok ? 'delivered' : 'failed';
+      } catch {
+        deliveryStatus = 'failed';
+      }
     }
-
-    // Send Expo push notification
-    const message = {
-      to: tokenData.token,
-      sound: 'default',
-      title: 'Marks Entry Complete',
-      body: `${subject_name} marks for ${stream_name} have been fully entered by ${entered_by_name}.`,
-      data: { type: 'marks_complete', subject_id, stream_id, semester_id },
-    };
-
-    const pushRes = await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(message),
-    });
-
-    const pushJson = await pushRes.json();
 
     // Log notification
-    await supabase.from('notification_logs').insert({
+    const { error: logErr } = await supabase.from('notification_logs').insert({
       school_id,
-      recipient_id: hrtData.staff_id,
-      type: 'marks_complete',
-      title: message.title,
-      body: message.body,
-      sent_at: new Date().toISOString(),
+      recipient_user_id: hrtUserId,
+      trigger_event: 'marks_complete',
+      channel: 'push',
+      title,
+      body,
+      delivery_status: deliveryStatus,
       is_safeguarding: false,
-      meta: {
-        subject_id,
-        stream_id,
-        semester_id,
-        expo_response: pushJson,
-      },
     });
+    if (logErr) console.error('notification_logs insert failed', logErr);
 
-    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    return json({ ok: true, status: deliveryStatus, expo: pushJson });
   } catch (err) {
     console.error('notify-marks-complete error:', err);
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+    return json({ error: String(err) }, 500);
   }
 });

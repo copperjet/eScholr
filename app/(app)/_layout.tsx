@@ -44,7 +44,7 @@ async function registerPushToken(userId: string, schoolId: string) {
 }
 
 export default function AppLayout() {
-  const { user, isReady } = useAuthStore();
+  const { user, school, isReady } = useAuthStore();
   const notifListener = useRef<any>(null);
   const responseListener = useRef<any>(null);
 
@@ -70,7 +70,9 @@ export default function AppLayout() {
     };
   }, [user?.id]);
 
-  if (isReady && !user) return <Redirect href="/(auth)/school-code" />;
+  if (isReady && !user) {
+    return <Redirect href={school ? '/(auth)/login' : '/(auth)/school-code'} />;
+  }
 
   return (
     <View style={{ flex: 1 }}>

@@ -5,7 +5,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, StyleSheet, SafeAreaView, FlatList,
-  TouchableOpacity, Alert, RefreshControl, TextInput, ScrollView,
+  TouchableOpacity, Alert, RefreshControl, ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,9 +16,9 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Avatar, Badge, SearchBar, FAB, BottomSheet,
-  Skeleton, EmptyState, ErrorState,
+  Skeleton, EmptyState, ErrorState, FormField, ScreenHeader,
 } from '../../../components/ui';
-import { Spacing, Radius, Typography } from '../../../constants/Typography';
+import { Spacing, Radius, Typography, Shadow } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 import type { UserRole } from '../../../types/database';
@@ -242,16 +242,10 @@ export default function AdminStaffScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4">
-          Staff{data ? ` (${data.filter((s: any) => s.status === 'active').length} active)` : ''}
-        </ThemedText>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader
+        title={`Staff${data ? ` (${data.filter((s: any) => s.status === 'active').length} active)` : ''}`}
+        showBack
+      />
 
       {/* Search + filter chips */}
       <View style={{ paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, gap: Spacing.sm }}>
@@ -368,10 +362,10 @@ export default function AdminStaffScreen() {
       >
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.form}>
-            <FormField label="Full Name *" value={form.full_name} onChangeText={(v: string) => setForm(p => ({ ...p, full_name: v }))} placeholder="e.g. Joyce Kamau" colors={colors} />
-            <FormField label="Email *" value={form.email} onChangeText={(v: string) => setForm(p => ({ ...p, email: v }))} placeholder="e.g. jkamau@school.edu" keyboardType="email-address" autoCapitalize="none" colors={colors} />
-            <FormField label="Department" value={form.department} onChangeText={(v: string) => setForm(p => ({ ...p, department: v }))} placeholder="e.g. English" colors={colors} />
-            <FormField label="Phone" value={form.phone} onChangeText={(v: string) => setForm(p => ({ ...p, phone: v }))} placeholder="+260 97…" keyboardType="phone-pad" colors={colors} />
+            <FormField label="Full Name *" value={form.full_name} onChangeText={(v: string) => setForm(p => ({ ...p, full_name: v }))} placeholder="e.g. Joyce Kamau" iconLeft="person-outline" />
+            <FormField label="Email *" value={form.email} onChangeText={(v: string) => setForm(p => ({ ...p, email: v }))} placeholder="e.g. jkamau@school.edu" keyboardType="email-address" autoCapitalize="none" iconLeft="mail-outline" />
+            <FormField label="Department" value={form.department} onChangeText={(v: string) => setForm(p => ({ ...p, department: v }))} placeholder="e.g. English" iconLeft="business-outline" />
+            <FormField label="Phone" value={form.phone} onChangeText={(v: string) => setForm(p => ({ ...p, phone: v }))} placeholder="+260 97…" keyboardType="phone-pad" iconLeft="call-outline" />
 
             <ThemedText variant="label" color="muted" style={{ marginBottom: Spacing.sm, marginTop: Spacing.sm }}>
               ROLES (select at least one)
@@ -593,34 +587,16 @@ function EditRolesPanel({ staff, colors, isPending, onSave, onCancel }: {
   );
 }
 
-// ── FormField helper ──────────────────────────────────────────
-function FormField({ label, colors, ...props }: any) {
-  return (
-    <View style={{ gap: 4, marginBottom: Spacing.sm }}>
-      <ThemedText variant="label" color="muted">{label}</ThemedText>
-      <TextInput
-        style={[styles.input, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, color: colors.textPrimary }]}
-        placeholderTextColor={colors.textMuted}
-        {...props}
-      />
-    </View>
-  );
-}
-
 // ── Styles ────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.base, paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
   filterRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
   chip: { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.full, borderWidth: 1.5 },
   list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: 120 },
   staffRow: {
     flexDirection: 'row', alignItems: 'center', padding: Spacing.base,
-    marginBottom: Spacing.sm, borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, gap: Spacing.md,
+    marginBottom: Spacing.sm, borderRadius: Radius.lg, gap: Spacing.md,
+    ...Shadow.sm,
   },
   roleChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 },
   roleChip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },

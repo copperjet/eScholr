@@ -12,7 +12,7 @@ import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../lib/theme';
 import { useAuthStore } from '../../stores/authStore';
 import {
-  ThemedText, Skeleton, EmptyState, ErrorState,
+  ThemedText, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../components/ui';
 import { Spacing, Radius } from '../../constants/Typography';
 import { Colors } from '../../constants/Colors';
@@ -60,13 +60,7 @@ export default function AnnouncementsFeed() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4" style={{ flex: 1, textAlign: 'center' }}>Announcements</ThemedText>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader title="Announcements" showBack />
 
       {isLoading ? (
         <View style={{ padding: Spacing.base, gap: Spacing.md }}>

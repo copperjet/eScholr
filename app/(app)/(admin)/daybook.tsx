@@ -16,7 +16,7 @@ import { format } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  ThemedText, SearchBar, Skeleton, EmptyState, ErrorState,
+  ThemedText, SearchBar, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import { DayBookEntryCard } from '../../../components/modules/DayBookEntryCard';
 import { useAdminDayBook, useArchiveDayBookEntry } from '../../../hooks/useDayBook';
@@ -77,14 +77,7 @@ export default function AdminDayBookScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4" style={{ flex: 1, textAlign: 'center' }}>Day Book</ThemedText>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader title="Day Book" showBack />
 
       {/* Mode toggle */}
       <View style={[styles.modeBar, { borderBottomColor: colors.border }]}>

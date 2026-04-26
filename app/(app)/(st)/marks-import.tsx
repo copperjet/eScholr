@@ -30,7 +30,7 @@ import {
 import {
   useGradingScale, getGradeLabel, computeTotal,
 } from '../../../hooks/useMarks';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -614,13 +614,13 @@ const styles = StyleSheet.create({
   stepCircle: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   content: { padding: Spacing.base, paddingBottom: 80 },
   stepContent: { gap: 0 },
-  assignmentCard: {
+  studentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     gap: 10,
+    ...Shadow.sm,
   },
   closedChip: {
     paddingHorizontal: 8, paddingVertical: 3,
@@ -631,8 +631,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     padding: 14,
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     marginBottom: 20,
+    ...Shadow.sm,
   },
   actionBtn: {
     flexDirection: 'row',
@@ -657,8 +657,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderRadius: Radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
     gap: 10,
+    ...Shadow.sm,
   },
   previewMark: { alignItems: 'flex-end', gap: 2 },
   importBtn: {

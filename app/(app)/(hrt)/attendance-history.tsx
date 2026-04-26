@@ -14,10 +14,10 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, Skeleton, EmptyState, ErrorState,
+  ThemedText, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import { AttendanceSummaryCard } from '../../../components/modules/AttendanceSummaryCard';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { Colors, resolveAttColor } from '../../../constants/Colors';
 
 const TODAY = format(new Date(), 'yyyy-MM-dd');
@@ -111,19 +111,11 @@ export default function AttendanceHistoryScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <ThemedText variant="h4">Attendance History</ThemedText>
-          {data?.streamName ? (
-            <ThemedText variant="caption" color="muted">{data.streamName} — last {LOOKBACK_DAYS} days</ThemedText>
-          ) : null}
-        </View>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader
+        title="Attendance History"
+        subtitle={data?.streamName ? `${data.streamName} — last ${LOOKBACK_DAYS} days` : undefined}
+        showBack
+      />
 
       {isLoading ? (
         <View style={styles.skeletonList}>
@@ -250,12 +242,12 @@ const styles = StyleSheet.create({
   dayRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
+    padding: Spacing.md,
     marginBottom: Spacing.sm,
     overflow: 'hidden',
     gap: Spacing.md,
     paddingRight: Spacing.md,
+    ...Shadow.sm,
   },
   dateBlock: {
     width: 56,

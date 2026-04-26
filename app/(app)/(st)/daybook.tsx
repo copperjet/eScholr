@@ -18,7 +18,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, FAB, Skeleton, EmptyState, ErrorState,
+  ThemedText, FAB, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import { DayBookEntryCard } from '../../../components/modules/DayBookEntryCard';
 import { DayBookCreateSheet } from '../../../components/modules/DayBookCreateSheet';
@@ -28,7 +28,7 @@ import {
   useEditDayBookEntry,
   type DayBookEntry,
 } from '../../../hooks/useDayBook';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
 
 const TODAY = format(new Date(), 'yyyy-MM-dd');
@@ -122,19 +122,11 @@ export default function STDayBookScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <ThemedText variant="h4" style={{ textAlign: 'center' }}>Day Book</ThemedText>
-          <ThemedText variant="caption" color="muted" style={{ textAlign: 'center' }}>
-            {format(new Date(), 'EEEE, d MMM yyyy')}
-          </ThemedText>
-        </View>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader
+        title="Day Book"
+        subtitle={format(new Date(), 'EEEE, d MMM yyyy')}
+        showBack
+      />
 
       {/* Count badge */}
       {!isLoading && (
@@ -206,14 +198,6 @@ export default function STDayBookScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.sm,
-  },
   countBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -222,8 +206,8 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     paddingHorizontal: Spacing.md,
     borderRadius: Radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
     alignSelf: 'flex-start',
+    ...Shadow.sm,
   },
   skeletonRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.md, paddingBottom: 100 },

@@ -23,35 +23,54 @@ const queryClient = new QueryClient({
 });
 
 export default function RootLayout() {
-  const { setUser, setSchool, setReady, school } = useAuthStore();
+  const { setUser, setSchool, setReady, loadPersistedSchool, school } = useAuthStore();
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const meta = session.user.app_metadata as any;
-        const schoolId = meta?.school_id ?? '';
-        setUser({
-          id: session.user.id,
-          email: session.user.email ?? '',
-          fullName: session.user.user_metadata?.full_name ?? '',
-          staffId: meta?.staff_id ?? null,
-          parentId: meta?.parent_id ?? null,
-          roles: meta?.roles ?? [],
-          activeRole: meta?.active_role ?? 'hrt',
-          schoolId,
-        });
-        if (schoolId) {
-          const { data: schoolData } = await supabase
-            .from('schools')
-            .select('*')
-            .eq('id', schoolId)
-            .single();
-          if (schoolData) setSchool(schoolData as any);
+    const bootstrap = async () => {
+      try {
+        const result = await supabase.auth.getSession();
+        const session = result?.data?.session ?? null;
+        if (session?.user) {
+          const meta = (session.user.app_metadata ?? {}) as any;
+          const userMeta = (session.user.user_metadata ?? {}) as any;
+          // Platform admin has no school_id — keep as null
+          const schoolId: string | null = meta?.school_id ?? null;
+
+          setUser({
+            id: session.user.id,
+            email: session.user.email ?? '',
+            fullName: userMeta?.full_name ?? '',
+            staffId: meta?.staff_id ?? null,
+            parentId: meta?.parent_id ?? null,
+            roles: Array.isArray(meta?.roles) ? meta.roles : [],
+            activeRole: meta?.active_role ?? 'hrt',
+            schoolId,
+          });
+
+          if (schoolId) {
+            try {
+              const { data: schoolData } = await supabase
+                .from('schools')
+                .select('*')
+                .eq('id', schoolId)
+                .single();
+              if (schoolData) setSchool(schoolData as any);
+            } catch (e) {
+              console.warn('[bootstrap] school fetch failed', e);
+            }
+          }
+          // Platform admin: school stays null — no school to load
+        } else {
+          await loadPersistedSchool();
         }
+      } catch (e) {
+        console.warn('[bootstrap] getSession failed', e);
+      } finally {
+        setReady(true);
+        try { await SplashScreen.hideAsync(); } catch {}
       }
-      setReady(true);
-      SplashScreen.hideAsync();
-    });
+    };
+    bootstrap();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
@@ -64,7 +83,7 @@ export default function RootLayout() {
   }, []);
 
   const brand = school
-    ? { primary: school.primary_color ?? '#1B2A4A', secondary: school.secondary_color ?? '#E8A020' }
+    ? { primary: school.primary_color ?? undefined, secondary: school.secondary_color ?? undefined }
     : undefined;
 
   return (

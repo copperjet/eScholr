@@ -3,15 +3,15 @@
  * Tabbed view: Overview · Marks · Attendance · Reports · Day Book · Fees
  * Accessible from: HRT students list, Admin, Subject Teacher
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  FlatList,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -20,10 +20,10 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, Card, Avatar, Badge, ProgressBar,
+  ThemedText, Avatar, Badge, ProgressBar,
   Skeleton, SkeletonRow, EmptyState, ErrorState,
 } from '../../../components/ui';
-import { Spacing, Radius, Typography } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { Colors, resolveAttBg, resolveAttColor } from '../../../constants/Colors';
 import type { AttendanceStatus } from '../../../types/database';
 
@@ -163,88 +163,97 @@ export default function StudentProfileScreen() {
 
   if (profileQuery.isError) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <SafeAreaView edges={['top']} style={{ backgroundColor: colors.brand.primary }}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtnLight} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </SafeAreaView>
         <ErrorState title="Student not found" description="Could not load this student's profile." onRetry={profileQuery.refetch} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   const student = profileQuery.data;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4" style={{ flex: 1, marginLeft: Spacing.sm }}>Student Profile</ThemedText>
-      </View>
+    <View style={[styles.safe, { backgroundColor: colors.brand.primary }]}>
+      <StatusBar barStyle="light-content" />
 
-      {/* Identity card */}
-      {profileQuery.isLoading ? (
-        <View style={[styles.identityCard, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <Skeleton width={64} height={64} radius={32} />
-          <View style={{ flex: 1, gap: 8, marginLeft: Spacing.base }}>
-            <Skeleton width="60%" height={18} />
-            <Skeleton width="40%" height={13} />
-            <Skeleton width="50%" height={13} />
-          </View>
-        </View>
-      ) : student ? (
-        <View style={[styles.identityCard, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <Avatar name={student.full_name} photoUrl={student.photo_url} size={64} />
-          <View style={styles.identityInfo}>
-            <ThemedText variant="h4">{student.full_name}</ThemedText>
-            <ThemedText variant="bodySm" color="muted">{student.student_number}</ThemedText>
-            <ThemedText variant="caption" color="muted">
-              {student.grades?.name ?? ''}{student.streams?.name ? ` · ${student.streams.name}` : ''}
-              {student.school_sections?.name ? ` · ${student.school_sections.name}` : ''}
-            </ThemedText>
-          </View>
-          <Badge
-            label={student.status === 'active' ? 'Active' : student.status}
-            preset={student.status === 'active' ? 'success' : 'warning'}
-          />
-        </View>
-      ) : null}
-
-      {/* Tab bar */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={[styles.tabBar, { borderBottomColor: colors.border }]}
-        contentContainerStyle={styles.tabBarContent}
-      >
-        {TABS.map(tab => (
-          <TouchableOpacity
-            key={tab}
-            onPress={() => setActiveTab(tab)}
-            style={[styles.tab, activeTab === tab && { borderBottomColor: colors.brand.primary, borderBottomWidth: 2 }]}
-          >
-            <ThemedText
-              variant="bodySm"
-              style={{ fontWeight: activeTab === tab ? '700' : '500', color: activeTab === tab ? colors.brand.primary : colors.textMuted }}
-            >
-              {tab}
-            </ThemedText>
+      {/* ── Green hero header ─────────────────────────────── */}
+      <SafeAreaView edges={['top']} style={{ backgroundColor: colors.brand.primary }}>
+        <View style={styles.heroHeader}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+          <ThemedText style={styles.heroTitle}>Student Profile</ThemedText>
+          <View style={{ width: 24 }} />
+        </View>
 
-      {/* Tab content */}
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.tabContent} showsVerticalScrollIndicator={false}>
-        {activeTab === 'Overview' && <OverviewTab student={student} colors={colors} loading={profileQuery.isLoading} />}
-        {activeTab === 'Marks' && <MarksTab query={marksQuery} colors={colors} />}
-        {activeTab === 'Attendance' && <AttendanceTab query={attendanceQuery} colors={colors} scheme={scheme} />}
-        {activeTab === 'Reports' && <ReportsTab query={reportsQuery} colors={colors} student={student} />}
-        {activeTab === 'Day Book' && <DayBookTab query={dayBookQuery} colors={colors} />}
-        {activeTab === 'Fees' && <FeesTab query={financeQuery} colors={colors} schoolId={schoolId} />}
-      </ScrollView>
-    </SafeAreaView>
+        {profileQuery.isLoading ? (
+          <View style={styles.heroIdentity}>
+            <Skeleton width={72} height={72} radius={36} />
+            <View style={{ flex: 1, gap: 8, marginLeft: Spacing.base }}>
+              <Skeleton width="60%" height={18} />
+              <Skeleton width="40%" height={13} />
+            </View>
+          </View>
+        ) : student ? (
+          <View style={styles.heroIdentity}>
+            <Avatar name={student.full_name} photoUrl={student.photo_url} size={72} />
+            <View style={{ flex: 1 }}>
+              <ThemedText style={styles.heroStudentName} numberOfLines={1}>{student.full_name}</ThemedText>
+              <ThemedText style={styles.heroStudentMeta}>{student.student_number}</ThemedText>
+              <ThemedText style={styles.heroStudentMeta}>
+                {student.grades?.name ?? ''}{student.streams?.name ? ` · ${student.streams.name}` : ''}
+              </ThemedText>
+            </View>
+            <View style={[styles.statusPill, { backgroundColor: student.status === 'active' ? 'rgba(255,255,255,0.2)' : 'rgba(255,0,0,0.2)' }]}>
+              <ThemedText style={styles.statusPillText}>{student.status === 'active' ? 'Active' : student.status}</ThemedText>
+            </View>
+          </View>
+        ) : null}
+      </SafeAreaView>
+
+      {/* ── White rising body ─────────────────────────────── */}
+      <View style={[styles.whiteBody, { backgroundColor: colors.background }]}>
+        {/* Tab bar */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.tabBar, { borderBottomColor: colors.border }]}
+          contentContainerStyle={styles.tabBarContent}
+        >
+          {TABS.map(tab => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              style={[styles.tab, activeTab === tab && { borderBottomColor: colors.brand.primary, borderBottomWidth: 2.5 }]}
+            >
+              <ThemedText
+                style={{
+                  fontSize: 13,
+                  fontWeight: activeTab === tab ? '700' : '500',
+                  color: activeTab === tab ? colors.brand.primary : colors.textMuted,
+                }}
+              >
+                {tab}
+              </ThemedText>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Tab content */}
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.tabContent} showsVerticalScrollIndicator={false}>
+          {activeTab === 'Overview' && <OverviewTab student={student} colors={colors} loading={profileQuery.isLoading} />}
+          {activeTab === 'Marks' && <MarksTab query={marksQuery} colors={colors} />}
+          {activeTab === 'Attendance' && <AttendanceTab query={attendanceQuery} colors={colors} scheme={scheme} />}
+          {activeTab === 'Reports' && <ReportsTab query={reportsQuery} colors={colors} student={student} />}
+          {activeTab === 'Day Book' && <DayBookTab query={dayBookQuery} colors={colors} />}
+          {activeTab === 'Fees' && <FeesTab query={financeQuery} colors={colors} schoolId={schoolId} />}
+        </ScrollView>
+      </View>
+    </View>
   );
 }
 
@@ -252,7 +261,7 @@ function OverviewTab({ student, colors, loading }: { student: any; colors: any; 
   if (loading || !student) return <TabSkeleton />;
   return (
     <View style={{ gap: Spacing.base }}>
-      <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
         <ThemedText variant="label" color="muted" style={styles.sectionLabel}>PERSONAL</ThemedText>
         <InfoRow label="Full Name" value={student.full_name} colors={colors} />
         <InfoRow label="Student ID" value={student.student_number} colors={colors} />
@@ -260,7 +269,7 @@ function OverviewTab({ student, colors, loading }: { student: any; colors: any; 
         <InfoRow label="Date of Birth" value={student.date_of_birth ? format(new Date(student.date_of_birth), 'd MMM yyyy') : '—'} colors={colors} />
         <InfoRow label="Enrolled" value={student.enrollment_date ? format(new Date(student.enrollment_date), 'd MMM yyyy') : '—'} colors={colors} last />
       </View>
-      <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
         <ThemedText variant="label" color="muted" style={styles.sectionLabel}>CLASS</ThemedText>
         <InfoRow label="Grade" value={student.grades?.name ?? '—'} colors={colors} />
         <InfoRow label="Stream / Class" value={student.streams?.name ?? '—'} colors={colors} />
@@ -295,7 +304,7 @@ function MarksTab({ query, colors }: { query: any; colors: any }) {
   return (
     <View style={{ gap: Spacing.base }}>
       {Object.entries(grouped).map(([subject, items]) => (
-        <View key={subject} style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View key={subject} style={[styles.infoCard, { backgroundColor: colors.surface }]}>
           <ThemedText variant="label" color="muted" style={styles.sectionLabel}>{subject.toUpperCase()}</ThemedText>
           {items.map((m: any, i: number) => (
             <View key={i} style={[styles.infoRow, i < items.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
@@ -324,7 +333,7 @@ function AttendanceTab({ query, colors, scheme }: { query: any; colors: any; sch
 
   return (
     <View style={{ gap: Spacing.base }}>
-      <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
         <ThemedText variant="label" color="muted" style={styles.sectionLabel}>ATTENDANCE RATE</ThemedText>
         <View style={styles.infoRow}>
           <ThemedText variant="h2" style={{ color: pct >= 85 ? Colors.semantic.success : Colors.semantic.error }}>{pct}%</ThemedText>
@@ -367,7 +376,7 @@ function ReportsTab({ query, colors, student }: { query: any; colors: any; stude
       {reports.map((r: any) => (
         <TouchableOpacity
           key={r.id}
-          style={[styles.reportRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          style={[styles.reportRow, { backgroundColor: colors.surface }]}
           onPress={() => {
             if (r.pdf_url) {
               router.push({ pathname: '/(app)/report-viewer' as any, params: { report_id: r.id, pdf_url: r.pdf_url, student_name: student?.full_name ?? '', is_draft: r.status !== 'released' ? 'true' : 'false' } });
@@ -399,7 +408,7 @@ function DayBookTab({ query, colors }: { query: any; colors: any }) {
   return (
     <View style={{ gap: Spacing.sm }}>
       {entries.map((e: any) => (
-        <View key={e.id} style={[styles.dayBookEntry, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View key={e.id} style={[styles.dayBookEntry, { backgroundColor: colors.surface }]}>
           <View style={styles.dayBookHeader}>
             <ThemedText variant="label" style={{ color: colors.brand.primary, textTransform: 'uppercase', fontSize: 11 }}>{e.category}</ThemedText>
             {e.send_to_parent && <Ionicons name="mail-outline" size={13} color={Colors.semantic.success} />}
@@ -423,7 +432,7 @@ function FeesTab({ query, colors, schoolId }: { query: any; colors: any; schoolI
   return (
     <View style={{ gap: Spacing.sm }}>
       {records.map((r: any) => (
-        <View key={r.id} style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View key={r.id} style={[styles.infoCard, { backgroundColor: colors.surface }]}>
           <View style={styles.infoRow}>
             <ThemedText variant="body" style={{ fontWeight: '600' }}>{r.semesters?.name ?? 'Semester'}</ThemedText>
             <Badge label={r.status} preset={r.status === 'paid' ? 'success' : 'error'} />
@@ -454,22 +463,20 @@ function TabSkeleton() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
+  heroHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  backBtn: { padding: Spacing.base },
-  identityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.base,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.base,
-  },
-  identityInfo: { flex: 1, gap: 4 },
+  heroTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: '#FFFFFF', textAlign: 'center' },
+  heroIdentity: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingBottom: Spacing['2xl'], gap: Spacing.base },
+  heroStudentName: { fontSize: 18, fontWeight: '700', color: '#FFFFFF', marginBottom: 3 },
+  heroStudentMeta: { fontSize: 13, color: 'rgba(255,255,255,0.75)' },
+  statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full, alignSelf: 'flex-start' },
+  statusPillText: { fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
+  whiteBody: { flex: 1, borderTopLeftRadius: 22, borderTopRightRadius: 22, marginTop: -16, overflow: 'hidden' },
+  backBtnLight: { padding: Spacing.base },
   tabBar: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexGrow: 0,
@@ -478,14 +485,14 @@ const styles = StyleSheet.create({
   tab: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
-    borderBottomWidth: 2,
+    borderBottomWidth: 2.5,
     borderBottomColor: 'transparent',
   },
-  tabContent: { padding: Spacing.base, paddingBottom: 40 },
+  tabContent: { padding: Spacing.base, paddingBottom: 100 },
   infoCard: {
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
+    ...Shadow.sm,
   },
   sectionLabel: {
     paddingHorizontal: Spacing.base,
@@ -507,20 +514,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.md,
     borderRadius: Radius.md,
-    borderWidth: 1,
+    ...Shadow.sm,
   },
   reportRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: Spacing.base,
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
+    ...Shadow.sm,
   },
   dayBookEntry: {
     padding: Spacing.base,
     borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     gap: 4,
+    ...Shadow.sm,
   },
   dayBookHeader: {
     flexDirection: 'row',

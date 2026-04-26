@@ -25,7 +25,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, Avatar, Skeleton, EmptyState, ErrorState,
+  ThemedText, Avatar, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import { MarksWindowBanner } from '../../../components/modules/MarksWindowBanner';
 import { ClassAverageBanner } from '../../../components/modules/ClassAverageBanner';
@@ -269,28 +269,19 @@ export default function MarksEntryScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <ThemedText variant="h4" numberOfLines={1}>
-              {detail?.subjectName ?? '—'}
-            </ThemedText>
-            <ThemedText variant="caption" color="muted">
-              {detail?.streamName ?? '—'} · {detail?.semesterName ?? '—'}
-            </ThemedText>
-          </View>
-          {/* Bulk import shortcut */}
-          <TouchableOpacity
-            onPress={() => router.push({ pathname: '/(app)/(st)/marks-import', params: { assignmentId: params.assignmentId } } as any)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={[styles.importBtn, { backgroundColor: colors.surfaceSecondary }]}
-          >
-            <Ionicons name="cloud-upload-outline" size={18} color={colors.brand.primary} />
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader
+          title={detail?.subjectName ?? '—'}
+          subtitle={`${detail?.streamName ?? '—'} · ${detail?.semesterName ?? '—'}`}
+          showBack
+          right={
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: '/(app)/(st)/marks-import', params: { assignmentId: params.assignmentId } } as any)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="cloud-upload-outline" size={20} color={colors.brand.primary} />
+            </TouchableOpacity>
+          }
+        />
 
         {/* Window banner */}
         <MarksWindowBanner isOpen={isWindowOpen} />
@@ -499,16 +490,6 @@ export default function MarksEntryScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.sm,
-  },
-  headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
-  importBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   colHeader: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,13 +1,5 @@
-/**
- * Front Desk Inquiry CRM — /(app)/(frontdesk)/inquiries
- * Create, view, and update status of school admission inquiries
- */
 import React, { useState, useCallback } from 'react';
-import {
-  View, StyleSheet, SafeAreaView, FlatList,
-  TouchableOpacity, TextInput, KeyboardAvoidingView, Platform,
-  RefreshControl,
-} from 'react-native';
+import { View, StyleSheet, SafeAreaView, FlatList, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -17,9 +9,10 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, SearchBar, Badge, BottomSheet, FAB,
-  SkeletonRow, EmptyState, ErrorState,
+  ListItemSkeleton, EmptyState, ErrorState, TabBar,
+  ListItem, Chip, Button, FormField, IconChip,
 } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -30,7 +23,6 @@ const STATUS_META: Record<string, { label: string; preset: any; color: string }>
   enrolled:    { label: 'Enrolled',    preset: 'success', color: Colors.semantic.success },
   closed:      { label: 'Closed',      preset: 'neutral', color: '#9CA3AF' },
 };
-
 const NATURES = ['Admission', 'Re-Enrollment', 'Fee Query', 'General', 'Transfer', 'Other'] as const;
 
 function useInquiries(schoolId: string, status: string) {
@@ -42,8 +34,7 @@ function useInquiries(schoolId: string, status: string) {
       const { data, error } = await (supabase as any)
         .from('inquiries')
         .select('id, name, contact_phone, contact_email, nature_of_inquiry, date, status, notes, created_at')
-        .eq('school_id', schoolId)
-        .eq('status', status)
+        .eq('school_id', schoolId).eq('status', status)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data ?? []) as any[];
@@ -53,38 +44,28 @@ function useInquiries(schoolId: string, status: string) {
 
 export default function InquiriesScreen() {
   const { colors } = useTheme();
-  const { user } = useAuthStore();
+  const { user }   = useAuthStore();
   const queryClient = useQueryClient();
-  const schoolId = user?.schoolId ?? '';
+  const schoolId   = user?.schoolId ?? '';
 
-  const [activeTab, setActiveTab] = useState<string>('new');
-  const [search, setSearch] = useState('');
-  const [sheetVisible, setSheetVisible] = useState(false);
-  const [detailSheet, setDetailSheet] = useState(false);
-  const [selectedInquiry, setSelectedInquiry] = useState<any | null>(null);
-
-  // New inquiry form state
-  const [form, setForm] = useState({
-    name: '', phone: '', email: '', nature: 'Admission', notes: '',
-  });
+  const [activeTab, setActiveTab]           = useState<string>('new');
+  const [search, setSearch]                 = useState('');
+  const [sheetVisible, setSheetVisible]     = useState(false);
+  const [detailSheet, setDetailSheet]       = useState(false);
+  const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
+  const [form, setForm] = useState({ name: '', phone: '', email: '', nature: 'Admission', notes: '' });
 
   const { data, isLoading, isError, refetch, isFetching } = useInquiries(schoolId, activeTab);
 
   const createInquiry = useMutation({
     mutationFn: async () => {
       if (!form.name.trim()) throw new Error('Name required');
-      const { error } = await (supabase as any)
-        .from('inquiries')
-        .insert({
-          school_id: schoolId,
-          name: form.name.trim(),
-          contact_phone: form.phone.trim() || null,
-          contact_email: form.email.trim() || null,
-          nature_of_inquiry: form.nature,
-          notes: form.notes.trim() || null,
-          created_by: user?.staffId,
-          status: 'new',
-        });
+      const { error } = await (supabase as any).from('inquiries').insert({
+        school_id: schoolId, name: form.name.trim(),
+        contact_phone: form.phone.trim() || null, contact_email: form.email.trim() || null,
+        nature_of_inquiry: form.nature, notes: form.notes.trim() || null,
+        created_by: user?.staffId, status: 'new',
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -99,17 +80,11 @@ export default function InquiriesScreen() {
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await (supabase as any)
-        .from('inquiries')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('school_id', schoolId);
+        .from('inquiries').update({ status, updated_at: new Date().toISOString() })
+        .eq('id', id).eq('school_id', schoolId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      haptics.success();
-      queryClient.invalidateQueries({ queryKey: ['inquiries'] });
-      setDetailSheet(false);
-    },
+    onSuccess: () => { haptics.success(); queryClient.invalidateQueries({ queryKey: ['inquiries'] }); setDetailSheet(false); },
     onError: () => haptics.error(),
   });
 
@@ -127,34 +102,28 @@ export default function InquiriesScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <ThemedText variant="h4">Inquiries</ThemedText>
+      {/* ── Header ── */}
+      <View style={styles.topBar}>
+        <ThemedText variant="h2">Inquiries</ThemedText>
       </View>
 
-      {/* Status tabs */}
-      <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-        {STATUS_TABS.map(tab => (
-          <TouchableOpacity
-            key={tab}
-            onPress={() => setActiveTab(tab)}
-            style={[styles.tab, activeTab === tab && { borderBottomColor: colors.brand.primary, borderBottomWidth: 2 }]}
-          >
-            <ThemedText variant="bodySm" style={{ fontWeight: activeTab === tab ? '700' : '500', color: activeTab === tab ? colors.brand.primary : colors.textMuted }}>
-              {STATUS_META[tab].label}
-            </ThemedText>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* ── Status tabs ── */}
+      <TabBar
+        tabs={STATUS_TABS.map(t => ({ key: t, label: STATUS_META[t].label }))}
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        variant="underline"
+      />
 
-      {/* Search */}
-      <View style={{ paddingHorizontal: Spacing.base, paddingTop: Spacing.sm }}>
+      {/* ── Search ── */}
+      <View style={{ paddingHorizontal: Spacing.screen, paddingTop: Spacing.sm }}>
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search by name or phone…" />
       </View>
 
+      {/* ── List ── */}
       {isLoading ? (
-        <View style={{ padding: Spacing.base, gap: Spacing.sm }}>
-          {Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
+        <View style={{ paddingHorizontal: Spacing.screen }}>
+          {Array.from({ length: 5 }).map((_, i) => <ListItemSkeleton key={i} />)}
         </View>
       ) : filtered.length === 0 ? (
         <EmptyState
@@ -167,124 +136,70 @@ export default function InquiriesScreen() {
           keyExtractor={i => i.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} />}
+          refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} tintColor={colors.brand.primary} />}
           renderItem={({ item: inq }) => (
-            <TouchableOpacity
-              onPress={() => router.push({ pathname: '/(app)/(frontdesk)/inquiry-detail' as any, params: { inquiry_id: inq.id } })}
-              activeOpacity={0.8}
-              style={[styles.inqRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            >
-              <View style={[styles.inqAvatar, { backgroundColor: STATUS_META[inq.status].color + '18' }]}>
-                <ThemedText variant="h4" style={{ color: STATUS_META[inq.status].color }}>
-                  {(inq.name ?? '?')[0].toUpperCase()}
-                </ThemedText>
-              </View>
-              <View style={{ flex: 1 }}>
-                <ThemedText variant="body" style={{ fontWeight: '600' }}>{inq.name}</ThemedText>
-                {inq.nature_of_inquiry && (
-                  <ThemedText variant="caption" color="muted">{inq.nature_of_inquiry}</ThemedText>
-                )}
-                {inq.contact_phone && (
-                  <ThemedText variant="caption" color="muted">{inq.contact_phone}</ThemedText>
-                )}
-                <ThemedText variant="caption" color="muted">
-                  {inq.date ? format(parseISO(inq.date), 'd MMM yyyy') : ''}
-                </ThemedText>
-              </View>
-              <Badge label={STATUS_META[inq.status].label} preset={STATUS_META[inq.status].preset} />
-            </TouchableOpacity>
+            <View style={[styles.rowCard, { backgroundColor: colors.surface }, Shadow.sm]}>
+              <ListItem
+                title={inq.name}
+                subtitle={[inq.nature_of_inquiry, inq.contact_phone].filter(Boolean).join(' · ')}
+                caption={inq.date ? format(parseISO(inq.date), 'd MMM yyyy') : undefined}
+                leading={
+                  <IconChip
+                    icon={<ThemedText style={{ color: STATUS_META[inq.status].color, fontSize: 16, fontWeight: '700' }}>{(inq.name ?? '?')[0].toUpperCase()}</ThemedText>}
+                    bg={STATUS_META[inq.status].color + '18'}
+                    size={44}
+                    radius={22}
+                  />
+                }
+                badge={{ label: STATUS_META[inq.status].label, preset: STATUS_META[inq.status].preset }}
+                onPress={() => {
+                  setSelectedInquiry(inq);
+                  setDetailSheet(true);
+                }}
+              />
+            </View>
           )}
         />
       )}
 
-      {/* FAB */}
       <FAB
         icon={<Ionicons name="add" size={26} color="#fff" />}
         label="New Inquiry"
         onPress={() => setSheetVisible(true)}
-        color={colors.brand.primary}
       />
 
-      {/* Create sheet */}
-      <BottomSheet
-        visible={sheetVisible}
-        onClose={() => setSheetVisible(false)}
-        title="New Inquiry"
-        snapHeight={560}
-      >
+      {/* ── Create sheet ── */}
+      <BottomSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} title="New Inquiry" snapHeight={580}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={{ gap: Spacing.base }}>
-            {[
-              { key: 'name', label: 'FULL NAME *', placeholder: 'Parent / Guardian name', autoFocus: true },
-              { key: 'phone', label: 'PHONE', placeholder: '+263 77 000 0000', keyboardType: 'phone-pad' as const },
-              { key: 'email', label: 'EMAIL', placeholder: 'example@mail.com', keyboardType: 'email-address' as const },
-            ].map(field => (
-              <View key={field.key}>
-                <ThemedText variant="label" color="muted" style={styles.fieldLabel}>{field.label}</ThemedText>
-                <TextInput
-                  value={(form as any)[field.key]}
-                  onChangeText={v => setForm(prev => ({ ...prev, [field.key]: v }))}
-                  placeholder={field.placeholder}
-                  placeholderTextColor={colors.textMuted}
-                  autoFocus={field.autoFocus}
-                  keyboardType={field.keyboardType}
-                  style={[styles.input, { color: colors.textPrimary, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
-                />
-              </View>
-            ))}
-
-            {/* Nature */}
+          <View style={{ gap: Spacing.md }}>
+            <FormField label="Full Name *" placeholder="Parent / Guardian name" value={form.name} onChangeText={v => setForm(p => ({ ...p, name: v }))} iconLeft="person-outline" autoFocus />
+            <FormField label="Phone" placeholder="+260 97 000 0000" value={form.phone} onChangeText={v => setForm(p => ({ ...p, phone: v }))} iconLeft="call-outline" keyboardType="phone-pad" />
+            <FormField label="Email" placeholder="example@mail.com" value={form.email} onChangeText={v => setForm(p => ({ ...p, email: v }))} iconLeft="mail-outline" keyboardType="email-address" />
             <View>
-              <ThemedText variant="label" color="muted" style={styles.fieldLabel}>NATURE OF INQUIRY</ThemedText>
+              <ThemedText style={styles.fieldLabel}>Nature of Inquiry</ThemedText>
               <View style={styles.chipRow}>
                 {NATURES.map(n => (
-                  <TouchableOpacity
-                    key={n}
-                    onPress={() => setForm(prev => ({ ...prev, nature: n }))}
-                    style={[styles.chip, { borderColor: form.nature === n ? colors.brand.primary : colors.border, backgroundColor: form.nature === n ? colors.brand.primary + '18' : colors.surfaceSecondary }]}
-                  >
-                    <ThemedText variant="label" style={{ color: form.nature === n ? colors.brand.primary : colors.textMuted, fontSize: 11, fontWeight: form.nature === n ? '700' : '500' }}>{n}</ThemedText>
-                  </TouchableOpacity>
+                  <Chip key={n} label={n} selected={form.nature === n} onPress={() => setForm(p => ({ ...p, nature: n }))} />
                 ))}
               </View>
             </View>
-
-            {/* Notes */}
-            <View>
-              <ThemedText variant="label" color="muted" style={styles.fieldLabel}>NOTES</ThemedText>
-              <TextInput
-                value={form.notes}
-                onChangeText={v => setForm(prev => ({ ...prev, notes: v }))}
-                placeholder="Additional notes…"
-                placeholderTextColor={colors.textMuted}
-                multiline
-                numberOfLines={3}
-                style={[styles.input, { color: colors.textPrimary, backgroundColor: colors.surfaceSecondary, borderColor: colors.border, minHeight: 72, textAlignVertical: 'top' }]}
-              />
-            </View>
-
-            <TouchableOpacity
+            <FormField label="Notes" placeholder="Additional notes…" value={form.notes} onChangeText={v => setForm(p => ({ ...p, notes: v }))} textarea />
+            <Button
+              label={createInquiry.isPending ? 'Saving…' : 'Log Inquiry'}
+              variant="primary"
+              fullWidth
+              loading={createInquiry.isPending}
+              disabled={!form.name.trim()}
               onPress={() => createInquiry.mutate()}
-              disabled={!form.name.trim() || createInquiry.isPending}
-              style={[styles.saveBtn, { backgroundColor: form.name.trim() ? colors.brand.primary : colors.border }]}
-            >
-              <ThemedText variant="bodyLg" style={{ color: '#fff', fontWeight: '700' }}>
-                {createInquiry.isPending ? 'Saving…' : 'Log Inquiry'}
-              </ThemedText>
-            </TouchableOpacity>
+            />
           </View>
         </KeyboardAvoidingView>
       </BottomSheet>
 
-      {/* Detail sheet */}
-      <BottomSheet
-        visible={detailSheet && !!selectedInquiry}
-        onClose={() => setDetailSheet(false)}
-        title={selectedInquiry?.name ?? 'Inquiry'}
-        snapHeight={440}
-      >
+      {/* ── Detail sheet ── */}
+      <BottomSheet visible={detailSheet && !!selectedInquiry} onClose={() => setDetailSheet(false)} title={selectedInquiry?.name ?? 'Inquiry'} snapHeight={440}>
         {selectedInquiry && (
-          <View style={{ gap: Spacing.base }}>
+          <View style={{ gap: Spacing.md }}>
             {selectedInquiry.contact_phone && (
               <View style={styles.detailRow}>
                 <Ionicons name="call-outline" size={16} color={colors.textMuted} />
@@ -304,25 +219,20 @@ export default function InquiriesScreen() {
               </View>
             )}
             {selectedInquiry.notes && (
-              <View style={[styles.notesBox, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
-                <ThemedText variant="label" color="muted" style={{ marginBottom: 4 }}>NOTES</ThemedText>
+              <View style={[styles.notesBox, { backgroundColor: colors.surfaceSecondary }]}>
+                <ThemedText style={styles.fieldLabel}>Notes</ThemedText>
                 <ThemedText variant="bodySm">{selectedInquiry.notes}</ThemedText>
               </View>
             )}
-
-            <ThemedText variant="label" color="muted" style={styles.fieldLabel}>UPDATE STATUS</ThemedText>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
+            <ThemedText style={styles.fieldLabel}>Update Status</ThemedText>
+            <View style={styles.chipRow}>
               {STATUS_TABS.filter(s => s !== selectedInquiry.status).map(s => (
-                <TouchableOpacity
+                <Chip
                   key={s}
+                  label={`→ ${STATUS_META[s].label}`}
+                  selected={false}
                   onPress={() => updateStatus.mutate({ id: selectedInquiry.id, status: s })}
-                  disabled={updateStatus.isPending}
-                  style={[styles.statusBtn, { borderColor: STATUS_META[s].color, backgroundColor: STATUS_META[s].color + '18' }]}
-                >
-                  <ThemedText variant="bodySm" style={{ color: STATUS_META[s].color, fontWeight: '600' }}>
-                    → {STATUS_META[s].label}
-                  </ThemedText>
-                </TouchableOpacity>
+                />
               ))}
             </View>
           </View>
@@ -333,67 +243,12 @@ export default function InquiriesScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  header: {
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  tabBar: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: 120 },
-  inqRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.base,
-    marginBottom: Spacing.sm,
-    borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.md,
-  },
-  inqAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fieldLabel: { marginBottom: Spacing.sm, letterSpacing: 0.5, fontSize: 11 },
-  input: {
-    borderRadius: Radius.md,
-    borderWidth: 1.5,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 10,
-    fontSize: 15,
-  },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  chip: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-    borderWidth: 1.5,
-  },
-  saveBtn: {
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    borderRadius: Radius.lg,
-  },
+  safe:      { flex: 1 },
+  topBar:    { paddingHorizontal: Spacing.screen, paddingTop: Spacing.xl, paddingBottom: Spacing.sm },
+  list:      { paddingHorizontal: Spacing.screen, paddingTop: Spacing.sm, paddingBottom: 120, gap: Spacing.sm },
+  rowCard:   { borderRadius: Radius.lg, overflow: 'hidden' },
+  fieldLabel: { fontSize: 13, fontWeight: '600', marginBottom: Spacing.xs },
+  chipRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   detailRow: { flexDirection: 'row', alignItems: 'center' },
-  notesBox: {
-    padding: Spacing.md,
-    borderRadius: Radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  statusBtn: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.md,
-    borderWidth: 1.5,
-  },
+  notesBox:  { padding: Spacing.md, borderRadius: Radius.md },
 });

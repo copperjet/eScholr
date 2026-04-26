@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Create auth user via admin invite ─────────────────────
-    const redirectTo = Deno.env.get("APP_REDIRECT_URL") ?? "educore://";
+    const redirectTo = Deno.env.get("APP_REDIRECT_URL") ?? "escholr://";
     const { data: inviteData, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
       data: { full_name },
       redirectTo,

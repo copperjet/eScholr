@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
-import { ThemedText, Avatar } from '../../../components/ui';
+import { ThemedText, Avatar, ScreenHeader } from '../../../components/ui';
 import { useCreateStudent, useUploadStudentPhoto } from '../../../hooks/useStudents';
 import { Spacing, Radius } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -131,21 +131,21 @@ export default function StudentAddScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4" style={{ flex: 1, textAlign: 'center' }}>Add Student</ThemedText>
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={!canSave || isSaving}
-          style={[styles.saveBtn, { backgroundColor: canSave && !isSaving ? colors.brand.primary : colors.border }]}
-        >
-          <ThemedText variant="bodySm" style={{ color: '#fff', fontWeight: '700' }}>
-            {isSaving ? 'Saving…' : 'Save'}
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="Add Student"
+        showBack
+        right={
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={!canSave || isSaving}
+            style={[styles.saveBtn, { backgroundColor: canSave && !isSaving ? colors.brand.primary : colors.border }]}
+          >
+            <ThemedText variant="bodySm" style={{ color: '#fff', fontWeight: '700' }}>
+              {isSaving ? 'Saving…' : 'Save'}
+            </ThemedText>
+          </TouchableOpacity>
+        }
+      />
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -246,11 +246,6 @@ const sectionStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: Spacing.base, paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth, gap: Spacing.sm,
-  },
   saveBtn: { paddingHorizontal: Spacing.md, paddingVertical: 7, borderRadius: Radius.full },
   scroll: { padding: Spacing.base, paddingBottom: 40 },
   photoPicker: { alignItems: 'center', marginBottom: Spacing.base },

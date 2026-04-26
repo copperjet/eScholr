@@ -16,7 +16,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Card, Avatar, FAB, BottomSheet,
-  Skeleton, EmptyState, ErrorState,
+  Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -168,19 +168,11 @@ export default function AssignmentsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <ThemedText variant="h4">Assignments</ThemedText>
-          {data?.semester && (
-            <ThemedText variant="caption" color="muted">{data.semester.name}</ThemedText>
-          )}
-        </View>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader
+        title="Assignments"
+        subtitle={data?.semester?.name}
+        showBack
+      />
 
       {/* Tab bar */}
       <View style={[styles.tabBar, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>

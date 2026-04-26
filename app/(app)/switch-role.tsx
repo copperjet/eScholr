@@ -11,23 +11,23 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../lib/theme';
 import { useAuthStore } from '../../stores/authStore';
-import { ThemedText } from '../../components/ui';
+import { ThemedText, ScreenHeader } from '../../components/ui';
 import { Spacing, Radius } from '../../constants/Typography';
 import { Colors } from '../../constants/Colors';
 import { haptics } from '../../lib/haptics';
 import type { UserRole } from '../../types/database';
 
-const ROLE_META: Record<UserRole, { label: string; icon: string; color: string; description: string }> = {
-  hrt:        { label: 'Class Teacher (HRT)', icon: 'people',          color: '#1B2A4A', description: 'Attendance, marks, CREED, day book, reports' },
-  st:         { label: 'Subject Teacher',     icon: 'book',            color: '#7C3AED', description: 'Subject assignments and marks entry' },
-  admin:      { label: 'Administrator',       icon: 'shield',          color: '#1D4ED8', description: 'School-wide management and approvals' },
-  super_admin:{ label: 'Super Admin',         icon: 'shield-checkmark',color: '#1D4ED8', description: 'Full system access across all schools' },
-  principal:  { label: 'Principal',          icon: 'ribbon',          color: '#1D4ED8', description: 'School leadership and oversight' },
-  coordinator:{ label: 'Coordinator',        icon: 'git-merge',       color: '#1D4ED8', description: 'Academic coordination and scheduling' },
-  hod:        { label: 'Head of Department', icon: 'layers',          color: '#1D4ED8', description: 'Departmental marks and staff oversight' },
-  finance:    { label: 'Finance',            icon: 'card',            color: '#059669', description: 'Fee clearance and financial reports' },
-  front_desk: { label: 'Front Desk',         icon: 'headset',         color: '#D97706', description: 'Admission inquiries and visitor management' },
-  parent:     { label: 'Parent',            icon: 'heart',           color: '#DB2777', description: "Your children's progress and reports" },
+const ROLE_META: Record<UserRole, { label: string; icon: string; description: string }> = {
+  hrt:        { label: 'Class Teacher (HRT)', icon: 'people',          description: 'Attendance, marks, CREED, day book, reports' },
+  st:         { label: 'Subject Teacher',     icon: 'book',            description: 'Subject assignments and marks entry' },
+  admin:      { label: 'Administrator',       icon: 'shield',          description: 'School-wide management and approvals' },
+  super_admin:{ label: 'Super Admin',         icon: 'shield-checkmark',description: 'Full system access across all schools' },
+  principal:  { label: 'Principal',          icon: 'ribbon',          description: 'School leadership and oversight' },
+  coordinator:{ label: 'Coordinator',        icon: 'git-merge',       description: 'Academic coordination and scheduling' },
+  hod:        { label: 'Head of Department', icon: 'layers',          description: 'Departmental marks and staff oversight' },
+  finance:    { label: 'Finance',            icon: 'card',            description: 'Fee clearance and financial reports' },
+  front_desk: { label: 'Front Desk',         icon: 'headset',         description: 'Admission inquiries and visitor management' },
+  parent:     { label: 'Parent',            icon: 'heart',           description: "Your children's progress and reports" },
 };
 
 export default function SwitchRoleScreen() {
@@ -49,14 +49,7 @@ export default function SwitchRoleScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="close" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <ThemedText variant="h4">Switch Role</ThemedText>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader title="Switch Role" showBack />
 
       <View style={styles.content}>
         <ThemedText variant="body" color="muted" style={{ marginBottom: Spacing.lg }}>
@@ -64,7 +57,7 @@ export default function SwitchRoleScreen() {
         </ThemedText>
 
         {roles.map((role) => {
-          const meta = ROLE_META[role] ?? { label: role, icon: 'person', color: colors.brand.primary, description: '' };
+          const meta = ROLE_META[role] ?? { label: role, icon: 'person', description: '' };
           const isActive = role === activeRole;
           return (
             <TouchableOpacity
@@ -74,23 +67,23 @@ export default function SwitchRoleScreen() {
               style={[
                 styles.roleCard,
                 {
-                  backgroundColor: isActive ? meta.color + '12' : colors.surface,
-                  borderColor: isActive ? meta.color : colors.border,
+                  backgroundColor: isActive ? colors.brand.primarySoft : colors.surface,
+                  borderColor: isActive ? colors.brand.primary : colors.border,
                   borderWidth: isActive ? 2 : StyleSheet.hairlineWidth,
                 },
               ]}
             >
-              <View style={[styles.roleIcon, { backgroundColor: meta.color + '18' }]}>
-                <Ionicons name={meta.icon as any} size={24} color={meta.color} />
+              <View style={[styles.roleIcon, { backgroundColor: colors.brand.primarySoft }]}>
+                <Ionicons name={meta.icon as any} size={24} color={colors.brand.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <ThemedText variant="body" style={{ fontWeight: '700', color: isActive ? meta.color : colors.textPrimary }}>
+                <ThemedText variant="body" style={{ fontWeight: '700', color: isActive ? colors.brand.primary : colors.textPrimary }}>
                   {meta.label}
                 </ThemedText>
                 <ThemedText variant="caption" color="muted">{meta.description}</ThemedText>
               </View>
               {isActive ? (
-                <View style={[styles.activeDot, { backgroundColor: meta.color }]}>
+                <View style={[styles.activeDot, { backgroundColor: colors.brand.primary }]}>
                   <Ionicons name="checkmark" size={14} color="#fff" />
                 </View>
               ) : (
@@ -106,14 +99,6 @@ export default function SwitchRoleScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
   content: {
     flex: 1,
     padding: Spacing.base,

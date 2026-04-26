@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, View, StyleSheet, ViewStyle } from 'react-native';
+import { Pressable, View, StyleSheet, ViewStyle } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { useTheme } from '../../lib/theme';
 import { Shadow, Radius, Spacing } from '../../constants/Typography';
@@ -18,35 +18,26 @@ export function FAB({ icon, label, onPress, style, color, disabled }: FABProps) 
   const { colors } = useTheme();
   const bg = color ?? colors.brand.primary;
 
-  const handlePress = () => {
-    if (disabled) return;
-    haptics.medium();
-    onPress();
-  };
-
   return (
-    <TouchableOpacity
-      activeOpacity={disabled ? 1 : 0.85}
-      onPress={handlePress}
+    <Pressable
+      onPress={() => { if (!disabled) { haptics.medium(); onPress(); } }}
       disabled={disabled}
-      style={[
+      style={({ pressed }) => [
         styles.fab,
-        { backgroundColor: bg, opacity: disabled ? 0.55 : 1 },
+        { backgroundColor: bg, opacity: disabled ? 0.5 : 1 },
         Shadow.lg,
         label ? styles.extended : styles.round,
+        { transform: [{ scale: pressed && !disabled ? 0.95 : 1 }] },
         style,
       ]}
     >
       {icon}
       {label && (
-        <ThemedText
-          variant="body"
-          style={{ color: '#fff', fontWeight: '600', marginLeft: Spacing.sm }}
-        >
+        <ThemedText style={{ color: '#fff', fontWeight: '600', fontSize: 15, marginLeft: Spacing.sm }}>
           {label}
         </ThemedText>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -61,9 +52,9 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   round: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
   },
   extended: {
     height: 52,

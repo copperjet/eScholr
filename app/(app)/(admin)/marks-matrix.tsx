@@ -18,7 +18,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, BottomSheet, Skeleton, EmptyState, ErrorState,
+  ThemedText, BottomSheet, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -209,19 +209,11 @@ export default function MarksMatrixScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <ThemedText variant="h4">Marks Matrix</ThemedText>
-          <ThemedText variant="caption" color="muted">
-            {data?.semesterName ?? '—'} · {completedCells}/{totalCells} complete
-          </ThemedText>
-        </View>
-        <View style={{ width: 36 }} />
-      </View>
+      <ScreenHeader
+        title="Marks Matrix"
+        subtitle={`${data?.semesterName ?? '—'} · ${completedCells}/${totalCells} complete`}
+        showBack
+      />
 
       {isLoading ? (
         <View style={styles.skeletonWrap}>
