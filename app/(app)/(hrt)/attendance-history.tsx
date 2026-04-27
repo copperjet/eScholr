@@ -41,7 +41,7 @@ function useAttendanceHistory(staffId: string | null, schoolId: string) {
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
       // Get HRT assignment
-      const { data: assignment } = await supabase
+      const { data: assignment } = await (supabase as any)
         .from('hrt_assignments')
         .select('stream_id, semester_id, streams ( name )')
         .eq('school_id', schoolId)
@@ -55,7 +55,7 @@ function useAttendanceHistory(staffId: string | null, schoolId: string) {
       const streamName = (assignment as any).streams?.name ?? '';
       const fromDate = format(subDays(new Date(), LOOKBACK_DAYS), 'yyyy-MM-dd');
 
-      const { data: records } = await supabase
+      const { data: records } = await (supabase as any)
         .from('attendance_records')
         .select('date, status, submitted_by, register_locked')
         .eq('school_id', schoolId)

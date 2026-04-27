@@ -22,4 +22,9 @@ export { Chip, FilterChipRow } from './Chip';
 export { TabBar } from './TabBar';
 export { FormField } from './FormField';
 export { AppTabBar } from './AppTabBar';
+export { FastList, type FastListProps } from './FastList';
 export { BiometricEnrollModal } from './BiometricEnrollModal';
+// Motion primitives
+export { PressableScale } from './PressableScale';
+export { AnimatedNumber } from './AnimatedNumber';
+export { FadeIn } from './FadeIn';

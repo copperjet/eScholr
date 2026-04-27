@@ -39,7 +39,7 @@ export default function SchoolCodeScreen() {
     if (!trimmed) { setError('Enter your school code'); shake(); return; }
     setLoading(true);
     setError('');
-    const { data, error: err } = await supabase.from('schools').select('*').eq('code', trimmed).in('subscription_status', ['active', 'trial']).single();
+    const { data, error: err } = await (supabase as any).from('schools').select('*').eq('code', trimmed).in('subscription_status', ['active', 'trial']).single();
     setLoading(false);
     if (err || !data) { setError('School not found. Check your code and try again.'); shake(); return; }
     const school = data as any;
@@ -95,7 +95,7 @@ export default function SchoolCodeScreen() {
               <TextInput
                 value={code}
                 onChangeText={t => { setCode(t); setError(''); }}
-                placeholder="e.g. CIS_DEMO"
+                placeholder="e.g. ESCHOLR"
                 placeholderTextColor={colors.textMuted}
                 autoCapitalize="characters"
                 autoCorrect={false}
@@ -115,12 +115,14 @@ export default function SchoolCodeScreen() {
             <Button label="Continue" onPress={handleContinue} loading={loading} fullWidth size="lg" style={{ marginTop: Spacing.md }} />
           </Animated.View>
 
-          <Pressable onPress={() => router.push('/(auth)/platform-login' as any)} style={styles.platformLink}>
-            <Ionicons name="shield-outline" size={13} color={colors.textMuted} />
-            <ThemedText variant="caption" color="muted" style={{ marginLeft: 4 }}>
-              eScholr Admin Access
-            </ThemedText>
-          </Pressable>
+          {/* Hidden platform-admin tap target — visually invisible at the very
+              bottom of the screen. Anyone who knows where it is can tap it. */}
+          <Pressable
+            onPress={() => router.push('/(auth)/platform-login' as any)}
+            style={styles.hiddenPlatformLink}
+            hitSlop={12}
+            accessibilityLabel="eScholr admin access"
+          />
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -156,11 +158,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
   },
   errorRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  platformLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing['2xl'],
-    paddingVertical: Spacing.sm,
+  hiddenPlatformLink: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 32,
   },
 });

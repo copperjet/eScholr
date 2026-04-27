@@ -11,63 +11,53 @@ import {
   ThemedText, Card, Avatar, Badge, ProgressBar,
   ListItemSkeleton, ErrorState, SectionHeader, StatCard, IconChip,
 } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors, resolveAttBg, resolveAttColor } from '../../../constants/Colors';
 
 const TODAY      = format(new Date(), 'yyyy-MM-dd');
 const TODAY_LABEL = format(new Date(), 'EEEE, d MMM');
 
+/**
+ * Single RPC `get_hrt_dashboard` replaces the old 5-query waterfall.
+ * Server returns one JSONB payload — no more sequential round-trips.
+ */
 function useHRTDashboard(staffId: string | null, schoolId: string) {
   return useQuery({
     queryKey: ['hrt-dashboard', staffId, schoolId, TODAY],
     enabled: !!staffId && !!schoolId,
     staleTime: 1000 * 60 * 2,
     queryFn: async () => {
-      const { data: assignment, error: assignErr } = await supabase
-        .from('hrt_assignments')
-        .select('stream_id, semester_id, streams(name, grade_id, grades(name, section_id, school_sections(name))), semesters(name, end_date)')
-        .eq('staff_id', staffId!)
-        .eq('school_id', schoolId)
-        .limit(1)
-        .single();
+      const { data, error } = await (supabase.rpc as any)('get_hrt_dashboard', {
+        p_staff_id:  staffId!,
+        p_school_id: schoolId,
+      });
+      if (error) throw error;
+      const payload = (data ?? {}) as any;
+      if (!payload.assignment) throw new Error('No HRT assignment found');
 
-      if (assignErr || !assignment) throw new Error('No HRT assignment found');
-
-      const a = assignment as any;
-      const streamId   = a.stream_id;
-      const semesterId = a.semester_id;
-
-      const [attendanceRes, studentsRes, marksRes, subjectAssignRes, dayBookRes] = await Promise.all([
-        supabase.from('attendance_records').select('status, student_id')
-          .eq('school_id', schoolId).eq('stream_id', streamId).eq('date', TODAY),
-        supabase.from('students').select('id', { count: 'exact', head: true })
-          .eq('school_id', schoolId).eq('stream_id', streamId).eq('status', 'active'),
-        supabase.from('marks').select('student_id', { count: 'exact', head: true })
-          .eq('school_id', schoolId).eq('stream_id', streamId).eq('semester_id', semesterId).eq('assessment_type', 'fa1'),
-        supabase.from('subject_teacher_assignments').select('subjects(name)')
-          .eq('school_id', schoolId).eq('stream_id', streamId).limit(1).single(),
-        supabase.from('day_book_entries')
-          .select('id, student_id, category, description, date, students(full_name, photo_url)')
-          .eq('school_id', schoolId).eq('created_by', staffId!)
-          .order('date', { ascending: false }).limit(3),
-      ]);
-
-      const attendance      = (attendanceRes.data ?? []) as any[];
-      const totalStudents   = studentsRes.count ?? 0;
-      const marksEntered    = marksRes.count ?? 0;
-      const firstSubjectName = (subjectAssignRes.data as any)?.subjects?.name ?? 'FA1';
-      const semesterEndDate  = a.semesters?.end_date ?? null;
-      const dayBook          = dayBookRes.data ?? [];
-
-      const presentCount      = attendance.filter(r => r.status === 'present').length;
-      const absentCount       = attendance.filter(r => r.status === 'absent').length;
-      const lateCount         = attendance.filter(r => r.status === 'late').length;
-      const registerSubmitted = attendance.length > 0;
-
+      // Reshape to keep the screen's existing rendering contract.
       return {
-        assignment,
-        attendance: { presentCount, absentCount, lateCount, totalMarked: attendance.length, registerSubmitted },
-        marksEntered, totalStudents, firstSubjectName, semesterEndDate, dayBook,
+        assignment: {
+          stream_id:   payload.assignment.streamId,
+          semester_id: payload.assignment.semesterId,
+          streams: {
+            name: payload.assignment.streamName,
+            grades: {
+              name: payload.assignment.gradeName,
+              school_sections: { name: payload.assignment.sectionName },
+            },
+          },
+          semesters: {
+            name:     payload.assignment.semesterName,
+            end_date: payload.assignment.semesterEnd,
+          },
+        },
+        attendance:        payload.attendance,
+        marksEntered:      payload.marksEntered ?? 0,
+        totalStudents:     payload.totalStudents ?? 0,
+        firstSubjectName:  payload.firstSubjectName ?? 'FA1',
+        semesterEndDate:   payload.assignment.semesterEnd,
+        dayBook:           payload.dayBook ?? [],
       };
     },
   });
@@ -291,7 +281,7 @@ function DayBookRow({ entry }: { entry: any }) {
 
 const styles = StyleSheet.create({
   safe:   { flex: 1 },
-  scroll: { paddingBottom: Spacing['2xl'] },
+  scroll: { paddingBottom: TAB_BAR_HEIGHT },
   topBar: {
     flexDirection: 'row',
     alignItems: 'flex-start',

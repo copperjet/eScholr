@@ -11,7 +11,7 @@ import {
   ThemedText, Avatar, ProgressBar, CardSkeleton,
   EmptyState, ErrorState, SectionHeader, Card, IconChip,
 } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 
 const TODAY = format(new Date(), 'EEEE, d MMM');
@@ -22,7 +22,7 @@ function useSTDashboard(staffId: string | null, schoolId: string) {
     enabled: !!staffId && !!schoolId,
     staleTime: 1000 * 60 * 3,
     queryFn: async () => {
-      const { data: assignments, error } = await supabase
+      const { data: assignments, error } = await (supabase as any)
         .from('subject_teacher_assignments')
         .select('id, subject_id, stream_id, semester_id, subjects (name, department), streams (name, grades (name, school_sections (section_type))), semesters (name, is_active)')
         .eq('staff_id', staffId!).eq('school_id', schoolId);
@@ -31,9 +31,9 @@ function useSTDashboard(staffId: string | null, schoolId: string) {
       const progress = await Promise.all(active.map(async (a: any) => {
         const sectionType = a.streams?.grades?.school_sections?.section_type ?? 'primary';
         const [studentsRes, marksRes] = await Promise.all([
-          supabase.from('students').select('id', { count: 'exact', head: true })
+          (supabase as any).from('students').select('id', { count: 'exact', head: true })
             .eq('school_id', schoolId).eq('stream_id', a.stream_id).eq('status', 'active'),
-          supabase.from('marks').select('id', { count: 'exact', head: true })
+          (supabase as any).from('marks').select('id', { count: 'exact', head: true })
             .eq('school_id', schoolId).eq('subject_id', a.subject_id)
             .eq('stream_id', a.stream_id).eq('semester_id', a.semester_id),
         ]);
@@ -164,7 +164,7 @@ export default function STHome() {
           </View>
         )}
 
-        <View style={{ height: Spacing['2xl'] }} />
+        <View style={{ height: TAB_BAR_HEIGHT }} />
       </ScrollView>
     </SafeAreaView>
   );

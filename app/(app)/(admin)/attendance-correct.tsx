@@ -90,7 +90,7 @@ export default function AttendanceCorrectScreen() {
       saveError = error;
     } else {
       // No record yet — admin is entering on behalf of absent HRT
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('attendance_records')
         .insert({
           school_id:       user?.schoolId,
@@ -116,7 +116,7 @@ export default function AttendanceCorrectScreen() {
     }
 
     // Audit log — non-negotiable
-    await supabase.from('audit_logs').insert({
+    await (supabase as any).from('audit_logs').insert({
       school_id:  user?.schoolId,
       event_type: 'attendance_corrected',
       actor_id:   user?.staffId,

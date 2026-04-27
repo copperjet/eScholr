@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { ThemedText, ErrorState, ListItemSkeleton } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { useImpersonationLog } from '../../../hooks/usePlatform';
 
 export default function ImpersonationLog() {
@@ -69,7 +69,7 @@ export default function ImpersonationLog() {
       </View>
 
       {/* Info banner */}
-      <View style={[styles.infoBanner, { backgroundColor: '#0F172A' }]}>
+      <View style={[styles.infoBanner, { backgroundColor: colors.brand.primaryDark }]}>
         <Ionicons name="shield-checkmark" size={14} color="rgba(255,255,255,0.8)" />
         <ThemedText style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginLeft: 6, flex: 1 }}>
           All impersonation sessions are permanently logged. Last 200 entries shown.
@@ -79,7 +79,7 @@ export default function ImpersonationLog() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} tintColor={colors.brand.primary} />}
-        contentContainerStyle={{ paddingHorizontal: Spacing.screen, paddingBottom: 80, gap: Spacing.sm, paddingTop: Spacing.base }}
+        contentContainerStyle={{ paddingHorizontal: Spacing.screen, paddingBottom: TAB_BAR_HEIGHT, gap: Spacing.sm, paddingTop: Spacing.base }}
       >
         {isLoading ? (
           [0, 1, 2, 3, 4].map((i) => <ListItemSkeleton key={i} />)

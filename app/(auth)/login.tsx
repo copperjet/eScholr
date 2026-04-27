@@ -46,7 +46,17 @@ export default function LoginScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const meta = session.user.app_metadata as any;
-        setUser({ id: session.user.id, email: session.user.email ?? '', fullName: session.user.user_metadata?.full_name ?? '', staffId: meta?.staff_id ?? null, parentId: meta?.parent_id ?? null, studentId: meta?.student_id ?? null, roles: meta?.roles ?? [], activeRole: meta?.active_role ?? 'hrt', schoolId: meta?.school_id ?? '' });
+        // Fetch staff department for HOD scoping
+        let department: string | null = null;
+        if (meta?.staff_id) {
+          const { data: staff } = await (supabase as any)
+            .from('staff')
+            .select('department')
+            .eq('id', meta.staff_id)
+            .single();
+          department = staff?.department ?? null;
+        }
+        setUser({ id: session.user.id, email: session.user.email ?? '', fullName: session.user.user_metadata?.full_name ?? '', staffId: meta?.staff_id ?? null, parentId: meta?.parent_id ?? null, studentId: meta?.student_id ?? null, department, roles: meta?.roles ?? [], activeRole: meta?.active_role ?? 'hrt', schoolId: meta?.school_id ?? '' });
         haptics.success();
         router.replace('/');
       } else {
@@ -67,7 +77,17 @@ export default function LoginScreen() {
       return;
     }
     const meta = data.session.user.app_metadata as any;
-    setUser({ id: data.session.user.id, email: data.session.user.email ?? '', fullName: data.session.user.user_metadata?.full_name ?? '', staffId: meta?.staff_id ?? null, parentId: meta?.parent_id ?? null, studentId: meta?.student_id ?? null, roles: meta?.roles ?? [], activeRole: meta?.active_role ?? 'hrt', schoolId: meta?.school_id ?? '' });
+    // Fetch staff department for HOD scoping
+    let department: string | null = null;
+    if (meta?.staff_id) {
+      const { data: staff } = await (supabase as any)
+        .from('staff')
+        .select('department')
+        .eq('id', meta.staff_id)
+        .single();
+      department = staff?.department ?? null;
+    }
+    setUser({ id: data.session.user.id, email: data.session.user.email ?? '', fullName: data.session.user.user_metadata?.full_name ?? '', staffId: meta?.staff_id ?? null, parentId: meta?.parent_id ?? null, studentId: meta?.student_id ?? null, department, roles: meta?.roles ?? [], activeRole: meta?.active_role ?? 'hrt', schoolId: meta?.school_id ?? '' });
     haptics.success();
     router.replace('/');
   };

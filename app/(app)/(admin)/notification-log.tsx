@@ -7,7 +7,6 @@ import {
   View,
   StyleSheet,
   SafeAreaView,
-  FlatList,
   TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -18,7 +17,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, SearchBar, Skeleton, EmptyState, ErrorState, ScreenHeader,
+  ThemedText, SearchBar, Skeleton, EmptyState, ErrorState, ScreenHeader, FastList,
 } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -155,7 +154,7 @@ export default function NotificationLogScreen() {
       ) : logs.length === 0 ? (
         <EmptyState title="No notifications" description="No notifications have been sent yet." icon="notifications-outline" />
       ) : (
-        <FlatList
+        <FastList
           data={logs}
           keyExtractor={(n) => n.id}
           contentContainerStyle={styles.list}

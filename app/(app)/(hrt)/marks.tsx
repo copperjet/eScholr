@@ -95,7 +95,7 @@ function useAssignments(staffId: string | null, schoolId: string) {
     queryKey: ['hrt-marks-assignments', staffId, schoolId],
     enabled: !!staffId && !!schoolId,
     queryFn: async () => {
-      const { data: hrtAssignment } = await supabase
+      const { data: hrtAssignment } = await (supabase as any)
         .from('hrt_assignments')
         .select('stream_id, semester_id')
         .eq('staff_id', staffId!)
@@ -105,7 +105,7 @@ function useAssignments(staffId: string | null, schoolId: string) {
       if (!hrtAssignment) return [] as Assignment[];
       const { stream_id, semester_id } = hrtAssignment as any;
 
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('subject_teacher_assignments')
         .select('subject_id, stream_id, semester_id, subjects(name), streams(name, grades(name))')
         .eq('stream_id', stream_id)
@@ -160,7 +160,7 @@ export default function MarksScreen() {
       const prevEntry = getStoredEntry(studentId);
       const prevValue = prevEntry?.value ?? null;
 
-      const { data: upserted, error } = await supabase
+      const { data: upserted, error } = await (supabase as any)
         .from('marks')
         .upsert({
           school_id: user?.schoolId,
@@ -178,7 +178,7 @@ export default function MarksScreen() {
       if (error) throw error;
 
       // Audit log — edit vs first entry
-      supabase.from('audit_logs').insert({
+      (supabase as any).from('audit_logs').insert({
         school_id: user?.schoolId,
         event_type: prevValue === null ? 'mark_entered' : 'mark_edited',
         actor_id: user?.staffId,
@@ -201,7 +201,7 @@ export default function MarksScreen() {
         if (others.length >= 3) {
           const avg = others.reduce((a, b) => a + b, 0) / others.length;
           if (Math.abs(value - avg) >= 25) {
-            supabase.from('mark_notes').insert({
+            (supabase as any).from('mark_notes').insert({
               school_id: user?.schoolId,
               mark_id: (upserted as any)?.id,
               note_type: 'deviation_warning',

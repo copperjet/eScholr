@@ -13,7 +13,7 @@ import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Button, ErrorState, StatCard, SectionHeader, ListItemSkeleton,
 } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 import {
@@ -83,7 +83,7 @@ function InfoTab({ school, colors, refetch, isFetching }: { school: any; colors:
   };
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}
       refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.brand.primary} />}
     >
       <View style={styles.statRow}>
@@ -207,7 +207,7 @@ function UsageTab({ school, colors, refetch, isFetching }: { school: any; colors
   ];
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}
       refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.brand.primary} />}
     >
       {/* Usage stats */}
@@ -254,7 +254,7 @@ function UsageTab({ school, colors, refetch, isFetching }: { school: any; colors
         <TouchableOpacity
           onPress={handleImpersonatePress}
           disabled={impersonate.isPending}
-          style={[styles.impersonateBtn, { backgroundColor: impersonate.isPending ? colors.border : '#1E40AF' }]}
+          style={[styles.impersonateBtn, { backgroundColor: impersonate.isPending ? colors.border : colors.brand.primary }]}
         >
           {impersonate.isPending
             ? <ActivityIndicator size="small" color="#fff" />
@@ -324,7 +324,7 @@ function NotesTab({ school, colors }: { school: any; colors: any }) {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}>
         {/* Compose */}
         <SectionHeader title="Add Note" />
         <View style={{ paddingHorizontal: Spacing.screen, gap: Spacing.sm }}>

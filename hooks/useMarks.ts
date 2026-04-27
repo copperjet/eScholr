@@ -89,7 +89,7 @@ export function useGradingScale(schoolId: string) {
     staleTime: Infinity,
     gcTime: Infinity,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('grading_scales')
         .select('grade_label, min_percentage, max_percentage')
         .eq('school_id', schoolId)
@@ -108,7 +108,7 @@ export function useMarksProgress(staffId: string | null, schoolId: string) {
     enabled: !!staffId && !!schoolId,
     staleTime: 1000 * 60,
     queryFn: async () => {
-      const { data: assignments, error } = await supabase
+      const { data: assignments, error } = await (supabase as any)
         .from('subject_teacher_assignments')
         .select(`
           id, subject_id, stream_id, semester_id,
@@ -126,7 +126,7 @@ export function useMarksProgress(staffId: string | null, schoolId: string) {
 
       // Student counts per stream
       const streamIds = [...new Set(asgns.map((a: any) => a.stream_id))];
-      const { data: students } = await supabase
+      const { data: students } = await (supabase as any)
         .from('students')
         .select('id, stream_id')
         .eq('school_id', schoolId)
@@ -141,7 +141,7 @@ export function useMarksProgress(staffId: string | null, schoolId: string) {
       // Entered marks counts per assignment
       const semesterIds = [...new Set(asgns.map((a: any) => a.semester_id))];
       const subjectIds  = [...new Set(asgns.map((a: any) => a.subject_id))];
-      const { data: marks } = await supabase
+      const { data: marks } = await (supabase as any)
         .from('marks')
         .select('student_id, subject_id, stream_id, semester_id, assessment_type, value')
         .eq('school_id', schoolId)
@@ -318,7 +318,7 @@ export function useMarksMatrix(schoolId: string, semesterId: string | undefined)
 
 // ── Save mark mutation ────────────────────────────────────────
 
-export function useUpdateMark(schoolId: string) {
+export function useUpdateMark(schoolId: string, assignmentId?: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (params: {
@@ -334,7 +334,7 @@ export function useUpdateMark(schoolId: string) {
     }) => {
       const { studentId, subjectId, streamId, semesterId, assessmentType, value, enteredBy, oldValue, markId } = params;
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('marks')
         .upsert(
           {
@@ -359,7 +359,7 @@ export function useUpdateMark(schoolId: string) {
       // Audit log (fire-and-forget)
       const savedMarkId = (data as any)?.id ?? markId;
       if (savedMarkId && (oldValue !== undefined)) {
-        supabase.from('mark_audit_logs').insert({
+        (supabase as any).from('mark_audit_logs').insert({
           school_id:  schoolId,
           mark_id:    savedMarkId,
           student_id: studentId,
@@ -372,9 +372,48 @@ export function useUpdateMark(schoolId: string) {
 
       return data;
     },
-    onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ['marks-entry', undefined, schoolId] });
+    // ── Optimistic update — UI reflects new value instantly ──
+    onMutate: async (params) => {
+      if (!assignmentId) return { previous: undefined };
+      const key = ['marks-entry', assignmentId, schoolId];
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<{ students: StudentMarkRow[]; detail: AssignmentDetail | null }>(key);
+      if (previous) {
+        qc.setQueryData(key, {
+          ...previous,
+          students: previous.students.map((s) =>
+            s.id !== params.studentId
+              ? s
+              : {
+                  ...s,
+                  [params.assessmentType]: {
+                    ...(s as any)[params.assessmentType],
+                    id: (s as any)[params.assessmentType]?.id ?? `optimistic-${Date.now()}`,
+                    student_id: params.studentId,
+                    subject_id: params.subjectId,
+                    assessment_type: params.assessmentType,
+                    value: params.value,
+                    is_excused: false,
+                    excused_reason: null,
+                    is_locked: false,
+                  } as MarkRecord,
+                },
+          ),
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, ctx: any) => {
+      if (ctx?.previous && assignmentId) {
+        qc.setQueryData(['marks-entry', assignmentId, schoolId], ctx.previous);
+      }
+    },
+    onSettled: () => {
+      if (assignmentId) {
+        qc.invalidateQueries({ queryKey: ['marks-entry', assignmentId, schoolId] });
+      }
       qc.invalidateQueries({ queryKey: ['marks-progress'] });
+      qc.invalidateQueries({ queryKey: ['marks-matrix'] });
     },
   });
 }
@@ -397,7 +436,7 @@ export function useExcuseMark(schoolId: string) {
       // Upsert for all assessment types
       const types = ['fa1', 'fa2', 'summative'];
       for (const assessmentType of types) {
-        await supabase.from('marks').upsert(
+        await (supabase as any).from('marks').upsert(
           {
             school_id:       schoolId,
             student_id:      studentId,
@@ -453,7 +492,7 @@ export function useMarkUnlock(schoolId: string) {
       }
 
       // Audit log
-      supabase.from('audit_logs').insert({
+      (supabase as any).from('audit_logs').insert({
         school_id:  schoolId,
         event_type: 'mark_unlocked',
         actor_id:   params.adminId,

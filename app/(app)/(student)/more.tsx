@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { ThemedText, Avatar } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -65,10 +65,13 @@ export default function StudentMore() {
           icon: 'person-outline',
           label: 'My Profile',
           sublabel: user?.email ?? undefined,
-          onPress: () => Alert.alert(user?.fullName ?? 'My Profile', `Email: ${user?.email ?? '—'}`, [{ text: 'Close', style: 'cancel' }]),
+          onPress: () => Alert.alert(user?.fullName ?? 'My Profile', `Role: Student\nSchool: ${school?.name ?? '—'}\nEmail: ${user?.email ?? '—'}`, [{ text: 'Close', style: 'cancel' }]),
         },
+        ...((user?.roles ?? []).length > 1
+          ? [{ icon: 'swap-horizontal-outline' as IoniconsName, label: 'Switch Role', sublabel: `Active: ${user?.activeRole ?? ''}`, onPress: () => router.push('/(app)/switch-role' as any) }]
+          : []),
         {
-          icon: 'log-out-outline',
+          icon: 'log-out-outline' as IoniconsName,
           label: 'Sign Out',
           danger: true,
           onPress: () => Alert.alert('Sign Out', 'Are you sure?', [
@@ -83,7 +86,7 @@ export default function StudentMore() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.brand.primary }}>
       <StatusBar barStyle="light-content" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}>
         <SafeAreaView edges={['top']} style={{ backgroundColor: colors.brand.primary }}>
           <View style={styles.hero}>
             <View style={styles.heroAvatarRow}>

@@ -18,7 +18,7 @@ import {
   ThemedText, Card, Avatar, FAB, BottomSheet,
   Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -33,12 +33,12 @@ function useAssignmentData(schoolId: string) {
     staleTime: 1000 * 60 * 2,
     queryFn: async () => {
       const [semRes, staffRes, streamRes, subjectRes, hrtRes, staRes] = await Promise.all([
-        supabase.from('semesters').select('id, name').eq('school_id', schoolId).eq('is_active', true).single(),
-        supabase.from('staff').select('id, full_name, staff_number').eq('school_id', schoolId).eq('status', 'active').order('full_name'),
-        supabase.from('streams').select('id, name, grades(name, school_sections(name))').eq('school_id', schoolId).order('name'),
-        supabase.from('subjects').select('id, name, department').eq('school_id', schoolId).order('name'),
-        supabase.from('hrt_assignments').select('id, staff_id, co_hrt_staff_id, stream_id').eq('school_id', schoolId),
-        supabase.from('subject_teacher_assignments').select('id, staff_id, subject_id, stream_id').eq('school_id', schoolId),
+        (supabase as any).from('semesters').select('id, name').eq('school_id', schoolId).eq('is_active', true).single(),
+        (supabase as any).from('staff').select('id, full_name, staff_number').eq('school_id', schoolId).eq('status', 'active').order('full_name'),
+        (supabase as any).from('streams').select('id, name, grades(name, school_sections(name))').eq('school_id', schoolId).order('name'),
+        (supabase as any).from('subjects').select('id, name, department').eq('school_id', schoolId).order('name'),
+        (supabase as any).from('hrt_assignments').select('id, staff_id, co_hrt_staff_id, stream_id').eq('school_id', schoolId),
+        (supabase as any).from('subject_teacher_assignments').select('id, staff_id, subject_id, stream_id').eq('school_id', schoolId),
       ]);
       if (semRes.error) throw semRes.error;
       return {
@@ -89,7 +89,7 @@ export default function AssignmentsScreen() {
         semester_id: data.semester.id,
       };
       if (coHrtStaffId) payload.co_hrt_staff_id = coHrtStaffId;
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('hrt_assignments')
         .upsert(payload, { onConflict: 'staff_id,stream_id,semester_id' });
       if (error) throw new Error(error.message);
@@ -106,7 +106,7 @@ export default function AssignmentsScreen() {
   const assignST = useMutation({
     mutationFn: async () => {
       if (!stStaffId || !stSubjectId || !stStreamId || !data?.semester?.id) throw new Error('All fields required');
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('subject_teacher_assignments')
         .upsert({
           school_id: schoolId,
@@ -128,7 +128,7 @@ export default function AssignmentsScreen() {
 
   const removeHRT = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('hrt_assignments').delete().eq('id', id).eq('school_id', schoolId);
+      const { error } = await (supabase as any).from('hrt_assignments').delete().eq('id', id).eq('school_id', schoolId);
       if (error) throw error;
     },
     onSuccess: () => { haptics.success(); queryClient.invalidateQueries({ queryKey: ['admin-assignments'] }); },
@@ -137,7 +137,7 @@ export default function AssignmentsScreen() {
 
   const removeSTA = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('subject_teacher_assignments').delete().eq('id', id).eq('school_id', schoolId);
+      const { error } = await (supabase as any).from('subject_teacher_assignments').delete().eq('id', id).eq('school_id', schoolId);
       if (error) throw error;
     },
     onSuccess: () => { haptics.success(); queryClient.invalidateQueries({ queryKey: ['admin-assignments'] }); },
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1, paddingVertical: Spacing.md, alignItems: 'center',
   },
-  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: 120 },
+  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT },
   assignRow: {
     flexDirection: 'row', alignItems: 'center', padding: Spacing.base,
     marginBottom: Spacing.sm, borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, gap: Spacing.md,

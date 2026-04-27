@@ -26,7 +26,7 @@ import {
   useActivateSemester,
   type Semester,
 } from '../../../hooks/useAdmin';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: Spacing.sm,
   },
-  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.md, paddingBottom: 100 },
+  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.md, paddingBottom: TAB_BAR_HEIGHT },
   semRow: {
     flexDirection: 'row',
     alignItems: 'center',

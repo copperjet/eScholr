@@ -60,6 +60,7 @@ export default function HRLayout() {
       {/* Hidden screens */}
       <Tabs.Screen name="leave-request" options={{ href: null }} />
       <Tabs.Screen name="leave-approve" options={{ href: null }} />
+      <Tabs.Screen name="leave-balances" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -6,7 +6,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import { ThemedText, Avatar, Card, EmptyState, ErrorState, SectionHeader } from '../../../components/ui';
-import { Spacing } from '../../../constants/Typography';
+import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
 
 function useSTStudents(staffId: string | null, schoolId: string) {
@@ -16,7 +16,7 @@ function useSTStudents(staffId: string | null, schoolId: string) {
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
       // Get ST assignments to find which streams they teach
-      const { data: assignments } = await supabase
+      const { data: assignments } = await (supabase as any)
         .from('subject_teacher_assignments')
         .select('stream_id')
         .eq('staff_id', staffId!)
@@ -25,7 +25,7 @@ function useSTStudents(staffId: string | null, schoolId: string) {
       const streamIds = (assignments ?? []).map((a: any) => a.stream_id);
       if (streamIds.length === 0) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('students')
         .select('id, full_name, student_number, photo_url, streams(name, grades(name))')
         .in('stream_id', streamIds)
@@ -58,6 +58,7 @@ export default function STStudents() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand.primary} />}
       >
         <View style={styles.header}>

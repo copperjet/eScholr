@@ -23,6 +23,8 @@ export default function FrontDeskLayout() {
       <Tabs.Screen name="inquiries" options={{ title: 'Inquiries', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'} size={22} color={color} /> }} />
       <Tabs.Screen name="more"      options={{ title: 'More',      tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} /> }} />
       <Tabs.Screen name="inquiry-detail" options={{ href: null }} />
+      <Tabs.Screen name="visitors"       options={{ href: null }} />
+      <Tabs.Screen name="applications"   options={{ href: null }} />
     </Tabs>
   );
 }

@@ -9,42 +9,54 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Avatar, ErrorState, StatCard, SectionHeader,
-  QuickActionCard, ListItemSkeleton, StatCardSkeleton,
+  QuickActionCard, ListItemSkeleton, StatCardSkeleton, FadeIn,
 } from '../../../components/ui';
-import { Spacing } from '../../../constants/Typography';
+import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
+import { useCanAccess } from '../../../lib/roleScope';
 
+/**
+ * Single RPC `get_admin_dashboard` replaces the old 5-query waterfall.
+ * Falls back to an empty payload while migration 036 is being deployed
+ * so the screen never crashes on missing function.
+ */
 function useAdminDashboard(schoolId: string) {
   return useQuery({
     queryKey: ['admin-dashboard', schoolId],
     enabled: !!schoolId,
     staleTime: 1000 * 60 * 3,
     queryFn: async () => {
-      const [studentsRes, staffRes, pendingReportsRes, semesterRes, attendanceTodayRes] =
-        await Promise.all([
-          supabase.from('students').select('id', { count: 'exact', head: true })
-            .eq('school_id', schoolId).eq('status', 'active'),
-          (supabase as any).from('staff').select('id', { count: 'exact', head: true })
-            .eq('school_id', schoolId).eq('status', 'active'),
-          (supabase as any).from('reports').select('id', { count: 'exact', head: true })
-            .eq('school_id', schoolId).eq('status', 'pending_approval'),
-          (supabase as any).from('semesters').select('id, name, start_date, end_date, is_active')
-            .eq('school_id', schoolId).eq('is_active', true).limit(1).maybeSingle(),
-          supabase.from('attendance_records').select('student_id, status')
-            .eq('school_id', schoolId).eq('date', format(new Date(), 'yyyy-MM-dd')),
-        ]);
-
-      const attData = (attendanceTodayRes.data ?? []) as any[];
-      const presentToday = attData.filter((a: any) => a.status === 'present').length;
-      const totalAttToday = attData.length;
-
-      return {
-        studentCount: studentsRes.count ?? 0,
-        staffCount: staffRes.count ?? 0,
-        pendingReports: pendingReportsRes.count ?? 0,
-        semester: semesterRes.data as any,
-        presentToday,
-        totalAttToday,
+      const { data, error } = await (supabase.rpc as any)('get_admin_dashboard', {
+        p_school_id: schoolId,
+      });
+      if (error) {
+        // Fallback: legacy parallel queries while 036 deploys.
+        const [studentsRes, staffRes, pendingReportsRes, semesterRes, attendanceTodayRes] =
+          await Promise.all([
+            (supabase as any).from('students').select('id', { count: 'exact', head: true })
+              .eq('school_id', schoolId).eq('status', 'active'),
+            (supabase as any).from('staff').select('id', { count: 'exact', head: true })
+              .eq('school_id', schoolId).eq('status', 'active'),
+            (supabase as any).from('reports').select('id', { count: 'exact', head: true })
+              .eq('school_id', schoolId).eq('status', 'pending_approval'),
+            (supabase as any).from('semesters').select('id, name, start_date, end_date, is_active')
+              .eq('school_id', schoolId).eq('is_active', true).limit(1).maybeSingle(),
+            (supabase as any).from('attendance_records').select('student_id, status')
+              .eq('school_id', schoolId).eq('date', format(new Date(), 'yyyy-MM-dd')),
+          ]);
+        const attData = (attendanceTodayRes.data ?? []) as any[];
+        return {
+          studentCount: studentsRes.count ?? 0,
+          staffCount: staffRes.count ?? 0,
+          pendingReports: pendingReportsRes.count ?? 0,
+          semester: semesterRes.data as any,
+          presentToday: attData.filter((a: any) => a.status === 'present').length,
+          totalAttToday: attData.length,
+        };
+      }
+      return data as {
+        studentCount: number; staffCount: number; pendingReports: number;
+        semester: any; presentToday: number; totalAttToday: number;
       };
     },
   });
@@ -54,6 +66,12 @@ export default function AdminHome() {
   const { colors } = useTheme();
   const { user, school } = useAuthStore();
   const { data, isLoading, isError, refetch, isFetching } = useAdminDashboard(user?.schoolId ?? '');
+  const canStudents = useCanAccess('students');
+  const canStaff = useCanAccess('staff');
+  const canReports = useCanAccess('reports');
+  const canAttendance = useCanAccess('attendance');
+  const canMarksMatrix = useCanAccess('marks_matrix');
+  const canDaybook = useCanAccess('daybook');
 
   const TODAY = format(new Date(), 'EEEE, d MMM');
   const attPct = data?.totalAttToday
@@ -92,7 +110,7 @@ export default function AdminHome() {
         </View>
 
         {/* ── Hero stat card ── */}
-        <View style={styles.heroPad}>
+        <FadeIn delay={40} style={styles.heroPad}>
           {isLoading ? (
             <View style={[styles.heroPlaceholder, { backgroundColor: colors.brand.primary }]}>
               <StatCardSkeleton />
@@ -112,20 +130,21 @@ export default function AdminHome() {
               style={{ marginHorizontal: Spacing.screen }}
             />
           )}
-        </View>
+        </FadeIn>
 
         {/* ── Stat grid ── */}
-        <SectionHeader title="Overview" noTopMargin />
-        {isLoading ? (
-          <View style={styles.statRow}>
-            {[0, 1, 2].map((i) => (
-              <View key={i} style={[styles.statCell, { backgroundColor: colors.surface }]}>
-                <StatCardSkeleton />
-              </View>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.statRow}>
+        <FadeIn delay={120}>
+          <SectionHeader title="Overview" noTopMargin />
+          {isLoading ? (
+            <View style={styles.statRow}>
+              {[0, 1, 2].map((i) => (
+                <View key={i} style={[styles.statCell, { backgroundColor: colors.surface }]}>
+                  <StatCardSkeleton />
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.statRow}>
             <StatCard
               label="Staff"
               value={data?.staffCount ?? 0}
@@ -150,8 +169,9 @@ export default function AdminHome() {
               iconColor={Colors.semantic.success}
               style={styles.statCell}
             />
-          </View>
-        )}
+            </View>
+          )}
+        </FadeIn>
 
         {/* ── Pending reports alert ── */}
         {!isLoading && (data?.pendingReports ?? 0) > 0 && (
@@ -175,9 +195,10 @@ export default function AdminHome() {
         )}
 
         {/* ── Quick actions — gated by role ── */}
+        <FadeIn delay={200}>
         <SectionHeader title="Quick Actions" />
         <View style={styles.qaGrid}>
-          {(['super_admin', 'admin'] as const).includes(user?.activeRole as any) && (
+          {canStudents && (
             <QuickActionCard
               title="Students"
               subtitle="Manage enrolment"
@@ -187,7 +208,7 @@ export default function AdminHome() {
               style={styles.qaCard}
             />
           )}
-          {(['super_admin', 'admin'] as const).includes(user?.activeRole as any) && (
+          {canStaff && (
             <QuickActionCard
               title="Staff"
               subtitle="Roles & access"
@@ -197,7 +218,7 @@ export default function AdminHome() {
               style={styles.qaCard}
             />
           )}
-          {(['super_admin', 'admin', 'principal', 'coordinator', 'hod'] as const).includes(user?.activeRole as any) && (
+          {canReports && (
             <QuickActionCard
               title="Reports"
               subtitle="Approve & release"
@@ -207,7 +228,7 @@ export default function AdminHome() {
               style={styles.qaCard}
             />
           )}
-          {(['super_admin', 'admin', 'principal', 'coordinator'] as const).includes(user?.activeRole as any) && (
+          {canAttendance && (
             <QuickActionCard
               title="Attendance"
               subtitle="View overview"
@@ -217,7 +238,7 @@ export default function AdminHome() {
               style={styles.qaCard}
             />
           )}
-          {(['super_admin', 'admin', 'principal', 'coordinator', 'hod'] as const).includes(user?.activeRole as any) && (
+          {canMarksMatrix && (
             <QuickActionCard
               title="Marks Matrix"
               subtitle="Class completion view"
@@ -227,7 +248,7 @@ export default function AdminHome() {
               style={styles.qaCard}
             />
           )}
-          {(['super_admin', 'admin', 'principal', 'coordinator', 'hod'] as const).includes(user?.activeRole as any) && (
+          {canDaybook && (
             <QuickActionCard
               title="Day Book"
               subtitle="Student notes"
@@ -238,8 +259,9 @@ export default function AdminHome() {
             />
           )}
         </View>
+        </FadeIn>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: TAB_BAR_HEIGHT }} />
       </ScrollView>
     </SafeAreaView>
   );

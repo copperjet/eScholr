@@ -10,7 +10,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import { useConversations, useMessages, useSendMessage, useMarkAsRead, Conversation } from '../../../hooks/useMessages';
 import { ThemedText, Card, EmptyState, Button, CardSkeleton } from '../../../components/ui';
-import { Spacing, Radius, Typography } from '../../../constants/Typography';
+import { Spacing, Radius, Typography, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.md,
   },
-  list: { padding: Spacing.base, paddingBottom: 100 },
+  list: { padding: Spacing.base, paddingBottom: TAB_BAR_HEIGHT },
   convoCard: { marginBottom: Spacing.md },
   unreadCard: { borderLeftWidth: 3, borderLeftColor: Colors.semantic.info },
   convoHeader: {

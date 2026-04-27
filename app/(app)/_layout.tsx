@@ -31,7 +31,7 @@ async function registerPushToken(userId: string, schoolId: string) {
     const deviceId = `${Platform.OS}-${Date.now()}`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from('push_tokens') as any).upsert({
+    await (supabase as any).from('push_tokens').upsert({
       user_id: userId,
       school_id: schoolId,
       device_id: deviceId,

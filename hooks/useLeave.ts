@@ -49,7 +49,7 @@ export function useLeaveRequests(schoolId: string) {
     enabled: !!schoolId,
     staleTime: 1000 * 60,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('leave_requests')
         .select('*, staff:staff_id(full_name, staff_number), approver:approved_by(full_name)')
         .eq('school_id', schoolId)
@@ -66,7 +66,7 @@ export function useStaffLeaveRequests(staffId: string | null, schoolId: string) 
     enabled: !!staffId && !!schoolId,
     staleTime: 1000 * 60,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('leave_requests')
         .select('*, approver:approved_by(full_name)')
         .eq('school_id', schoolId)
@@ -85,7 +85,7 @@ export function useLeaveBalances(staffId: string | null, schoolId: string, year?
     enabled: !!staffId && !!schoolId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('staff_leave_balances')
         .select('*')
         .eq('school_id', schoolId)
@@ -104,7 +104,7 @@ export function useLeaveRequestDetail(requestId: string | null) {
     staleTime: 1000 * 60,
     queryFn: async () => {
       if (!requestId) return null;
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('leave_requests')
         .select('*, staff:staff_id(full_name, staff_number), approver:approved_by(full_name)')
         .eq('id', requestId)
@@ -146,6 +146,30 @@ export function useCreateLeaveRequest(schoolId: string) {
   });
 }
 
+function patchLeaveStatus(
+  qc: ReturnType<typeof useQueryClient>,
+  requestId: string,
+  patch: Partial<LeaveRequest>,
+) {
+  const snapshots: Array<[readonly unknown[], any]> = [];
+  ['leave-requests', 'staff-leave-requests'].forEach((root) => {
+    qc.getQueriesData({ queryKey: [root] }).forEach(([key, value]) => {
+      if (!Array.isArray(value)) return;
+      snapshots.push([key, value]);
+      qc.setQueryData(
+        key,
+        (value as LeaveRequest[]).map((r) => (r.id === requestId ? { ...r, ...patch } : r)),
+      );
+    });
+  });
+  qc.getQueriesData({ queryKey: ['leave-request', requestId] }).forEach(([key, value]) => {
+    if (!value) return;
+    snapshots.push([key, value]);
+    qc.setQueryData(key, { ...(value as LeaveRequest), ...patch });
+  });
+  return snapshots;
+}
+
 export function useApproveLeaveRequest(schoolId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -166,7 +190,18 @@ export function useApproveLeaveRequest(schoolId: string) {
         .eq('school_id', schoolId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (params) => {
+      const snapshots = patchLeaveStatus(qc, params.requestId, {
+        status: 'approved',
+        approved_by: params.approverStaffId,
+        approved_at: new Date().toISOString(),
+      } as any);
+      return { snapshots };
+    },
+    onError: (_err, _vars, ctx: any) => {
+      ctx?.snapshots?.forEach(([key, value]: any) => qc.setQueryData(key, value));
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['leave-requests'] });
       qc.invalidateQueries({ queryKey: ['leave-request'] });
       qc.invalidateQueries({ queryKey: ['staff-leave-requests'] });
@@ -194,7 +229,17 @@ export function useRejectLeaveRequest(schoolId: string) {
         .eq('school_id', schoolId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (params) => {
+      const snapshots = patchLeaveStatus(qc, params.requestId, {
+        status: 'rejected',
+        rejection_reason: params.rejectionReason,
+      } as any);
+      return { snapshots };
+    },
+    onError: (_err, _vars, ctx: any) => {
+      ctx?.snapshots?.forEach(([key, value]: any) => qc.setQueryData(key, value));
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['leave-requests'] });
       qc.invalidateQueries({ queryKey: ['leave-request'] });
       qc.invalidateQueries({ queryKey: ['staff-leave-requests'] });

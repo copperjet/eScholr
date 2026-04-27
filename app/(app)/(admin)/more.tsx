@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, StyleSheet, ScrollView, Alert, Linking,
+  View, StyleSheet, ScrollView, Alert, Linking, Share,
   TouchableOpacity, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,50 +9,22 @@ import { router } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { ThemedText, Avatar } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
+import { ROLE_ACCESS, canAccess } from '../../../lib/roleScope';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
-interface MenuItem {
+type MenuItem = {
   icon: IoniconsName;
   label: string;
   sublabel?: string;
   onPress: () => void;
   danger?: boolean;
   badge?: string;
-}
-
-// ── Role permission helper ────────────────────────────────────────────────────
-
-type AdminRole = 'super_admin' | 'admin' | 'principal' | 'coordinator' | 'hod';
-
-const ROLE_ACCESS: Record<string, AdminRole[]> = {
-  onboard_school:   ['super_admin'],
-  students:         ['super_admin', 'admin'],
-  staff:            ['super_admin', 'admin'],
-  parents:          ['super_admin', 'admin'],
-  assignments:      ['super_admin', 'admin'],
-  timetable:        ['super_admin', 'admin'],
-  semesters:        ['super_admin', 'admin'],
-  promotion:        ['super_admin', 'admin'],
-  audit:            ['super_admin', 'admin'],
-  marks_windows:    ['super_admin', 'admin', 'hod'],
-  reports:          ['super_admin', 'admin', 'principal', 'coordinator', 'hod'],
-  attendance:       ['super_admin', 'admin', 'principal', 'coordinator'],
-  marks_matrix:     ['super_admin', 'admin', 'principal', 'coordinator', 'hod'],
-  daybook:          ['super_admin', 'admin', 'principal', 'coordinator', 'hod'],
-  announcements:    ['super_admin', 'admin', 'principal', 'coordinator'],
-  calendar:         ['super_admin', 'admin', 'principal', 'coordinator'],
-  notification_log: ['super_admin', 'admin', 'principal'],
-  fee_structure:    ['super_admin', 'admin'],
-  backup:           ['super_admin', 'admin'],
 };
 
-function can(role: string | undefined, feature: string): boolean {
-  if (!role) return false;
-  return (ROLE_ACCESS[feature] ?? []).includes(role as AdminRole);
-}
+const can = canAccess;
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -129,6 +101,23 @@ export default function AdminMore() {
       ].filter(Boolean),
     },
 
+    // Public surfaces
+    ...(can(role, 'students') ? [{
+      title: 'Public',
+      items: [
+        {
+          icon: 'link-outline' as IoniconsName,
+          label: 'Share Admissions Link',
+          sublabel: `Public application form for ${school?.name ?? 'your school'}`,
+          onPress: () => {
+            const code = school?.code ?? '';
+            const url = `escholr://admissions?code=${code}`;
+            Share.share({ message: `Apply to ${school?.name ?? 'our school'} online: ${url}`, title: 'Admissions Link' }).catch(() => {});
+          },
+        },
+      ],
+    }] : []),
+
     {
       title: 'Notifications',
       items: [
@@ -177,7 +166,7 @@ export default function AdminMore() {
       <StatusBar barStyle="light-content" />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}
       >
         {/* ── Hero header ── */}
         <SafeAreaView edges={['top']} style={{ backgroundColor: colors.brand.primary }}>
@@ -220,6 +209,7 @@ export default function AdminMore() {
           ))}
 
           <ThemedText variant="caption" color="muted" style={styles.version}>eScholr v1.0.0</ThemedText>
+          <View style={{ height: TAB_BAR_HEIGHT }} />
         </View>
       </ScrollView>
     </View>

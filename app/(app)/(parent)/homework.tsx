@@ -15,7 +15,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import { useStudentHomework } from '../../../hooks/useHomework';
 import { ThemedText, Card, Skeleton, EmptyState, Button, CardSkeleton } from '../../../components/ui';
-import { Spacing, Radius, Typography } from '../../../constants/Typography';
+import { Spacing, Radius, Typography, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -33,7 +33,7 @@ function useChildren(parentId: string | null, schoolId: string) {
     queryKey: ['parent-children', parentId, schoolId],
     enabled: !!parentId && !!schoolId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('student_parent_links')
         .select('students(id, full_name, photo_url, stream_id, grades(name), streams(name))')
         .eq('parent_id', parentId!)
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: Radius.full,
   },
-  list: { padding: Spacing.base, gap: Spacing.md, paddingBottom: 100 },
+  list: { padding: Spacing.base, gap: Spacing.md, paddingBottom: TAB_BAR_HEIGHT },
   card: { marginBottom: Spacing.md },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   desc: { marginTop: Spacing.xs },

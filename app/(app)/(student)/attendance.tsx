@@ -15,7 +15,7 @@ function useStudentAttendance(studentId: string | null, schoolId: string) {
     enabled: !!studentId && !!schoolId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('attendance_records')
         .select('date, status, semesters(name)')
         .eq('student_id', studentId!)

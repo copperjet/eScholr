@@ -7,7 +7,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme';
 import { ThemedText, ErrorState, SectionHeader, StatCardSkeleton, ListItemSkeleton } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { usePlatformMetrics } from '../../../hooks/usePlatform';
 import { format } from 'date-fns';
@@ -120,7 +120,7 @@ export default function PlatformMetrics() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} tintColor={colors.brand.primary} />}
-        contentContainerStyle={{ paddingBottom: 80 }}
+        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}
       >
         {/* Revenue */}
         <SectionHeader title="Revenue" />

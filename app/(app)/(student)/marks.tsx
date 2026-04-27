@@ -13,7 +13,7 @@ function useStudentMarks(studentId: string | null, schoolId: string) {
     enabled: !!studentId && !!schoolId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('marks')
         .select('id, assessment_type, value, raw_total, is_excused, excused_reason, subjects(name), semesters(name)')
         .eq('student_id', studentId!)

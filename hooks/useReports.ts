@@ -257,6 +257,35 @@ export function useGenerateReportPDF(schoolId: string) {
 export function useApproveReport(schoolId: string) {
   const qc = useQueryClient();
   return useMutation({
+    // ── Optimistic: HRT-side report list reflects new status instantly ──
+    onMutate: async (params: { reportId: string; hrtComment: string; staffId: string }) => {
+      const snapshots: Array<[readonly unknown[], any]> = [];
+      const all = qc.getQueriesData({ queryKey: ['hrt-reports'] });
+      all.forEach(([key, value]) => {
+        if (!value) return;
+        snapshots.push([key, value]);
+        const v = value as any;
+        if (Array.isArray(v?.reports)) {
+          qc.setQueryData(key, {
+            ...v,
+            reports: v.reports.map((r: any) =>
+              r.id === params.reportId
+                ? { ...r, status: 'pending_approval', hrt_comment: params.hrtComment }
+                : r,
+            ),
+          });
+        }
+      });
+      return { snapshots };
+    },
+    onError: (_err, _vars, ctx: any) => {
+      ctx?.snapshots?.forEach(([key, value]: any) => qc.setQueryData(key, value));
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['hrt-reports'] });
+      qc.invalidateQueries({ queryKey: ['admin-reports'] });
+      qc.invalidateQueries({ queryKey: ['admin-report-counts'] });
+    },
     mutationFn: async (params: {
       reportId: string;
       hrtComment: string;
@@ -304,16 +333,50 @@ export function useApproveReport(schoolId: string) {
         body: { report_id: params.reportId, is_preview: false },
       }).then(() => {}).catch(() => {});
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['hrt-reports'] });
-      qc.invalidateQueries({ queryKey: ['admin-reports'] });
-    },
   });
 }
 
 export function useAdminApproveReport(schoolId: string) {
   const qc = useQueryClient();
   return useMutation({
+    // ── Optimistic: admin report list reflects "approved" instantly ──
+    onMutate: async (params: { reportId: string; staffId: string }) => {
+      const snapshots: Array<[readonly unknown[], any]> = [];
+      const all = qc.getQueriesData({ queryKey: ['admin-reports'] });
+      all.forEach(([key, value]) => {
+        if (!value) return;
+        snapshots.push([key, value]);
+        if (Array.isArray(value)) {
+          qc.setQueryData(
+            key,
+            (value as any[]).map((r) =>
+              r.id === params.reportId ? { ...r, status: 'approved' } : r,
+            ),
+          );
+        }
+      });
+      // Update admin-report-counts optimistically
+      const countQueries = qc.getQueriesData({ queryKey: ['admin-report-counts'] });
+      countQueries.forEach(([key, value]) => {
+        if (!value || typeof value !== 'object') return;
+        snapshots.push([key, value]);
+        const v = value as Record<string, number>;
+        qc.setQueryData(key, {
+          ...v,
+          pending_approval: Math.max(0, (v.pending_approval ?? 0) - 1),
+          approved: (v.approved ?? 0) + 1,
+        });
+      });
+      return { snapshots };
+    },
+    onError: (_err, _vars, ctx: any) => {
+      ctx?.snapshots?.forEach(([key, value]: any) => qc.setQueryData(key, value));
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['admin-reports'] });
+      qc.invalidateQueries({ queryKey: ['admin-report-counts'] });
+      qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
+    },
     mutationFn: async (params: { reportId: string; staffId: string }) => {
       const db = supabase as any;
       const { error } = await db
@@ -343,7 +406,6 @@ export function useAdminApproveReport(schoolId: string) {
         data: { report_id: params.reportId },
       });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-reports'] }),
   });
 }
 

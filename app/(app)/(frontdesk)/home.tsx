@@ -8,7 +8,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import { ThemedText, Avatar, FAB, ErrorState, SectionHeader, StatCard, IconChip, Card } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 
 const TODAY       = format(new Date(), 'EEEE, d MMM');
@@ -27,9 +27,11 @@ function useFrontDeskDashboard(schoolId: string) {
     enabled: !!schoolId,
     staleTime: 1000 * 30,
     queryFn: async () => {
-      const [allRes, todayRes] = await Promise.all([
+      const [allRes, todayRes, visitorsRes, appsRes] = await Promise.all([
         (supabase as any).from('inquiries').select('id, status').eq('school_id', schoolId),
         (supabase as any).from('inquiries').select('id, status').eq('school_id', schoolId).eq('date', TODAY_DATE),
+        (supabase as any).from('visitor_log').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).is('sign_out_at', null),
+        (supabase as any).from('admissions_applications').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'submitted'),
       ]);
       const all   = (allRes.data ?? []) as any[];
       const today = (todayRes.data ?? []) as any[];
@@ -38,7 +40,11 @@ function useFrontDeskDashboard(schoolId: string) {
       STATUS_META.forEach(s => { counts[s.key] = 0; todayCounts[s.key] = 0; });
       all.forEach((i: any)   => { if (counts[i.status]      !== undefined) counts[i.status]++; });
       today.forEach((i: any) => { if (todayCounts[i.status] !== undefined) todayCounts[i.status]++; });
-      return { counts, todayCounts, totalToday: today.length, totalAll: all.length };
+      return {
+        counts, todayCounts, totalToday: today.length, totalAll: all.length,
+        activeVisitors: visitorsRes.count ?? 0,
+        pendingApps: appsRes.count ?? 0,
+      };
     },
   });
 }
@@ -113,6 +119,29 @@ export default function FrontDeskHome() {
           ))}
         </View>
 
+        {/* ── Quick actions ── */}
+        <SectionHeader title="Quick Actions" />
+        <View style={styles.statRow}>
+          <Pressable onPress={() => router.push('/(app)/(frontdesk)/visitors' as any)} style={{ flex: 1 }}>
+            <StatCard
+              label="Visitors In"
+              value={isLoading ? '—' : String(data?.activeVisitors ?? 0)}
+              icon="people-outline"
+              iconBg={Colors.semantic.success + '18'}
+              iconColor={Colors.semantic.success}
+            />
+          </Pressable>
+          <Pressable onPress={() => router.push('/(app)/(frontdesk)/applications' as any)} style={{ flex: 1 }}>
+            <StatCard
+              label="New Applications"
+              value={isLoading ? '—' : String(data?.pendingApps ?? 0)}
+              icon="document-text-outline"
+              iconBg={Colors.semantic.info + '18'}
+              iconColor={Colors.semantic.info}
+            />
+          </Pressable>
+        </View>
+
         {/* ── Quick tip ── */}
         <Card variant="tinted" style={styles.tip}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm }}>
@@ -127,7 +156,7 @@ export default function FrontDeskHome() {
           </View>
         </Card>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: TAB_BAR_HEIGHT }} />
       </ScrollView>
 
       <FAB

@@ -16,7 +16,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import {
   ThemedText, FAB, BottomSheet, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 import {
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base, paddingVertical: Spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth, gap: Spacing.sm,
   },
-  list: { padding: Spacing.base, gap: Spacing.sm, paddingBottom: 100 },
+  list: { padding: Spacing.base, gap: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT },
   card: {
     borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth,
     padding: Spacing.md, gap: Spacing.sm,

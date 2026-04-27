@@ -23,7 +23,9 @@ export default function ParentLayout() {
       <Tabs.Screen name="homework" options={{ title: 'Homework', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'book' : 'book-outline'} size={22} color={color} /> }} />
       <Tabs.Screen name="reports"  options={{ title: 'Reports',  tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'document-text' : 'document-text-outline'} size={22} color={color} /> }} />
       <Tabs.Screen name="fees"     options={{ title: 'Fees',     tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'cash' : 'cash-outline'} size={22} color={color} /> }} />
-      <Tabs.Screen name="inbox"    options={{ title: 'Inbox',    tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'mail' : 'mail-outline'} size={22} color={color} /> }} />
+      <Tabs.Screen name="more"     options={{ title: 'More',     tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} /> }} />
+      {/* Hidden screens */}
+      <Tabs.Screen name="inbox"    options={{ href: null }} />
       <Tabs.Screen name="messages" options={{ href: null }} />
     </Tabs>
   );

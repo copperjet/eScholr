@@ -8,7 +8,6 @@ import {
   View,
   StyleSheet,
   SafeAreaView,
-  FlatList,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -18,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  ThemedText, Avatar, Badge, BottomSheet, Skeleton, EmptyState, ErrorState, ScreenHeader,
+  ThemedText, Avatar, Badge, BottomSheet, Skeleton, EmptyState, ErrorState, ScreenHeader, FastList,
 } from '../../../components/ui';
 import {
   useAdminReports, useAdminReportCounts, useAdminApproveReport, useReleaseReports,
@@ -178,7 +177,7 @@ export default function AdminReportsScreen() {
           description="No reports in this status."
         />
       ) : (
-        <FlatList
+        <FastList
           data={reports}
           keyExtractor={(r) => r.id}
           contentContainerStyle={styles.list}

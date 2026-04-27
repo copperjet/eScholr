@@ -11,7 +11,7 @@ import {
   ThemedText, Card, Badge, StatCard,
   EmptyState, ErrorState, SectionHeader,
 } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 
 const TODAY = format(new Date(), 'EEEE, d MMM');
@@ -23,9 +23,9 @@ function useHRDashboard(schoolId: string) {
     staleTime: 1000 * 60 * 2,
     queryFn: async () => {
       const [staffRes, pendingLeaveRes, allLeaveRes] = await Promise.all([
-        supabase.from('staff').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
-        supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'pending'),
-        supabase.from('leave_requests').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(5),
+        (supabase as any).from('staff').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
+        (supabase as any).from('leave_requests').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'pending'),
+        (supabase as any).from('leave_requests').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(5),
       ]);
       return {
         staffCount: staffRes.count ?? 0,
@@ -55,6 +55,7 @@ export default function HRHome() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand.primary} />}
       >
         <View style={styles.topBar}>

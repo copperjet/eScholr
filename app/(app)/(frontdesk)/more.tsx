@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { ThemedText, Avatar } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -47,6 +47,8 @@ export default function FrontDeskMore() {
       title: 'Front Desk',
       items: [
         { icon: 'chatbubble-ellipses-outline', label: 'Inquiries', sublabel: 'View and log admission inquiries', onPress: () => router.push('/(app)/(frontdesk)/inquiries' as any) },
+        { icon: 'people-outline', label: 'Visitor Log', sublabel: 'Sign visitors in and out', onPress: () => router.push('/(app)/(frontdesk)/visitors' as any) },
+        { icon: 'document-text-outline', label: 'Admissions', sublabel: 'Review online applications', onPress: () => router.push('/(app)/(frontdesk)/applications' as any) },
       ],
     },
     {
@@ -93,7 +95,7 @@ export default function FrontDeskMore() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.brand.primary }}>
       <StatusBar barStyle="light-content" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}>
         <SafeAreaView edges={['top']} style={{ backgroundColor: colors.brand.primary }}>
           <View style={styles.hero}>
             <View style={styles.heroRow}>

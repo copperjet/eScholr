@@ -26,7 +26,7 @@ import {
   ThemedText, Avatar, BottomSheet, FAB,
   Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -51,7 +51,7 @@ function useDayBook(staffId: string | null, schoolId: string) {
     enabled: !!staffId && !!schoolId,
     staleTime: 1000 * 30,
     queryFn: async () => {
-      const { data: assignment } = await supabase
+      const { data: assignment } = await (supabase as any)
         .from('hrt_assignments')
         .select('stream_id')
         .eq('staff_id', staffId!)
@@ -62,10 +62,10 @@ function useDayBook(staffId: string | null, schoolId: string) {
       const { stream_id } = assignment as any;
 
       const [studentsRes, entriesRes] = await Promise.all([
-        supabase.from('students').select('id, full_name, student_number, photo_url')
+        (supabase as any).from('students').select('id, full_name, student_number, photo_url')
           .eq('school_id', schoolId).eq('stream_id', stream_id)
           .eq('status', 'active').order('full_name'),
-        supabase.from('day_book_entries').select('id, student_id, category, description, send_to_parent, edit_window_closes_at, created_at, date')
+        (supabase as any).from('day_book_entries').select('id, student_id, category, description, send_to_parent, edit_window_closes_at, created_at, date')
           .eq('school_id', schoolId).eq('created_by', staffId!)
           .eq('date', TODAY).eq('archived', false).order('created_at', { ascending: false }),
       ]);
@@ -117,7 +117,7 @@ export default function DayBookScreen() {
   const createEntry = useMutation({
     mutationFn: async () => {
       if (!selectedStudent || !description.trim()) throw new Error('Missing fields');
-      const { error } = await supabase.from('day_book_entries').insert({
+      const { error } = await (supabase as any).from('day_book_entries').insert({
         school_id: user?.schoolId,
         student_id: selectedStudent.id,
         date: TODAY,
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     borderRadius: Radius.md,
   },
-  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: 100 },
+  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT },
   entryRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

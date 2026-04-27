@@ -12,7 +12,7 @@ import {
   ListItemSkeleton, EmptyState, ErrorState, TabBar,
   ListItem, Chip, Button, FormField, IconChip,
 } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -245,7 +245,7 @@ export default function InquiriesScreen() {
 const styles = StyleSheet.create({
   safe:      { flex: 1 },
   topBar:    { paddingHorizontal: Spacing.screen, paddingTop: Spacing.xl, paddingBottom: Spacing.sm },
-  list:      { paddingHorizontal: Spacing.screen, paddingTop: Spacing.sm, paddingBottom: 120, gap: Spacing.sm },
+  list:      { paddingHorizontal: Spacing.screen, paddingTop: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT, gap: Spacing.sm },
   rowCard:   { borderRadius: Radius.lg, overflow: 'hidden' },
   fieldLabel: { fontSize: 13, fontWeight: '600', marginBottom: Spacing.xs },
   chipRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },

@@ -13,7 +13,7 @@ function useStaffList(schoolId: string) {
     enabled: !!schoolId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('staff')
         .select('id, full_name, staff_number, email, phone, department, status, staff_roles(role)')
         .eq('school_id', schoolId)

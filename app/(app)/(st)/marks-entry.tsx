@@ -33,7 +33,7 @@ import {
   useGradingScale, useMarksForAssignment, useUpdateMark, useExcuseMark,
   getGradeLabel, computeTotal, type StudentMarkRow,
 } from '../../../hooks/useMarks';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -53,7 +53,7 @@ export default function MarksEntryScreen() {
     enabled: !!params.assignmentId && !!user?.schoolId,
     staleTime: 1000 * 60 * 10,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('subject_teacher_assignments')
         .select(`
           id, subject_id, stream_id, semester_id,
@@ -74,7 +74,7 @@ export default function MarksEntryScreen() {
     user?.schoolId ?? '',
   );
   const { data: gradingScales = [] } = useGradingScale(user?.schoolId ?? '');
-  const updateMark = useUpdateMark(user?.schoolId ?? '');
+  const updateMark = useUpdateMark(user?.schoolId ?? '', assignmentRaw?.id);
   const excuseMark = useExcuseMark(user?.schoolId ?? '');
 
   // Local edits: studentId → { fa1, fa2, summative }
@@ -156,7 +156,7 @@ export default function MarksEntryScreen() {
       if (avg !== null && Math.abs(num - avg) > DEVIATION_THRESHOLD) {
         const direction = num > avg ? 'above' : 'below';
         // Non-blocking: just log a mark_note (fire-and-forget)
-        supabase.from('mark_notes').insert({
+        (supabase as any).from('mark_notes').insert({
           school_id:  user?.schoolId,
           note_type:  'deviation_warning',
           note_text:  `Mark ${num} is ${direction} class average ${avg} by ${Math.abs(num - avg)} points.`,
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   gradeColHeader: { width: 32, textAlign: 'center', fontSize: 10 },
   skeletonList: { padding: Spacing.base, gap: Spacing.sm },
   skeletonRow: { flexDirection: 'row', alignItems: 'center' },
-  list: { paddingHorizontal: Spacing.sm, paddingTop: Spacing.sm, paddingBottom: 80 },
+  list: { paddingHorizontal: Spacing.sm, paddingTop: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT },
   studentRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -30,7 +30,7 @@ import {
 import {
   useGradingScale, getGradeLabel, computeTotal,
 } from '../../../hooks/useMarks';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
   },
   stepItem: { alignItems: 'center', gap: 3 },
   stepCircle: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  content: { padding: Spacing.base, paddingBottom: 80 },
+  content: { padding: Spacing.base, paddingBottom: TAB_BAR_HEIGHT },
   stepContent: { gap: 0 },
   studentRow: {
     flexDirection: 'row',

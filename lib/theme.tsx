@@ -26,8 +26,8 @@ interface ThemeContextValue {
 export const DEFAULT_BRAND: BrandColors = {
   primary:      '#0F5132',
   primaryDark:  '#0A3D26',
-  primarySoft:  '#E6F2EB',
-  primaryMuted: '#B8D4BC',
+  primarySoft:  '#E8F5EE',
+  primaryMuted: '#B2D4BA',
   secondary:    '#F59E0B',
   onPrimary:    '#FFFFFF',
 };
@@ -42,14 +42,31 @@ const ThemeContext = createContext<ThemeContextValue>({
   setMode: () => {},
 });
 
+/** Blend a hex color toward black by `amount` (0–1). */
+function darken(hex: string, amount = 0.2): string {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const r = Math.max(0, Math.round(((n >> 16) & 0xff) * (1 - amount)));
+  const g = Math.max(0, Math.round(((n >> 8)  & 0xff) * (1 - amount)));
+  const b = Math.max(0, Math.round(( n        & 0xff) * (1 - amount)));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+/** Blend a hex color toward white by `amount` (0–1). */
+function lighten(hex: string, amount = 0.85): string {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const r = Math.min(255, Math.round(((n >> 16) & 0xff) + (255 - ((n >> 16) & 0xff)) * amount));
+  const g = Math.min(255, Math.round(((n >> 8)  & 0xff) + (255 - ((n >> 8)  & 0xff)) * amount));
+  const b = Math.min(255, Math.round(( n        & 0xff) + (255 - ( n        & 0xff)) * amount));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
 function buildBrand(primary?: string, secondary?: string): BrandColors {
   if (!primary) return DEFAULT_BRAND;
-  // Derive soft/muted from the supplied primary by mixing with white
   return {
     primary,
-    primaryDark:  primary,
-    primarySoft:  DEFAULT_BRAND.primarySoft,
-    primaryMuted: DEFAULT_BRAND.primaryMuted,
+    primaryDark:  darken(primary, 0.22),
+    primarySoft:  lighten(primary, 0.88),
+    primaryMuted: lighten(primary, 0.60),
     secondary:    secondary ?? DEFAULT_BRAND.secondary,
     onPrimary:    '#FFFFFF',
   };

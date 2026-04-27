@@ -2,14 +2,14 @@
  * Parent Reports — list of released report cards for linked children.
  */
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, FlatList, Pressable, RefreshControl } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Pressable, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
-import { ThemedText, Avatar, Badge, Skeleton, EmptyState, ErrorState } from '../../../components/ui';
+import { ThemedText, Avatar, Badge, Skeleton, EmptyState, ErrorState, FastList } from '../../../components/ui';
 import { useParentReports } from '../../../hooks/useReports';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
 
 export default function ParentReportsScreen() {
@@ -17,7 +17,7 @@ export default function ParentReportsScreen() {
   const { user } = useAuthStore();
 
   const { data: reports = [], isLoading, isError, refetch, isFetching } = useParentReports(
-    user?.staffId ?? null,
+    user?.parentId ?? null,
     user?.schoolId ?? '',
   );
 
@@ -62,7 +62,7 @@ export default function ParentReportsScreen() {
           icon="document-text-outline"
         />
       ) : (
-        <FlatList
+        <FastList
           data={reports}
           keyExtractor={(r) => r.id}
           contentContainerStyle={styles.list}
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     padding: Spacing.base,
     marginBottom: Spacing.sm,
   },
-  list: { padding: Spacing.base, paddingBottom: 100, gap: Spacing.md },
+  list: { padding: Spacing.base, paddingBottom: TAB_BAR_HEIGHT, gap: Spacing.md },
   card: {
     flexDirection: 'row',
     borderRadius: Radius.lg,

@@ -11,7 +11,7 @@ import {
   ThemedText, Card, Avatar, ListItemSkeleton,
   EmptyState, ErrorState, SectionHeader, IconChip,
 } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors, resolveAttBg, resolveAttColor } from '../../../constants/Colors';
 import type { AttendanceStatus } from '../../../types/database';
 
@@ -28,7 +28,7 @@ function useChildren(parentId: string | null, schoolId: string) {
     queryKey: ['parent-children', parentId, schoolId],
     enabled: !!parentId && !!schoolId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('student_parent_links')
         .select('students(id, full_name, photo_url, student_number, stream_id, grades(name), streams(name))')
         .eq('parent_id', parentId!).eq('school_id', schoolId);
@@ -44,16 +44,16 @@ function useChildDashboard(child: ChildRow | null, schoolId: string) {
     enabled: !!child && !!schoolId,
     staleTime: 1000 * 60 * 2,
     queryFn: async () => {
-      const { data: sem } = await supabase
+      const { data: sem } = await (supabase as any)
         .from('semesters').select('id, name, start_date, end_date')
         .eq('school_id', schoolId).eq('is_active', true).limit(1).single();
       const semesterId = (sem as any)?.id;
       if (!semesterId) return { semester: null, report: null, attendance: null, dayBook: [] };
       const [attSumRes, reportRes, dayBookRes] = await Promise.all([
         (supabase.rpc as any)('get_attendance_summary', { p_student_id: child!.id, p_semester_id: semesterId }),
-        supabase.from('reports').select('id, status, overall_percentage, released_at, semesters(name)')
+        (supabase as any).from('reports').select('id, status, overall_percentage, released_at, semesters(name)')
           .eq('school_id', schoolId).eq('student_id', child!.id).eq('semester_id', semesterId).maybeSingle(),
-        supabase.from('day_book_entries')
+        (supabase as any).from('day_book_entries')
           .select('id, category, description, date, created_at, staff:created_by(full_name)')
           .eq('school_id', schoolId).eq('student_id', child!.id)
           .eq('send_to_parent', true).eq('archived', false)
@@ -340,7 +340,7 @@ function DayBookRow({ entry }: { entry: any }) {
 
 const styles = StyleSheet.create({
   safe:       { flex: 1 },
-  scroll:     { paddingBottom: Spacing['2xl'] },
+  scroll:     { paddingBottom: TAB_BAR_HEIGHT },
   topBar:     { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: Spacing.screen, paddingTop: Spacing.xl, paddingBottom: Spacing.base, gap: Spacing.sm },
   iconBtn:    { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   childRow:   { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.screen, paddingBottom: Spacing.base },

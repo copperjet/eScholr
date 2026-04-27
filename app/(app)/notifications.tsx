@@ -3,7 +3,7 @@
  * Shared by all roles. Shows last 90 days of in-app notifications.
  */
 import React, { useCallback } from 'react';
-import { View, StyleSheet, FlatList, Pressable, RefreshControl } from 'react-native';
+import { View, StyleSheet, Pressable, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +13,7 @@ import { useTheme } from '../../lib/theme';
 import { useAuthStore } from '../../stores/authStore';
 import { supabase } from '../../lib/supabase';
 import {
-  ThemedText, Skeleton, EmptyState, ErrorState, ScreenHeader, IconChip,
+  ThemedText, Skeleton, EmptyState, ErrorState, ScreenHeader, IconChip, FastList,
 } from '../../components/ui';
 import { Spacing, Radius, Shadow } from '../../constants/Typography';
 import { Colors } from '../../constants/Colors';
@@ -165,7 +165,7 @@ export default function NotificationsScreen() {
           description="Notifications from the last 90 days will appear here."
         />
       ) : (
-        <FlatList
+        <FastList
           data={notifications}
           keyExtractor={n => n.id}
           contentContainerStyle={styles.list}

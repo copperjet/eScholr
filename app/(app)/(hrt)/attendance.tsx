@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   SafeAreaView,
-  FlatList,
   TouchableOpacity,
   TextInput,
   Alert,
@@ -27,9 +26,9 @@ import { supabase } from '../../../lib/supabase';
 import { triggerAbsenceNotification } from '../../../lib/notifications';
 import {
   ThemedText, Avatar, FAB, BottomSheet,
-  Skeleton, EmptyState, ErrorState, ScreenHeader,
+  Skeleton, EmptyState, ErrorState, ScreenHeader, FastList,
 } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors, resolveAttBg, resolveAttColor } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 import type { AttendanceStatus } from '../../../types/database';
@@ -74,7 +73,7 @@ function useAttendanceRegister(staffId: string | null, schoolId: string) {
     enabled: !!staffId && !!schoolId,
     staleTime: 0,
     queryFn: async () => {
-      const { data: assignment } = await supabase
+      const { data: assignment } = await (supabase as any)
         .from('hrt_assignments')
         .select('stream_id, semester_id, streams ( name )')
         .eq('school_id', schoolId)
@@ -164,7 +163,7 @@ function useExamPeriod(schoolId: string) {
     enabled: !!schoolId,
     staleTime: 1000 * 60 * 30,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('calendar_events')
         .select('id, title, start_date, end_date')
         .eq('school_id', schoolId)
@@ -303,7 +302,7 @@ export default function AttendanceScreen() {
     setSubmitError(null);
 
     // Re-check for race — co-HRT first-submit-wins
-    const { data: existing } = await supabase
+    const { data: existing } = await (supabase as any)
       .from('attendance_records')
       .select('submitted_by, register_locked')
       .eq('school_id', user?.schoolId ?? '')
@@ -337,7 +336,7 @@ export default function AttendanceScreen() {
       register_locked: true,
     }));
 
-    const { data: upserted, error } = await supabase
+    const { data: upserted, error } = await (supabase as any)
       .from('attendance_records')
       .upsert(records as any, { onConflict: 'student_id,date' })
       .select('id, student_id, status');
@@ -362,7 +361,7 @@ export default function AttendanceScreen() {
         };
       }).filter((r) => r.attendance_record_id);
       if (apUpserts.length > 0) {
-        await supabase
+        await (supabase as any)
           .from('excused_absence_requests')
           .upsert(apUpserts as any, { onConflict: 'attendance_record_id' });
       }
@@ -390,7 +389,7 @@ export default function AttendanceScreen() {
     }
 
     // Audit log (fire-and-forget)
-    supabase.from('audit_logs').insert({
+    (supabase as any).from('audit_logs').insert({
       school_id: user?.schoolId,
       event_type: 'attendance_submitted',
       actor_id: user?.staffId,
@@ -452,7 +451,7 @@ export default function AttendanceScreen() {
     }
 
     // Audit log
-    supabase.from('audit_logs').insert({
+    (supabase as any).from('audit_logs').insert({
       school_id: user?.schoolId,
       event_type: 'attendance_corrected',
       actor_id: user?.staffId,
@@ -606,7 +605,7 @@ export default function AttendanceScreen() {
           description="There are no active students in your class."
         />
       ) : (
-        <FlatList
+        <FastList
           data={data?.students ?? []}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
@@ -848,7 +847,11 @@ export default function AttendanceScreen() {
 
 // ── Sub-components ──────────────────────────────────────────────
 
-function StudentAttendanceRow({
+/**
+ * Memoised so FlashList recycling skips re-rendering rows whose
+ * status/reason hasn't changed when the parent re-renders.
+ */
+const StudentAttendanceRow = React.memo(function StudentAttendanceRow({
   student, status, apReason, isReadOnly, inCorrectionMode, scheme, colors, onPress,
 }: {
   student: StudentRow;
@@ -899,7 +902,7 @@ function StudentAttendanceRow({
       )}
     </TouchableOpacity>
   );
-}
+});
 
 function SubmittedView({
   streamName, presentCount, absentCount, lateCount, otherCount, total, onViewRegister, onHome,
@@ -1012,7 +1015,7 @@ const styles = StyleSheet.create({
   },
   skeletonList: { padding: Spacing.base, gap: Spacing.sm },
   skeletonRow: { flexDirection: 'row', alignItems: 'center' },
-  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: 120 },
+  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT },
   studentRow: {
     flexDirection: 'row',
     alignItems: 'center',

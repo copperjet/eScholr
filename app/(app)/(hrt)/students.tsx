@@ -6,7 +6,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import { SearchBar, ListItem, Skeleton, EmptyState, ErrorState } from '../../../components/ui';
-import { Spacing } from '../../../constants/Typography';
+import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 
 function useStudents(schoolId: string) {
   return useQuery({
@@ -14,7 +14,7 @@ function useStudents(schoolId: string) {
     enabled: !!schoolId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('students')
         .select('id, full_name, student_number, photo_url, status, streams(name, grades(name))')
         .eq('school_id', schoolId)
@@ -101,5 +101,5 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   topBar: { paddingHorizontal: Spacing.base, paddingVertical: Spacing.md },
   skRow: { flexDirection: 'row', alignItems: 'center' },
-  list: { paddingBottom: 100 },
+  list: { paddingBottom: TAB_BAR_HEIGHT },
 });

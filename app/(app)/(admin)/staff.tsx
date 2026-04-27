@@ -4,7 +4,7 @@
  */
 import React, { useState, useCallback } from 'react';
 import {
-  View, StyleSheet, SafeAreaView, FlatList,
+  View, StyleSheet, SafeAreaView,
   TouchableOpacity, Alert, RefreshControl, ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -16,9 +16,9 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Avatar, Badge, SearchBar, FAB, BottomSheet,
-  Skeleton, EmptyState, ErrorState, FormField, ScreenHeader,
+  Skeleton, EmptyState, ErrorState, FormField, ScreenHeader, FastList,
 } from '../../../components/ui';
-import { Spacing, Radius, Typography, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Typography, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 import type { UserRole } from '../../../types/database';
@@ -95,7 +95,7 @@ export default function AdminStaffScreen() {
       if (!form.full_name.trim() || !form.email.trim()) throw new Error('Name and email are required.');
       if (formRoles.length === 0) throw new Error('Assign at least one role.');
 
-      const { data: newStaff, error } = await supabase
+      const { data: newStaff, error } = await (supabase as any)
         .from('staff')
         .insert({
           school_id: schoolId,
@@ -110,12 +110,12 @@ export default function AdminStaffScreen() {
       if (error) throw new Error(error.message);
 
       const staffId = (newStaff as any).id;
-      const { error: roleErr } = await supabase
+      const { error: roleErr } = await (supabase as any)
         .from('staff_roles')
         .insert(formRoles.map(r => ({ school_id: schoolId, staff_id: staffId, role: r })) as any);
       if (roleErr) throw new Error(roleErr.message);
 
-      await supabase.from('audit_logs').insert({
+      await (supabase as any).from('audit_logs').insert({
         school_id: schoolId,
         event_type: 'account_created',
         actor_id: user?.staffId,
@@ -140,9 +140,9 @@ export default function AdminStaffScreen() {
 
   const updateRoles = useMutation({
     mutationFn: async ({ staffId, roles }: { staffId: string; roles: UserRole[] }) => {
-      await supabase.from('staff_roles').delete().eq('staff_id', staffId).eq('school_id', schoolId);
+      await (supabase as any).from('staff_roles').delete().eq('staff_id', staffId).eq('school_id', schoolId);
       if (roles.length > 0) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('staff_roles')
           .insert(roles.map(r => ({ school_id: schoolId, staff_id: staffId, role: r })) as any);
         if (error) throw error;
@@ -162,7 +162,8 @@ export default function AdminStaffScreen() {
   const toggleStatus = useMutation({
     mutationFn: async ({ staffId, currentStatus }: { staffId: string; currentStatus: string }) => {
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-      const { error } = await (supabase.from('staff') as any)
+      const { error } = await (supabase as any)
+        .from('staff')
         .update({ status: newStatus })
         .eq('id', staffId)
         .eq('school_id', schoolId);
@@ -292,13 +293,13 @@ export default function AdminStaffScreen() {
           description={!search ? 'Tap + to add a staff member.' : ''}
         />
       ) : (
-        <FlatList
+        <FastList
           data={filtered}
           keyExtractor={(s: any) => s.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} />}
-          renderItem={({ item: staff }) => (
+          renderItem={({ item: staff }: { item: any }) => (
             <TouchableOpacity
               onPress={() => openDetail(staff)}
               activeOpacity={0.8}
@@ -592,7 +593,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   filterRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
   chip: { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.full, borderWidth: 1.5 },
-  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: 120 },
+  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT },
   staffRow: {
     flexDirection: 'row', alignItems: 'center', padding: Spacing.base,
     marginBottom: Spacing.sm, borderRadius: Radius.lg, gap: Spacing.md,

@@ -39,27 +39,30 @@ export const Radius = {
 
 export const Shadow = {
   sm: {
-    shadowColor: '#0F5132',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.07,
     shadowRadius: 3,
     elevation: 2,
   },
   md: {
-    shadowColor: '#0F5132',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.09,
     shadowRadius: 8,
     elevation: 4,
   },
   lg: {
-    shadowColor: '#0F5132',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 8,
   },
 } as const;
+
+/** Extra bottom padding to clear the floating pill tab bar on iOS and Android */
+export const TAB_BAR_HEIGHT = 96;
 
 export const FontSize = {
   xs:   11,

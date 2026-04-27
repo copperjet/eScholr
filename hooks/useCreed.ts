@@ -41,7 +41,7 @@ export function useCharacterFramework(schoolId: string) {
     enabled: !!schoolId,
     staleTime: Infinity,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('character_frameworks')
         .select('is_enabled, value_names, rating_scale')
         .eq('school_id', schoolId)
@@ -68,14 +68,14 @@ export function useCreedForStream(
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
       const [studentsRes, creedRes] = await Promise.all([
-        supabase
+        (supabase as any)
           .from('students')
           .select('id, full_name, student_number, photo_url')
           .eq('school_id', schoolId)
           .eq('stream_id', streamId!)
           .eq('status', 'active')
           .order('full_name'),
-        supabase
+        (supabase as any)
           .from('character_records')
           .select('id, student_id, creativity, respect, excellence, empathy, discipline, is_locked')
           .eq('school_id', schoolId)
@@ -123,7 +123,7 @@ export function useUpdateCreed(schoolId: string) {
           .eq('school_id', schoolId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('character_records')
           .upsert(
             {

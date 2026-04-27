@@ -1,9 +1,10 @@
 import React from 'react';
-import { Pressable, View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from './ThemedText';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
+import { PressableScale } from './PressableScale';
 import { useTheme } from '../../lib/theme';
 import { Spacing } from '../../constants/Typography';
 
@@ -89,12 +90,9 @@ export function ListItem({
 
   if (onPress) {
     return (
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => [styles.pressable, { opacity: pressed ? 0.7 : 1 }, style]}
-      >
+      <PressableScale onPress={onPress} scaleTo={0.985} style={[styles.pressable, style]}>
         {inner}
-      </Pressable>
+      </PressableScale>
     );
   }
 

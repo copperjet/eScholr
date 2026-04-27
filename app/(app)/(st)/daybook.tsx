@@ -28,7 +28,7 @@ import {
   useEditDayBookEntry,
   type DayBookEntry,
 } from '../../../hooks/useDayBook';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
 
 const TODAY = format(new Date(), 'yyyy-MM-dd');
@@ -210,5 +210,5 @@ const styles = StyleSheet.create({
     ...Shadow.sm,
   },
   skeletonRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.md, paddingBottom: 100 },
+  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.md, paddingBottom: TAB_BAR_HEIGHT },
 });

@@ -66,7 +66,7 @@ export default function PlatformLoginScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0F172A' }}>
+    <View style={{ flex: 1, backgroundColor: colors.brand.primaryDark }}>
       <StatusBar barStyle="light-content" />
 
       <View style={styles.hero}>

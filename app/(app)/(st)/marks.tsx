@@ -31,7 +31,7 @@ function useSTAssignmentsOverview(staffId: string | null, schoolId: string) {
     enabled: !!staffId && !!schoolId,
     staleTime: 1000 * 60,
     queryFn: async () => {
-      const { data: assignments, error } = await supabase
+      const { data: assignments, error } = await (supabase as any)
         .from('subject_teacher_assignments')
         .select(`
           id, subject_id, stream_id, semester_id,

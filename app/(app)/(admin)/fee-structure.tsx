@@ -16,7 +16,7 @@ function useFeeCategories(schoolId: string) {
     queryKey: ['fee-categories', schoolId],
     enabled: !!schoolId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('fee_categories')
         .select('*')
         .eq('school_id', schoolId)
@@ -32,7 +32,7 @@ function useFeeSchedules(schoolId: string, semesterId: string | null) {
     queryKey: ['fee-schedules', schoolId, semesterId],
     enabled: !!schoolId && !!semesterId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('fee_schedules')
         .select('*, fee_categories(name), grades(name), streams(name)')
         .eq('school_id', schoolId)
@@ -48,7 +48,7 @@ function useCreateFeeCategory(schoolId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (values: { name: string; description?: string }) => {
-      const { error } = await supabase.from('fee_categories').insert({
+      const { error } = await (supabase as any).from('fee_categories').insert({
         school_id: schoolId,
         name: values.name,
         description: values.description || null,
@@ -63,7 +63,7 @@ function useCreateFeeSchedule(schoolId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (values: any) => {
-      const { error } = await supabase.from('fee_schedules').insert({
+      const { error } = await (supabase as any).from('fee_schedules').insert({
         school_id: schoolId,
         ...values,
       });

@@ -3,24 +3,17 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { ThemeProvider } from '../lib/theme';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import { StyleSheet } from 'react-native';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { queryClient, asyncStoragePersister, CACHE_BUSTER } from '../lib/queryClient';
+import { setupNetworkManager } from '../lib/networkManager';
 
 SplashScreen.preventAutoHideAsync();
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 30,
-      retry: 2,
-    },
-  },
-});
+setupNetworkManager();
 
 export default function RootLayout() {
   const { setUser, setSchool, setReady, loadPersistedSchool, school } = useAuthStore();
@@ -28,8 +21,12 @@ export default function RootLayout() {
   useEffect(() => {
     const bootstrap = async () => {
       try {
-        const result = await supabase.auth.getSession();
-        const session = result?.data?.session ?? null;
+        // Kick off session + persisted school in parallel so splash hides sooner.
+        const [sessionResult] = await Promise.all([
+          supabase.auth.getSession(),
+          loadPersistedSchool(),
+        ]);
+        const session = sessionResult?.data?.session ?? null;
         if (session?.user) {
           const meta = (session.user.app_metadata ?? {}) as any;
           const userMeta = (session.user.user_metadata ?? {}) as any;
@@ -43,26 +40,25 @@ export default function RootLayout() {
             staffId: meta?.staff_id ?? null,
             parentId: meta?.parent_id ?? null,
             studentId: meta?.student_id ?? null,
+            department: null,
             roles: Array.isArray(meta?.roles) ? meta.roles : [],
             activeRole: meta?.active_role ?? 'hrt',
             schoolId,
           });
 
           if (schoolId) {
-            try {
-              const { data: schoolData } = await supabase
-                .from('schools')
-                .select('*')
-                .eq('id', schoolId)
-                .single();
-              if (schoolData) setSchool(schoolData as any);
-            } catch (e) {
-              console.warn('[bootstrap] school fetch failed', e);
-            }
+            // Fire in background — UI already has persisted school loaded in parallel above.
+            (supabase as any)
+              .from('schools')
+              .select('*')
+              .eq('id', schoolId)
+              .single()
+              .then(({ data: schoolData }: { data: any }) => {
+                if (schoolData) setSchool(schoolData as any);
+              })
+              .catch((e: any) => console.warn('[bootstrap] school fetch failed', e));
           }
           // Platform admin: school stays null — no school to load
-        } else {
-          await loadPersistedSchool();
         }
       } catch (e) {
         console.warn('[bootstrap] getSession failed', e);
@@ -90,12 +86,19 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={styles.root}>
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{
+            persister: asyncStoragePersister,
+            maxAge: 1000 * 60 * 60 * 24, // 24h
+            buster: CACHE_BUSTER,
+          }}
+        >
           <ThemeProvider brand={brand}>
             <StatusBar style="auto" />
             <Stack screenOptions={{ headerShown: false }} />
           </ThemeProvider>
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>
   );

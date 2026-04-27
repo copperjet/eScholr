@@ -24,7 +24,7 @@ import {
   STATUS_META, type ReportStatus,
 } from '../../../hooks/useReports';
 import { ReportStatusPipeline } from '../../../components/modules/ReportStatusPipeline';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   skeletonRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: 120 },
+  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT },
   reportRow: {
     flexDirection: 'row',
     alignItems: 'center',

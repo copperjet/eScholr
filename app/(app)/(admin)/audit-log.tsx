@@ -6,7 +6,6 @@ import {
   View,
   StyleSheet,
   SafeAreaView,
-  FlatList,
   TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -17,7 +16,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, SearchBar, Skeleton, EmptyState, ErrorState, ScreenHeader,
+  ThemedText, SearchBar, Skeleton, EmptyState, ErrorState, ScreenHeader, FastList,
 } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -165,7 +164,7 @@ export default function AuditLogScreen() {
       ) : entries.length === 0 ? (
         <EmptyState title="No audit entries" description="Audited actions will appear here." icon="shield-checkmark-outline" />
       ) : (
-        <FlatList
+        <FastList
           data={entries}
           keyExtractor={(e) => e.id}
           contentContainerStyle={styles.list}

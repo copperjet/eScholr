@@ -23,7 +23,7 @@ import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, BottomSheet, FAB, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, paddingHorizontal: Spacing.base, paddingVertical: Spacing.sm },
   chip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full, borderWidth: 1 },
-  list: { paddingHorizontal: Spacing.base, paddingBottom: 100 },
+  list: { paddingHorizontal: Spacing.base, paddingBottom: TAB_BAR_HEIGHT },
   eventRow: { flexDirection: 'row', borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden', marginBottom: Spacing.sm },
   colorStripe: { width: 4 },
   typeBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full },

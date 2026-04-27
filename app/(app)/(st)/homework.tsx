@@ -32,7 +32,7 @@ import {
   Button,
   CardSkeleton,
 } from '../../../components/ui';
-import { Spacing, Radius, Typography } from '../../../constants/Typography';
+import { Spacing, Radius, Typography, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   skeleton: { marginHorizontal: Spacing.base, marginBottom: Spacing.md },
-  list: { padding: Spacing.base, gap: Spacing.md, paddingBottom: 100 },
+  list: { padding: Spacing.base, gap: Spacing.md, paddingBottom: TAB_BAR_HEIGHT },
   card: { marginBottom: Spacing.md },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   desc: { marginTop: Spacing.xs },

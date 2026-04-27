@@ -11,7 +11,7 @@ import {
   ListItemSkeleton, EmptyState, ErrorState, SearchBar,
   StatCard, SectionHeader, Badge,
 } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -29,12 +29,12 @@ function useFinanceRecords(schoolId: string) {
     enabled: !!schoolId,
     staleTime: 1000 * 30,
     queryFn: async () => {
-      const { data: sem } = await supabase
+      const { data: sem } = await (supabase as any)
         .from('semesters').select('id, name')
         .eq('school_id', schoolId).eq('is_active', true).limit(1).single();
       const semesterId = (sem as any)?.id;
       if (!semesterId) return { records: [], semester: null };
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('finance_records')
         .select('id, student_id, status, balance, students (id, full_name, student_number, photo_url, grades (name), streams (name))')
         .eq('school_id', schoolId).eq('semester_id', semesterId)
@@ -87,11 +87,11 @@ export default function FinanceHome() {
 
   const bulkClear = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await (supabase.from('finance_records') as any)
+      const { error } = await (supabase as any).from('finance_records')
         .update({ status: 'paid', balance: 0, updated_by: user?.staffId, updated_at: new Date().toISOString() })
         .in('id', ids);
       if (error) throw error;
-      supabase.from('audit_logs').insert({ school_id: schoolId, event_type: 'finance_status_changed', actor_id: user?.staffId, data: { action: 'bulk_clear_paid', count: ids.length } } as any).then(() => {});
+      (supabase as any).from('audit_logs').insert({ school_id: schoolId, event_type: 'finance_status_changed', actor_id: user?.staffId, data: { action: 'bulk_clear_paid', count: ids.length } } as any).then(() => {});
     },
     onSuccess: () => { haptics.success(); setSelected(new Set()); setBulkSheetVisible(false); queryClient.invalidateQueries({ queryKey: ['finance-records'] }); },
     onError: () => haptics.error(),
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   searchRow:  { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.screen, paddingBottom: Spacing.sm, alignItems: 'center' },
   selectAllBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm - 1, borderRadius: Radius.full, borderWidth: 1 },
   skeletonList: { paddingHorizontal: Spacing.screen, gap: 0 },
-  list:       { paddingHorizontal: Spacing.screen, paddingBottom: 120, gap: Spacing.sm },
+  list:       { paddingHorizontal: Spacing.screen, paddingBottom: TAB_BAR_HEIGHT, gap: Spacing.sm },
   row:        { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, gap: Spacing.md },
   checkbox:   { justifyContent: 'center', alignItems: 'center' },
   checkboxInner: { width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },

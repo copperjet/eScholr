@@ -3,6 +3,8 @@ import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from './ThemedText';
 import { IconChip } from './IconChip';
+import { PressableScale } from './PressableScale';
+import { AnimatedNumber } from './AnimatedNumber';
 import { useTheme } from '../../lib/theme';
 import { Spacing, Radius, Shadow } from '../../constants/Typography';
 
@@ -35,77 +37,101 @@ export function StatCard({
   trend,
   variant = 'standard',
   style,
+  onPress,
 }: StatCardProps) {
   const { colors } = useTheme();
 
+  const Wrapper: React.FC<{ children: React.ReactNode; style?: any }> = ({ children, style: s }) =>
+    onPress ? (
+      <PressableScale onPress={onPress} scaleTo={0.97} style={s}>
+        {children}
+      </PressableScale>
+    ) : (
+      <View style={s}>{children}</View>
+    );
+
   if (variant === 'hero') {
     return (
-      <View style={[styles.hero, { backgroundColor: colors.brand.primary }, Shadow.lg, style]}>
-        {icon && (
-          <IconChip
-            icon={<Ionicons name={icon} size={22} color={colors.brand.primary} />}
-            bg="rgba(255,255,255,0.2)"
-            size={46}
-            radius={Radius.md}
-          />
-        )}
-        <ThemedText style={styles.heroValue}>{value}</ThemedText>
-        <ThemedText style={styles.heroLabel}>{label}</ThemedText>
-        {caption && (
-          <ThemedText style={styles.heroCaption}>{caption}</ThemedText>
-        )}
-        {trend && (
-          <View style={styles.trendRow}>
-            <Ionicons
-              name={trend.direction === 'up' ? 'arrow-up' : 'arrow-down'}
-              size={12}
-              color="rgba(255,255,255,0.8)"
+      <Wrapper style={[styles.hero, { backgroundColor: colors.brand.primary }, Shadow.lg, style]}>
+        <View style={styles.heroInner}>
+          {icon && (
+            <IconChip
+              icon={<Ionicons name={icon} size={22} color={colors.brand.primary} />}
+              bg="rgba(255,255,255,0.2)"
+              size={46}
+              radius={Radius.md}
             />
-            <ThemedText style={styles.heroCaption}>{trend.label}</ThemedText>
-          </View>
-        )}
-      </View>
+          )}
+          {typeof value === 'number' ? (
+            <AnimatedNumber value={value} style={styles.heroValue} color="#FFFFFF" />
+          ) : (
+            <ThemedText style={styles.heroValue}>{value}</ThemedText>
+          )}
+          <ThemedText style={styles.heroLabel}>{label}</ThemedText>
+          {caption && (
+            <ThemedText style={styles.heroCaption}>{caption}</ThemedText>
+          )}
+          {trend && (
+            <View style={styles.trendRow}>
+              <Ionicons
+                name={trend.direction === 'up' ? 'arrow-up' : 'arrow-down'}
+                size={12}
+                color="rgba(255,255,255,0.8)"
+              />
+              <ThemedText style={styles.heroCaption}>{trend.label}</ThemedText>
+            </View>
+          )}
+        </View>
+      </Wrapper>
     );
   }
 
-  const trendColor = trend?.direction === 'up'
+  const trendColorStandard = trend?.direction === 'up'
     ? colors.brand.primary
     : '#DC2626';
 
   return (
-    <View style={[styles.standard, { backgroundColor: colors.surface }, Shadow.sm, style]}>
-      {icon && (
-        <IconChip
-          icon={<Ionicons name={icon} size={18} color={iconColor ?? colors.brand.primary} />}
-          bg={iconBg ?? colors.brand.primarySoft}
-          size={38}
-          radius={Radius.sm}
-        />
-      )}
-      <ThemedText style={styles.value}>{value}</ThemedText>
-      <ThemedText variant="caption" color="muted" numberOfLines={1}>{label}</ThemedText>
-      {trend && (
-        <View style={styles.trendRow}>
-          <Ionicons
-            name={trend.direction === 'up' ? 'trending-up' : 'trending-down'}
-            size={11}
-            color={trendColor}
+    <Wrapper style={[styles.standard, { backgroundColor: colors.surface }, Shadow.sm, style]}>
+      <View style={styles.standardInner}>
+        {icon && (
+          <IconChip
+            icon={<Ionicons name={icon} size={18} color={iconColor ?? colors.brand.primary} />}
+            bg={iconBg ?? colors.brand.primarySoft}
+            size={38}
+            radius={Radius.sm}
           />
-          <ThemedText style={{ fontSize: 10, color: trendColor, fontWeight: '600', marginLeft: 2 }}>
-            {trend.label}
-          </ThemedText>
-        </View>
-      )}
-    </View>
+        )}
+        {typeof value === 'number' ? (
+          <AnimatedNumber value={value} style={styles.value} />
+        ) : (
+          <ThemedText style={styles.value}>{value}</ThemedText>
+        )}
+        <ThemedText variant="caption" color="muted" numberOfLines={1}>{label}</ThemedText>
+        {trend && (
+          <View style={styles.trendRow}>
+            <Ionicons
+              name={trend.direction === 'up' ? 'trending-up' : 'trending-down'}
+              size={11}
+              color={trendColorStandard}
+            />
+            <ThemedText style={{ fontSize: 10, color: trendColorStandard, fontWeight: '600', marginLeft: 2 }}>
+              {trend.label}
+            </ThemedText>
+          </View>
+        )}
+      </View>
+    </Wrapper>
   );
 }
 
 const styles = StyleSheet.create({
   standard: {
     borderRadius: Radius.lg,
+    flex: 1,
+  },
+  standardInner: {
     padding: Spacing.base,
     gap: Spacing.xs,
-    flex: 1,
   },
   value: {
     fontSize: 22,
@@ -115,6 +141,8 @@ const styles = StyleSheet.create({
   },
   hero: {
     borderRadius: Radius.xl,
+  },
+  heroInner: {
     padding: Spacing.lg,
     gap: Spacing.xs,
   },

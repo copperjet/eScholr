@@ -1,11 +1,11 @@
 import React from 'react';
-import { Pressable, View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from './ThemedText';
 import { IconChip } from './IconChip';
+import { PressableScale } from './PressableScale';
 import { useTheme } from '../../lib/theme';
 import { Spacing, Radius, Shadow } from '../../constants/Typography';
-import { haptics } from '../../lib/haptics';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -45,13 +45,13 @@ export function QuickActionCard({
   const chipColor = variant === 'brand' ? '#FFFFFF' : (iconColor ?? colors.brand.primary);
 
   return (
-    <Pressable
-      onPress={() => { haptics.light(); onPress?.(); }}
-      style={({ pressed }) => [
+    <PressableScale
+      onPress={onPress}
+      scaleTo={0.97}
+      style={[
         styles.card,
         { backgroundColor: bgMap[variant] },
         variant === 'surface' && Shadow.md,
-        { transform: [{ scale: pressed ? 0.97 : 1 }] },
         style,
       ]}
     >
@@ -72,7 +72,7 @@ export function QuickActionCard({
         ) : null}
       </View>
       <Ionicons name="chevron-forward" size={16} color={variant === 'brand' ? 'rgba(255,255,255,0.6)' : colors.textMuted} />
-    </Pressable>
+    </PressableScale>
   );
 }
 

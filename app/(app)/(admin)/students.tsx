@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, SafeAreaView, FlatList, Pressable, RefreshControl, ScrollView } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Pressable, RefreshControl, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -8,10 +8,10 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   SearchBar, FAB, ListItemSkeleton, EmptyState, ErrorState,
-  ListItem, Chip, Badge, ThemedText,
+  ListItem, Chip, Badge, ThemedText, FastList,
 } from '../../../components/ui';
 import { useAllStudents } from '../../../hooks/useStudents';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
 
 function useStreamsFilter(schoolId: string) {
@@ -118,7 +118,7 @@ export default function AdminStudentsScreen() {
           icon="people-outline"
         />
       ) : (
-        <FlatList
+        <FastList
           data={filtered}
           keyExtractor={s => s.id}
           contentContainerStyle={styles.list}
@@ -162,6 +162,6 @@ const styles = StyleSheet.create({
   topBar:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.screen, paddingTop: Spacing.xl, paddingBottom: Spacing.md, gap: Spacing.sm },
   pill:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.sm, paddingVertical: 6, borderRadius: Radius.full, borderWidth: 1 },
   chipsRow: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.screen, paddingVertical: Spacing.sm },
-  list:    { paddingHorizontal: Spacing.screen, paddingBottom: 100, gap: Spacing.sm },
+  list:    { paddingHorizontal: Spacing.screen, paddingBottom: TAB_BAR_HEIGHT, gap: Spacing.sm },
   rowCard: { borderRadius: Radius.lg, overflow: 'hidden' },
 });

@@ -243,10 +243,42 @@ export function useCreateDayBookEntry(schoolId: string) {
       });
       if (error) throw error;
     },
-    onSuccess: (_, vars) => {
+    // ── Optimistic: insert into HRT/ST list immediately ──
+    onMutate: async (params) => {
+      const now = new Date();
+      const optimistic: DayBookEntry = {
+        id: `optimistic-${now.getTime()}`,
+        school_id: schoolId,
+        student_id: params.studentId,
+        staff_id: params.staffId,
+        category: params.category,
+        note: params.note,
+        send_to_parent: params.sendToParent,
+        entry_date: format(now, 'yyyy-MM-dd'),
+        edit_window_closes_at: new Date(now.getTime() + 15 * 60 * 1000).toISOString(),
+        archived_at: null,
+        created_at: now.toISOString(),
+        student: { id: params.studentId, full_name: '…', student_number: '', photo_url: null, grade_name: '', stream_name: '' },
+        staff_name: '…',
+      };
+      const snapshots: Array<[readonly unknown[], any]> = [];
+      ['daybook-hrt', 'daybook-st'].forEach((root) => {
+        qc.getQueriesData({ queryKey: [root, params.staffId] }).forEach(([key, value]) => {
+          if (!Array.isArray(value)) return;
+          snapshots.push([key, value]);
+          qc.setQueryData(key, [optimistic, ...(value as DayBookEntry[])]);
+        });
+      });
+      return { snapshots };
+    },
+    onError: (_err, _vars, ctx: any) => {
+      ctx?.snapshots?.forEach(([key, value]: any) => qc.setQueryData(key, value));
+    },
+    onSettled: (_data, _err, vars) => {
       qc.invalidateQueries({ queryKey: ['daybook-hrt'] });
       qc.invalidateQueries({ queryKey: ['daybook-st'] });
-      if (vars.sendToParent) {
+      qc.invalidateQueries({ queryKey: ['daybook-admin'] });
+      if (vars?.sendToParent) {
         supabase.functions
           .invoke('send-daybook-notification', {
             body: { studentId: vars.studentId, schoolId, staffId: vars.staffId },
@@ -293,7 +325,22 @@ export function useArchiveDayBookEntry(schoolId: string) {
         .eq('school_id', schoolId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    // ── Optimistic: remove from active list instantly ──
+    onMutate: async (entryId: string) => {
+      const snapshots: Array<[readonly unknown[], any]> = [];
+      ['daybook-hrt', 'daybook-st', 'daybook-admin'].forEach((root) => {
+        qc.getQueriesData({ queryKey: [root] }).forEach(([key, value]) => {
+          if (!Array.isArray(value)) return;
+          snapshots.push([key, value]);
+          qc.setQueryData(key, (value as DayBookEntry[]).filter((e) => e.id !== entryId));
+        });
+      });
+      return { snapshots };
+    },
+    onError: (_err, _vars, ctx: any) => {
+      ctx?.snapshots?.forEach(([key, value]: any) => qc.setQueryData(key, value));
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['daybook-admin'] });
       qc.invalidateQueries({ queryKey: ['daybook-hrt'] });
       qc.invalidateQueries({ queryKey: ['daybook-st'] });

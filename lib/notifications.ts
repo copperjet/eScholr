@@ -10,7 +10,7 @@ export async function registerPushToken(
 ): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase.from('push_tokens').upsert(
+  await (supabase as any).from('push_tokens').upsert(
     {
       school_id: schoolId,
       user_id: user.id,

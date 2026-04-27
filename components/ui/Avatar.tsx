@@ -54,8 +54,10 @@ export function Avatar({ name, photoUrl, size = 40, style }: AvatarProps) {
     return (
       <Image
         source={transformedUrl}
-        cachePolicy="disk"
+        cachePolicy="memory-disk"
         contentFit="cover"
+        recyclingKey={transformedUrl}
+        transition={120}
         onError={() => setHasError(true)}
         style={[{ width: size, height: size, borderRadius: size / 2 }, style as any]}
       />

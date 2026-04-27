@@ -23,7 +23,7 @@ import {
   ThemedText, Avatar, Badge, ProgressBar,
   Skeleton, SkeletonRow, EmptyState, ErrorState,
 } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors, resolveAttBg, resolveAttColor } from '../../../constants/Colors';
 import type { AttendanceStatus } from '../../../types/database';
 
@@ -36,7 +36,7 @@ function useStudentProfile(studentId: string, schoolId: string) {
     enabled: !!studentId && !!schoolId,
     staleTime: 1000 * 60 * 3,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('students')
         .select(`
           id, full_name, student_number, date_of_birth, gender, photo_url,
@@ -60,7 +60,7 @@ function useStudentMarks(studentId: string, schoolId: string) {
     enabled: !!studentId && !!schoolId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('marks')
         .select('assessment_type, value, is_excused, subjects ( name ), semesters ( name )')
         .eq('student_id', studentId)
@@ -78,7 +78,7 @@ function useStudentAttendance(studentId: string, schoolId: string) {
     enabled: !!studentId && !!schoolId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('attendance_records')
         .select('date, status, semesters ( name )')
         .eq('student_id', studentId)
@@ -97,7 +97,7 @@ function useStudentReports(studentId: string, schoolId: string) {
     enabled: !!studentId && !!schoolId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('reports')
         .select('id, status, overall_percentage, class_position, pdf_url, released_at, semesters ( name )')
         .eq('student_id', studentId)
@@ -115,7 +115,7 @@ function useStudentDayBook(studentId: string, schoolId: string) {
     enabled: !!studentId && !!schoolId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('day_book_entries')
         .select('id, date, category, description, send_to_parent, created_at')
         .eq('student_id', studentId)
@@ -134,7 +134,7 @@ function useStudentFinance(studentId: string, schoolId: string) {
     enabled: !!studentId && !!schoolId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('finance_records')
         .select('id, status, balance, updated_at, semesters ( name )')
         .eq('student_id', studentId)
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2.5,
     borderBottomColor: 'transparent',
   },
-  tabContent: { padding: Spacing.base, paddingBottom: 100 },
+  tabContent: { padding: Spacing.base, paddingBottom: TAB_BAR_HEIGHT },
   infoCard: {
     borderRadius: Radius.lg,
     overflow: 'hidden',

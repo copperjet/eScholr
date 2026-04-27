@@ -19,7 +19,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import { useTeacherHomework, useHomeworkSubmissions, useCreateHomework, useGradeSubmission, useDeleteHomework } from '../../../hooks/useHomework';
 import { ThemedText, Card, Skeleton, EmptyState, Button, CardSkeleton } from '../../../components/ui';
-import { Spacing, Radius, Typography } from '../../../constants/Typography';
+import { Spacing, Radius, Typography, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
   list: {
     padding: Spacing.base,
     gap: Spacing.md,
-    paddingBottom: 100,
+    paddingBottom: TAB_BAR_HEIGHT,
   },
   cardSkeleton: {
     marginHorizontal: Spacing.base,

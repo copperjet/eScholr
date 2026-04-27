@@ -92,11 +92,12 @@ export default function StudentFinanceScreen() {
   // Optimistic mark-paid
   const markPaid = useMutation({
     mutationFn: async () => {
-      const { error } = await (supabase.from('finance_records') as any)
+      const { error } = await (supabase as any)
+        .from('finance_records')
         .update({ status: 'paid', balance: 0, updated_by: user?.staffId, updated_at: new Date().toISOString() })
         .eq('id', finance_record_id);
       if (error) throw error;
-      supabase.from('audit_logs').insert({
+      (supabase as any).from('audit_logs').insert({
         school_id: user?.schoolId,
         event_type: 'finance_status_changed',
         actor_id: user?.staffId,
@@ -116,7 +117,7 @@ export default function StudentFinanceScreen() {
   const recordPayment = useMutation({
     mutationFn: async ({ amount, note }: { amount: number; note: string }) => {
       // Insert transaction
-      const { error: txErr } = await supabase
+      const { error: txErr } = await (supabase as any)
         .from('payment_transactions')
         .insert({
           school_id: user?.schoolId,
@@ -131,12 +132,13 @@ export default function StudentFinanceScreen() {
       // Update balance
       const newBalance = Math.max(0, balance - amount);
       const newStatus  = newBalance === 0 ? 'paid' : 'unpaid';
-      const { error: frErr } = await (supabase.from('finance_records') as any)
+      const { error: frErr } = await (supabase as any)
+        .from('finance_records')
         .update({ balance: newBalance, status: newStatus, updated_by: user?.staffId, updated_at: new Date().toISOString() })
         .eq('id', finance_record_id);
       if (frErr) throw frErr;
 
-      supabase.from('audit_logs').insert({
+      (supabase as any).from('audit_logs').insert({
         school_id: user?.schoolId,
         event_type: 'finance_status_changed',
         actor_id: user?.staffId,

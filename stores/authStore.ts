@@ -12,6 +12,7 @@ interface AuthUser {
   staffId: string | null;
   parentId: string | null;
   studentId: string | null;
+  department: string | null; // For HOD scoping
   roles: UserRole[];
   activeRole: UserRole;
   schoolId: string | null;

@@ -4,7 +4,7 @@
  */
 import React, { useState, useCallback } from 'react';
 import {
-  View, StyleSheet, SafeAreaView, FlatList,
+  View, StyleSheet, SafeAreaView,
   TouchableOpacity, Alert, RefreshControl, TextInput, ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -15,9 +15,9 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Avatar, Badge, SearchBar, FAB, BottomSheet,
-  Skeleton, EmptyState, ErrorState, ScreenHeader,
+  Skeleton, EmptyState, ErrorState, ScreenHeader, FastList,
 } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -68,7 +68,7 @@ function useStudents(schoolId: string) {
     enabled: !!schoolId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('students')
         .select('id, full_name, student_number, grade_id, grades(name), streams(name)')
         .eq('school_id', schoolId)
@@ -104,7 +104,7 @@ export default function AdminParentsScreen() {
   const addParent = useMutation({
     mutationFn: async () => {
       if (!form.full_name.trim() || !form.email.trim()) throw new Error('Name and email are required.');
-      const { data: np, error } = await supabase
+      const { data: np, error } = await (supabase as any)
         .from('parents')
         .insert({
           school_id: schoolId,
@@ -133,7 +133,7 @@ export default function AdminParentsScreen() {
 
   const linkStudent = useMutation({
     mutationFn: async (studentId: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('student_parent_links')
         .insert({ school_id: schoolId, student_id: studentId, parent_id: selectedParent.id } as any);
       if (error && error.code !== '23505') throw new Error(error.message);
@@ -157,7 +157,7 @@ export default function AdminParentsScreen() {
 
   const unlinkStudent = useMutation({
     mutationFn: async (studentId: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('student_parent_links')
         .delete()
         .eq('parent_id', selectedParent.id)
@@ -268,7 +268,7 @@ export default function AdminParentsScreen() {
           description={!search ? 'Tap + to add a parent.' : ''}
         />
       ) : (
-        <FlatList
+        <FastList
           data={filtered}
           keyExtractor={(p: any) => p.id}
           contentContainerStyle={styles.list}
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base, paddingVertical: Spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: 120 },
+  list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT },
   row: {
     flexDirection: 'row', alignItems: 'center', padding: Spacing.base,
     marginBottom: Spacing.sm, borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, gap: Spacing.md,

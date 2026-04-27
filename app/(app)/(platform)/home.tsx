@@ -14,7 +14,7 @@ import {
   ThemedText, Avatar, ErrorState, StatCard, SectionHeader,
   StatCardSkeleton, ListItemSkeleton,
 } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -155,9 +155,9 @@ export default function PlatformHome() {
         </View>
 
         {/* ── Platform role badge ── */}
-        <View style={[styles.platformBadge, { backgroundColor: '#0F172A', marginHorizontal: Spacing.screen }]}>
-          <Ionicons name="shield-checkmark" size={16} color="#fff" />
-          <ThemedText style={{ color: '#fff', fontSize: 13, fontWeight: '700', marginLeft: 8 }}>
+        <View style={[styles.platformBadge, { backgroundColor: colors.brand.primaryDark, marginHorizontal: Spacing.screen }]}>
+          <Ionicons name="shield-checkmark" size={16} color={colors.brand.onPrimary} />
+          <ThemedText style={{ color: colors.brand.onPrimary, fontSize: 13, fontWeight: '700', marginLeft: 8 }}>
             Platform Administrator
           </ThemedText>
         </View>
@@ -213,7 +213,7 @@ export default function PlatformHome() {
           </TouchableOpacity>
         </View>
 
-        <View style={{ paddingHorizontal: Spacing.screen, gap: Spacing.sm, paddingBottom: 100 }}>
+        <View style={{ paddingHorizontal: Spacing.screen, gap: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT }}>
           {isLoading
             ? [0, 1, 2, 3].map((i) => <ListItemSkeleton key={i} />)
             : (data?.schools ?? []).length === 0

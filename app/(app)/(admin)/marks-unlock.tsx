@@ -26,7 +26,7 @@ import {
 import {
   useGradingScale, getGradeLabel, computeTotal,
 } from '../../../hooks/useMarks';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -417,7 +417,7 @@ export default function MarksUnlockScreen() {
       ) : students.length === 0 ? (
         <EmptyState title="No students" description="No active students found." />
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}>
           {/* Column headers */}
           <View style={[styles.colHeader, { backgroundColor: colors.surfaceSecondary, borderBottomColor: colors.border }]}>
             <View style={styles.studentCol}>

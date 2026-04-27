@@ -11,7 +11,7 @@ import {
   ThemedText, Avatar, Card, Badge,
   EmptyState, ErrorState, SectionHeader, StatCard,
 } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 
 const TODAY = format(new Date(), 'EEEE, d MMM');
@@ -23,7 +23,7 @@ function useStudentDashboard(studentId: string | null, schoolId: string) {
     staleTime: 1000 * 60 * 3,
     queryFn: async () => {
       // Get active semester
-      const { data: sem } = await supabase
+      const { data: sem } = await (supabase as any)
         .from('semesters')
         .select('id, name, start_date, end_date')
         .eq('school_id', schoolId)
@@ -32,12 +32,12 @@ function useStudentDashboard(studentId: string | null, schoolId: string) {
       if (!sem) throw new Error('No active semester');
 
       const [profileRes, attendanceRes, marksRes, reportsRes, dayBookRes, invoicesRes] = await Promise.all([
-        supabase.from('students').select('*, streams(name, grades(name)), school_sections(name)').eq('id', studentId!).single(),
-        supabase.from('attendance_records').select('date, status').eq('student_id', studentId!).eq('semester_id', sem.id).order('date', { ascending: false }).limit(30),
-        supabase.from('marks').select('assessment_type, value, subjects(name)').eq('student_id', studentId!).eq('semester_id', sem.id).order('created_at', { ascending: false }),
-        supabase.from('reports').select('id, status, overall_percentage, class_position, pdf_url, released_at').eq('student_id', studentId!).eq('semester_id', sem.id).order('created_at', { ascending: false }).limit(1),
-        supabase.from('day_book_entries').select('id, date, category, description').eq('student_id', studentId!).order('date', { ascending: false }).limit(3),
-        supabase.from('invoices').select('id, invoice_number, total_amount, balance, status, due_date').eq('student_id', studentId!).eq('semester_id', sem.id).order('created_at', { ascending: false }),
+        (supabase as any).from('students').select('*, streams(name, grades(name)), school_sections(name)').eq('id', studentId!).single(),
+        (supabase as any).from('attendance_records').select('date, status').eq('student_id', studentId!).eq('semester_id', sem.id).order('date', { ascending: false }).limit(30),
+        (supabase as any).from('marks').select('assessment_type, value, subjects(name)').eq('student_id', studentId!).eq('semester_id', sem.id).order('created_at', { ascending: false }),
+        (supabase as any).from('reports').select('id, status, overall_percentage, class_position, pdf_url, released_at').eq('student_id', studentId!).eq('semester_id', sem.id).order('created_at', { ascending: false }).limit(1),
+        (supabase as any).from('day_book_entries').select('id, date, category, description').eq('student_id', studentId!).order('date', { ascending: false }).limit(3),
+        (supabase as any).from('invoices').select('id, invoice_number, total_amount, balance, status, due_date').eq('student_id', studentId!).eq('semester_id', sem.id).order('created_at', { ascending: false }),
       ]);
 
       const attendance = attendanceRes.data ?? [];
@@ -85,6 +85,7 @@ export default function StudentHome() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand.primary} />}
       >
         {/* Header */}

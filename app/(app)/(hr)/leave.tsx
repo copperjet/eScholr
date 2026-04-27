@@ -34,11 +34,19 @@ export default function HRLeave() {
       >
         <View style={styles.header}>
           <ThemedText variant="h4">Leave Requests</ThemedText>
-          <Button
-            label="Request Leave"
-            onPress={() => router.push('/(app)/(hr)/leave-request' as any)}
-            size="sm"
-          />
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            <Button
+              label="Balances"
+              variant="ghost"
+              onPress={() => router.push('/(app)/(hr)/leave-balances' as any)}
+              size="sm"
+            />
+            <Button
+              label="Request Leave"
+              onPress={() => router.push('/(app)/(hr)/leave-request' as any)}
+              size="sm"
+            />
+          </View>
         </View>
 
         {/* Pending */}

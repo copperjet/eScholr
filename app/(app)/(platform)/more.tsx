@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { ThemedText, Avatar } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -95,10 +95,10 @@ export default function PlatformMore() {
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0F172A' }}>
+    <View style={{ flex: 1, backgroundColor: colors.brand.primaryDark }}>
       <StatusBar barStyle="light-content" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        <SafeAreaView edges={['top']} style={{ backgroundColor: '#0F172A' }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}>
+        <SafeAreaView edges={['top']} style={{ backgroundColor: colors.brand.primaryDark }}>
           <View style={styles.hero}>
             <View style={styles.heroAvatarRow}>
               <Avatar name={user?.fullName ?? 'SA'} size={70} />

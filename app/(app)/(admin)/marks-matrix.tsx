@@ -20,7 +20,7 @@ import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, BottomSheet, Skeleton, EmptyState, ErrorState, ScreenHeader,
 } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -230,7 +230,7 @@ export default function MarksMatrixScreen() {
         <EmptyState title="No assignments" description="No subject assignments found for the active semester." />
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}>
             {/* Column header */}
             <View style={[styles.colHeaderRow, { backgroundColor: colors.surfaceSecondary, borderBottomColor: colors.border }]}>
               <View style={styles.streamLabelCell}>
