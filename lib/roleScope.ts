@@ -5,7 +5,9 @@
 
 import { useAuthStore } from '../stores/authStore';
 
-export type AdminRole = 'super_admin' | 'school_super_admin' | 'admin' | 'principal' | 'coordinator' | 'hod';
+export type AdminRole =
+  | 'super_admin' | 'school_super_admin' | 'admin' | 'principal' | 'coordinator' | 'hod'
+  | 'hrt' | 'st' | 'finance' | 'front_desk' | 'hr';
 
 /**
  * Role hierarchy - higher number = more permissions
@@ -36,12 +38,12 @@ export const ROLE_ACCESS: Record<string, AdminRole[]> = {
   // ── Super Admin governance (school-wide, not day-to-day) ────────────────
   // school_super_admin owns these; super_admin (platform) inherits.
   users:             ['super_admin', 'school_super_admin'], // Users hub (Staff/Students/Parents)
-  school_structure:  ['super_admin', 'school_super_admin'],
-  school_settings:   ['super_admin', 'school_super_admin'],
+  school_structure:  ['super_admin', 'school_super_admin', 'admin'],
+  school_settings:   ['super_admin', 'school_super_admin', 'admin'],
   staff:             ['super_admin', 'school_super_admin'],
-  parents:           ['super_admin', 'school_super_admin'],
-  semesters:         ['super_admin', 'school_super_admin'], // legacy key, kept for back-compat
-  calendar_events:   ['super_admin', 'school_super_admin'], // new combined screen
+  parents:           ['super_admin', 'school_super_admin', 'front_desk'],
+  semesters:         ['super_admin', 'school_super_admin', 'admin'], // legacy key, kept for back-compat
+  calendar_events:   ['super_admin', 'school_super_admin', 'admin'], // new combined screen
   promotion:         ['super_admin', 'school_super_admin'],
   audit:             ['super_admin', 'school_super_admin'],
   notification_log:  ['super_admin', 'school_super_admin'],
@@ -49,7 +51,7 @@ export const ROLE_ACCESS: Record<string, AdminRole[]> = {
   marks_windows:     ['super_admin', 'school_super_admin', 'hod'],
 
   // ── Admin (day-to-day operations) ───────────────────────────────────────
-  students:          ['super_admin', 'school_super_admin', 'admin'], // visible in Users hub for super; Students tab for admin
+  students:          ['super_admin', 'school_super_admin', 'admin', 'front_desk'], // visible in Users hub for super; Students tab for admin
   assignments:       ['super_admin', 'school_super_admin', 'admin'],
   timetable:         ['super_admin', 'school_super_admin', 'admin'],
   reports:           ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator', 'hod'],

@@ -33,7 +33,7 @@ function useAssignmentData(schoolId: string) {
     staleTime: 1000 * 60 * 2,
     queryFn: async () => {
       const [semRes, staffRes, streamRes, subjectRes, hrtRes, staRes] = await Promise.all([
-        (supabase as any).from('semesters').select('id, name').eq('school_id', schoolId).eq('is_active', true).single(),
+        (supabase as any).from('semesters').select('id, name').eq('school_id', schoolId).eq('is_active', true).maybeSingle(),
         (supabase as any).from('staff').select('id, full_name, staff_number').eq('school_id', schoolId).eq('status', 'active').order('full_name'),
         (supabase as any).from('streams').select('id, name, grades(name, school_sections(name))').eq('school_id', schoolId).order('name'),
         (supabase as any).from('subjects').select('id, name, department').eq('school_id', schoolId).order('name'),
@@ -162,6 +162,22 @@ export default function AssignmentsScreen() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
         <ErrorState title="Could not load assignments" description="Try again." onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  // No active semester
+  if (!isLoading && !data?.semester) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+        <ScreenHeader title="Assignments" showBack />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
+          <ThemedText variant="h3" style={{ marginTop: 16 }}>No Active Semester</ThemedText>
+          <ThemedText color="muted" style={{ textAlign: 'center', marginTop: 8, maxWidth: 280 }}>
+            Create an active semester in Calendar & Events before assigning teachers.
+          </ThemedText>
+        </View>
       </SafeAreaView>
     );
   }

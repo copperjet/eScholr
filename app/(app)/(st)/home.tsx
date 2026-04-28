@@ -70,6 +70,21 @@ export default function STHome() {
     );
   }
 
+  // No assignments yet
+  if (!isLoading && (data ?? []).length === 0) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+        <ScrollView contentContainerStyle={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Ionicons name="book-outline" size={48} color={colors.textMuted} />
+          <ThemedText variant="h3" style={{ marginTop: 16 }}>No Subjects Assigned</ThemedText>
+          <ThemedText color="muted" style={{ textAlign: 'center', marginTop: 8, maxWidth: 280 }}>
+            You haven't been assigned to teach any subjects yet. Ask your administrator to assign you in HRT/ST Assignments.
+          </ThemedText>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView

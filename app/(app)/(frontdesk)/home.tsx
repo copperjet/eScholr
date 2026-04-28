@@ -79,65 +79,34 @@ export default function FrontDeskHome() {
           </Pressable>
         </View>
 
-        {/* ── Today hero card ── */}
-        <View style={[styles.heroCard, { backgroundColor: colors.brand.primary }, Shadow.lg]}>
-          <ThemedText style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '700', letterSpacing: 0.7, textTransform: 'uppercase' }}>
-            Today's Inquiries
-          </ThemedText>
-          <ThemedText style={{ color: '#fff', fontSize: 38, fontWeight: '700', letterSpacing: -0.5 }}>
-            {isLoading ? '—' : data?.totalToday ?? 0}
-          </ThemedText>
-          <View style={styles.heroPills}>
-            {STATUS_META.map(s => (
-              <View key={s.key} style={styles.heroPill}>
-                <ThemedText style={{ color: '#fff', fontSize: 18, fontWeight: '700' }}>
-                  {isLoading ? '—' : data?.todayCounts[s.key] ?? 0}
-                </ThemedText>
-                <ThemedText style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11 }}>{s.label}</ThemedText>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* ── All-time stat row ── */}
-        <SectionHeader title="All Time" />
-        <View style={styles.statRow}>
-          {STATUS_META.map(s => (
-            <Pressable
-              key={s.key}
-              onPress={() => router.push('/(app)/(frontdesk)/inquiries' as any)}
-              style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.8 : 1 }]}
-            >
-              <StatCard
-                label={s.label}
-                value={isLoading ? '—' : String(data?.counts[s.key] ?? 0)}
-                icon={s.icon as any}
-                iconBg={s.color + '18'}
-                iconColor={s.color}
-              />
-            </Pressable>
-          ))}
-        </View>
-
-        {/* ── Quick actions ── */}
+        {/* ── Quick actions: Parents, Students, Applications ── */}
         <SectionHeader title="Quick Actions" />
         <View style={styles.statRow}>
-          <Pressable onPress={() => router.push('/(app)/(frontdesk)/visitors' as any)} style={{ flex: 1 }}>
+          <Pressable onPress={() => router.push('/(app)/(admin)/parents' as any)} style={{ flex: 1 }}>
             <StatCard
-              label="Visitors In"
-              value={isLoading ? '—' : String(data?.activeVisitors ?? 0)}
-              icon="people-outline"
+              label="Parents"
+              value="View"
+              icon="people-circle-outline"
+              iconBg={Colors.semantic.info + '18'}
+              iconColor={Colors.semantic.info}
+            />
+          </Pressable>
+          <Pressable onPress={() => router.push('/(app)/(admin)/students' as any)} style={{ flex: 1 }}>
+            <StatCard
+              label="Students"
+              value="View"
+              icon="school-outline"
               iconBg={Colors.semantic.success + '18'}
               iconColor={Colors.semantic.success}
             />
           </Pressable>
           <Pressable onPress={() => router.push('/(app)/(frontdesk)/applications' as any)} style={{ flex: 1 }}>
             <StatCard
-              label="New Applications"
+              label="Applications"
               value={isLoading ? '—' : String(data?.pendingApps ?? 0)}
               icon="document-text-outline"
-              iconBg={Colors.semantic.info + '18'}
-              iconColor={Colors.semantic.info}
+              iconBg={Colors.semantic.warning + '18'}
+              iconColor={Colors.semantic.warning}
             />
           </Pressable>
         </View>

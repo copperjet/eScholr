@@ -25,15 +25,15 @@ import type { UserRole } from '../../../types/database';
 
 // ── Constants ─────────────────────────────────────────────────
 const ALL_ROLES: { value: UserRole; label: string }[] = [
-  { value: 'admin',       label: 'Administrator' },
-  { value: 'super_admin', label: 'Super Admin' },
-  { value: 'principal',   label: 'Principal' },
-  { value: 'coordinator', label: 'Coordinator' },
-  { value: 'hod',         label: 'Head of Department' },
-  { value: 'hrt',         label: 'Class Teacher (HRT)' },
-  { value: 'st',          label: 'Subject Teacher' },
-  { value: 'finance',     label: 'Finance' },
-  { value: 'front_desk',  label: 'Front Desk' },
+  { value: 'admin',              label: 'Administrator' },
+  { value: 'school_super_admin', label: 'School Super Admin' },
+  { value: 'principal',          label: 'Principal' },
+  { value: 'coordinator',        label: 'Coordinator' },
+  { value: 'hod',                label: 'Head of Department' },
+  { value: 'hrt',                label: 'Class Teacher (HRT)' },
+  { value: 'st',                 label: 'Subject Teacher' },
+  { value: 'finance',            label: 'Finance' },
+  { value: 'front_desk',         label: 'Front Desk' },
 ];
 
 const ROLE_LABELS: Record<string, string> = Object.fromEntries(ALL_ROLES.map(r => [r.value, r.label]));
@@ -219,6 +219,43 @@ export default function AdminStaffScreen() {
     onError: (err: any) => {
       haptics.error();
       Alert.alert('Invite Failed', err.message ?? 'Could not send invite.');
+    },
+  });
+
+  const hardDeleteUser = useMutation({
+    mutationFn: async (staff: any) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({
+            user_id: staff.auth_user_id,
+            type: 'staff',
+            record_id: staff.id,
+            school_id: schoolId,
+            mode: 'anonymize', // safer default: anonymize instead of hard delete
+          }),
+        }
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Delete failed');
+      return json;
+    },
+    onSuccess: () => {
+      haptics.success();
+      queryClient.invalidateQueries({ queryKey: ['admin-staff'] });
+      setDetailVisible(false);
+      setSelectedStaff(null);
+      Alert.alert('User Deleted', 'The user has been permanently removed.');
+    },
+    onError: (err: any) => {
+      haptics.error();
+      Alert.alert('Delete Failed', err.message ?? 'Could not delete user.');
     },
   });
 
@@ -486,16 +523,16 @@ export default function AdminStaffScreen() {
                 {!selectedStaff.auth_user_id && (
                   <TouchableOpacity
                     onPress={() => {
-                      Alert.alert('Send Invite', `Send a login invite to ${selectedStaff.email}?`, [
+                      Alert.alert('Generate Login Password', `Create a login for ${selectedStaff.email}? A temporary password will be shown for you to share.`, [
                         { text: 'Cancel', style: 'cancel' },
-                        { text: 'Send', onPress: () => sendInvite.mutate(selectedStaff) },
+                        { text: 'Generate', onPress: () => sendInvite.mutate(selectedStaff) },
                       ]);
                     }}
                     disabled={sendInvite.isPending}
                     style={[styles.inviteBtn, { backgroundColor: Colors.semantic.warning }]}
                   >
                     <ThemedText variant="label" style={{ color: '#fff', fontWeight: '700' }}>
-                      {sendInvite.isPending ? '…' : 'Invite'}
+                      {sendInvite.isPending ? '…' : 'Create Login'}
                     </ThemedText>
                   </TouchableOpacity>
                 )}
@@ -527,6 +564,27 @@ export default function AdminStaffScreen() {
                 />
                 <ThemedText variant="body" style={{ marginLeft: 8, fontWeight: '600', color: selectedStaff.status === 'active' ? Colors.semantic.error : Colors.semantic.success }}>
                   {selectedStaff.status === 'active' ? 'Deactivate Account' : 'Reactivate Account'}
+                </ThemedText>
+              </TouchableOpacity>
+
+              {/* Hard Delete */}
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert(
+                    'Delete User Permanently',
+                    `This will permanently delete ${selectedStaff.full_name} and all their data. This action cannot be undone.\n\nAre you sure?`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Delete', style: 'destructive', onPress: () => hardDeleteUser.mutate(selectedStaff) },
+                    ]
+                  );
+                }}
+                disabled={hardDeleteUser.isPending}
+                style={[styles.toggleBtn, { borderColor: Colors.semantic.error, marginTop: Spacing.sm }]}
+              >
+                <Ionicons name="trash-outline" size={18} color={Colors.semantic.error} />
+                <ThemedText variant="body" style={{ marginLeft: 8, fontWeight: '600', color: Colors.semantic.error }}>
+                  {hardDeleteUser.isPending ? 'Deleting…' : 'Delete Permanently'}
                 </ThemedText>
               </TouchableOpacity>
             </View>

@@ -27,10 +27,10 @@ export default function AdminLayout() {
     >
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} /> }} />
 
-      {/* Super Admin: Users hub. Admin: Students. */}
+      {/* Admin: Students tab. Super Admin: hidden (moved to Quick Actions). */}
       {isSuper ? (
         <>
-          <Tabs.Screen name="users"    options={{ title: 'Users',    tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} /> }} />
+          <Tabs.Screen name="users"    options={{ href: null }} />
           <Tabs.Screen name="students" options={{ href: null }} />
           <Tabs.Screen name="staff"    options={{ href: null }} />
         </>

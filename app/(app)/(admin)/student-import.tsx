@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
@@ -150,7 +151,11 @@ export default function StudentImportScreen() {
     const content = [CSV_HEADERS.join(','), ...TEMPLATE_ROWS].join('\n');
     const path = FileSystem.cacheDirectory + 'student_import_template.csv';
     await FileSystem.writeAsStringAsync(path, content, { encoding: FileSystem.EncodingType.UTF8 });
-    Alert.alert('Template ready', 'Template saved to device cache. You can now fill it in and upload on the next step.');
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: 'Save student template' });
+    } else {
+      Alert.alert('Template ready', `Saved to: ${path}`);
+    }
   };
 
   const handleUpload = async () => {

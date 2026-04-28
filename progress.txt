@@ -73,4 +73,47 @@ front_desk | parent | student
 APK:   eas build --platform android --profile preview
 Web:   (not configured)
 DB push: supabase db push  (from eScholr root, with supabase CLI)
+
+── APRIL 28, 2026 FIXES ───────────────────────────────────
+P0 SECURITY:
+- staff.tsx: replaced 'super_admin' with 'school_super_admin' in role picker
+- platform/_layout.tsx: added schoolId guard to prevent school users accessing platform routes
+- switch-role.tsx: added school_super_admin to ROLE_META, fixed single-role copy
+
+P0 DASHBOARD FIXES:
+- hrt/home.tsx: 'no assignment' now shows empty state instead of error screen
+- st/home.tsx: empty assignments shows helpful empty state
+- admin/assignments.tsx: single()→maybeSingle(), added no-semester empty state
+
+UI RESTRUCTURE:
+- admin/_layout.tsx: super admin now only shows Home + More tabs
+- admin/home.tsx: branched layout — super sees Staff/Students/Parents quick actions
+  and Staff/Students/Teachers stats; regular admin sees Students/Staff/Attendance
+- admin/home.tsx: removed Reports/DayBook/MarksMatrix from regular admin quick actions
+- frontdesk/home.tsx: removed hero + all-time stats, added Parents/Students/Applications
+- frontdesk: added students+parents access to roleScope.ts
+- lib/roleScope.ts: expanded AdminRole type to include hrt/st/finance/front_desk/hr
+
+STUDENT MANAGEMENT:
+- student-add.tsx: auto-assign student numbers (next sequential), sticky bottom Save button
+- student-add.tsx: header Save changed to checkmark icon (fixed "Sa\nve" wrapping)
+- student-import.tsx: template now uses Sharing.shareAsync for real download
+- student-add.tsx: added useNextStudentNumber hook
+
+INVITE FLOW:
+- staff.tsx: relabeled 'Send Invite' → 'Generate Login Password' with clearer dialog
+
+HRT HOME:
+- Quick actions changed to: Attendance, Day Book, Marks
+
+NEW MIGRATIONS:
+- 044_school_super_admin_cleanup.sql
+- 045_admin_dashboard_teacher_count.sql
+
+PENDING (lower priority):
+- Hard delete user edge function + UI
+- Class view model + picker for HOD/coord/principal
+- Extend calendar_events/school_structure access to admin
+- School logo on post-code splash
+
 ============================================================

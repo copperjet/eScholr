@@ -33,7 +33,10 @@ function useHRTDashboard(staffId: string | null, schoolId: string) {
       });
       if (error) throw error;
       const payload = (data ?? {}) as any;
-      if (!payload.assignment) throw new Error('No HRT assignment found');
+      if (!payload.assignment) {
+        // No assignment = data state, not error
+        return { noAssignment: true } as any;
+      }
 
       // Reshape to keep the screen's existing rendering contract.
       return {
@@ -85,6 +88,21 @@ export default function HRTHome() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
         <ErrorState title="Could not load dashboard" description="Check your connection and try again." onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  // No assignment yet
+  if ((data as any)?.noAssignment) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+        <ScrollView contentContainerStyle={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Ionicons name="people-outline" size={48} color={colors.textMuted} />
+          <ThemedText variant="h3" style={{ marginTop: 16 }}>No Class Assigned</ThemedText>
+          <ThemedText color="muted" style={{ textAlign: 'center', marginTop: 8, maxWidth: 280 }}>
+            You haven't been assigned as a class teacher yet. Ask your administrator to assign you in HRT/ST Assignments.
+          </ThemedText>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -163,14 +181,13 @@ export default function HRTHome() {
           ) : null}
         </Pressable>
 
-        {/* ── Quick actions ── */}
+        {/* ── Quick actions: Attendance, Day Book, Marks ── */}
         <SectionHeader title="Quick Actions" />
         <View style={styles.qaRow}>
           {[
-            { icon: 'bar-chart-outline', label: 'Marks',    color: colors.brand.primary,     route: '/(app)/(hrt)/marks' },
-            { icon: 'people-outline',    label: 'Students', color: Colors.semantic.info,      route: '/(app)/(hrt)/students' },
-            { icon: 'document-text-outline', label: 'Reports', color: Colors.semantic.warning, route: '/(app)/(hrt)/reports' as any },
-            { icon: 'book-outline',      label: 'Day Book', color: '#7C3AED',                 route: '/(app)/(hrt)/daybook' as any },
+            { icon: 'checkmark-circle-outline', label: 'Attendance', color: Colors.semantic.success, route: '/(app)/(hrt)/attendance' },
+            { icon: 'book-outline',           label: 'Day Book',   color: '#7C3AED',              route: '/(app)/(hrt)/daybook' as any },
+            { icon: 'bar-chart-outline',      label: 'Marks',      color: colors.brand.primary, route: '/(app)/(hrt)/marks' },
           ].map(({ icon, label, color, route }) => (
             <Pressable
               key={label}

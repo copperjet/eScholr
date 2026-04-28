@@ -18,18 +18,19 @@ import { haptics } from '../../lib/haptics';
 import type { UserRole } from '../../types/database';
 
 const ROLE_META: Record<UserRole, { label: string; icon: string; description: string }> = {
-  hrt:        { label: 'Class Teacher (HRT)', icon: 'people',          description: 'Attendance, marks, CREED, day book, reports' },
-  st:         { label: 'Subject Teacher',     icon: 'book',            description: 'Subject assignments and marks entry' },
-  admin:      { label: 'Administrator',       icon: 'shield',          description: 'School-wide management and approvals' },
-  super_admin:{ label: 'Super Admin',         icon: 'shield-checkmark',description: 'Full system access across all schools' },
-  principal:  { label: 'Principal',          icon: 'ribbon',          description: 'School leadership and oversight' },
-  coordinator:{ label: 'Coordinator',        icon: 'git-merge',       description: 'Academic coordination and scheduling' },
-  hod:        { label: 'Head of Department', icon: 'layers',          description: 'Departmental marks and staff oversight' },
-  finance:    { label: 'Finance',            icon: 'card',            description: 'Fee clearance and financial reports' },
-  front_desk: { label: 'Front Desk',         icon: 'headset',         description: 'Admission inquiries and visitor management' },
-  parent:     { label: 'Parent',            icon: 'heart',           description: "Your children's progress and reports" },
-  student:    { label: 'Student',            icon: 'school',          description: 'View your marks, attendance, and reports' },
-  hr:         { label: 'Human Resources',    icon: 'briefcase',       description: 'Staff leave management and directory' },
+  hrt:                { label: 'Class Teacher (HRT)', icon: 'people',          description: 'Attendance, marks, CREED, day book, reports' },
+  st:                 { label: 'Subject Teacher',     icon: 'book',            description: 'Subject assignments and marks entry' },
+  admin:              { label: 'Administrator',       icon: 'shield',          description: 'School-wide management and approvals' },
+  super_admin:        { label: 'Super Admin',         icon: 'shield-checkmark',description: 'Full system access across all schools' },
+  school_super_admin: { label: 'School Super Admin',    icon: 'shield-checkmark',description: 'Full school management and governance' },
+  principal:          { label: 'Principal',             icon: 'ribbon',          description: 'School leadership and oversight' },
+  coordinator:        { label: 'Coordinator',         icon: 'git-merge',       description: 'Academic coordination and scheduling' },
+  hod:                { label: 'Head of Department',  icon: 'layers',          description: 'Departmental marks and staff oversight' },
+  finance:            { label: 'Finance',             icon: 'card',            description: 'Fee clearance and financial reports' },
+  front_desk:         { label: 'Front Desk',          icon: 'headset',         description: 'Admission inquiries and visitor management' },
+  parent:             { label: 'Parent',              icon: 'heart',           description: "Your children's progress and reports" },
+  student:            { label: 'Student',             icon: 'school',          description: 'View your marks, attendance, and reports' },
+  hr:                 { label: 'Human Resources',     icon: 'briefcase',       description: 'Staff leave management and directory' },
 };
 
 export default function SwitchRoleScreen() {
@@ -55,7 +56,9 @@ export default function SwitchRoleScreen() {
 
       <View style={styles.content}>
         <ThemedText variant="body" color="muted" style={{ marginBottom: Spacing.lg }}>
-          You have access to multiple roles. Select the one you want to use.
+          {roles.length > 1
+            ? 'You have access to multiple roles. Select the one you want to use.'
+            : 'This is your only assigned role.'}
         </ThemedText>
 
         {roles.map((role) => {

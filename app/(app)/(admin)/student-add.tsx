@@ -2,7 +2,7 @@
  * Add Student — admin creates a new student record.
  * Route: /(app)/(admin)/student-add
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, StyleSheet, SafeAreaView, ScrollView,
   TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform,
@@ -52,8 +52,32 @@ function useActiveSemester(schoolId: string) {
         .eq('school_id', schoolId)
         .eq('is_active', true)
         .limit(1)
-        .single();
+        .maybeSingle();
       return data as any;
+    },
+  });
+}
+
+function useNextStudentNumber(schoolId: string) {
+  return useQuery({
+    queryKey: ['next-student-number', schoolId],
+    enabled: !!schoolId,
+    staleTime: 1000 * 30,
+    queryFn: async () => {
+      const db = supabase as any;
+      // Get max numeric part of student_number (assuming format like 0001, 001, etc)
+      const { data } = await db
+        .from('students')
+        .select('student_number')
+        .eq('school_id', schoolId)
+        .order('student_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!data) return '0001';
+      // Extract numeric part and increment
+      const match = data.student_number.match(/(\d+)/);
+      const maxNum = match ? parseInt(match[1], 10) : 0;
+      return String(maxNum + 1).padStart(4, '0');
     },
   });
 }
@@ -65,12 +89,20 @@ export default function StudentAddScreen() {
 
   const { data: streams = [] } = useStreams(schoolId);
   const { data: semester } = useActiveSemester(schoolId);
+  const { data: nextNumber } = useNextStudentNumber(schoolId);
 
   const createMutation = useCreateStudent(schoolId);
   const uploadMutation = useUploadStudentPhoto(schoolId);
 
   const [fullName, setFullName] = useState('');
   const [studentNumber, setStudentNumber] = useState('');
+
+  // Auto-assign student number on mount
+  useEffect(() => {
+    if (nextNumber && !studentNumber) {
+      setStudentNumber(nextNumber);
+    }
+  }, [nextNumber, studentNumber]);
   const [streamId, setStreamId] = useState('');
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState<Gender | ''>('');
@@ -139,11 +171,9 @@ export default function StudentAddScreen() {
           <TouchableOpacity
             onPress={handleSave}
             disabled={!canSave || isSaving}
-            style={[styles.saveBtn, { backgroundColor: canSave && !isSaving ? colors.brand.primary : colors.border }]}
+            style={[styles.headerSaveBtn, { backgroundColor: canSave && !isSaving ? colors.brand.primary : colors.border }]}
           >
-            <ThemedText variant="bodySm" style={{ color: '#fff', fontWeight: '700' }}>
-              {isSaving ? 'Saving…' : 'Save'}
-            </ThemedText>
+            <Ionicons name="checkmark" size={20} color="#fff" />
           </TouchableOpacity>
         }
       />
@@ -208,7 +238,23 @@ export default function StudentAddScreen() {
             <Field label="Contact Name" value={emergencyName} onChangeText={setEmergencyName} placeholder="Parent / guardian name" colors={colors} />
             <Field label="Contact Phone" value={emergencyPhone} onChangeText={setEmergencyPhone} placeholder="+254 7xx xxx xxx" keyboardType="phone-pad" colors={colors} />
           </Section>
+
+          {/* Spacer for bottom button */}
+          <View style={{ height: 80 }} />
         </ScrollView>
+
+        {/* Sticky bottom Save */}
+        <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={!canSave || isSaving}
+            style={[styles.bottomSaveBtn, { backgroundColor: canSave && !isSaving ? colors.brand.primary : colors.border }]}
+          >
+            <ThemedText style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
+              {isSaving ? 'Saving…' : 'Save Student'}
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -247,8 +293,10 @@ const sectionStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  saveBtn: { paddingHorizontal: Spacing.md, paddingVertical: 7, borderRadius: Radius.full },
-  scroll: { padding: Spacing.base, paddingBottom: 40 },
+  headerSaveBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopWidth: 1, padding: Spacing.base },
+  bottomSaveBtn: { height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  scroll: { padding: Spacing.base, paddingBottom: 100 },
   photoPicker: { alignItems: 'center', marginBottom: Spacing.base },
   photoPlaceholder: {
     width: 80, height: 80, borderRadius: 40,

@@ -8,7 +8,8 @@ export default function PlatformLayout() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
 
-  if (user && user.activeRole !== 'super_admin') {
+  // Platform routes: only pure super_admin (no school) allowed
+  if (!user || user.activeRole !== 'super_admin' || user.schoolId) {
     return <Redirect href="/" />;
   }
 

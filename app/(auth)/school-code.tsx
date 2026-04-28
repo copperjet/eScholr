@@ -19,7 +19,7 @@ export default function SchoolCodeScreen() {
   const [code, setCode]       = useState('');
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
-  const [foundSchool, setFoundSchool] = useState<{ id: string; name: string; primary_color: string } | null>(null);
+  const [foundSchool, setFoundSchool] = useState<{ id: string; name: string; primary_color: string; logo_url?: string | null } | null>(null);
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const brandAnim = useRef(new Animated.Value(0)).current;
@@ -39,13 +39,13 @@ export default function SchoolCodeScreen() {
     if (!trimmed) { setError('Enter your school code'); shake(); return; }
     setLoading(true);
     setError('');
-    const { data, error: err } = await (supabase as any).from('schools').select('*').eq('code', trimmed).in('subscription_status', ['active', 'trial']).single();
+    const { data, error: err } = await (supabase as any).from('schools').select('id, name, primary_color, logo_url').eq('code', trimmed).in('subscription_status', ['active', 'trial']).single();
     setLoading(false);
     if (err || !data) { setError('School not found. Check your code and try again.'); shake(); return; }
     const school = data as any;
     haptics.success();
     setSchool(school);
-    setFoundSchool({ id: school.id, name: school.name, primary_color: school.primary_color ?? colors.brand.primary });
+    setFoundSchool({ id: school.id, name: school.name, primary_color: school.primary_color ?? colors.brand.primary, logo_url: school.logo_url });
     Animated.sequence([
       Animated.timing(brandAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
       Animated.delay(400),
@@ -63,7 +63,11 @@ export default function SchoolCodeScreen() {
       {/* Brand transition overlay */}
       {foundSchool && (
         <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: foundSchool.primary_color, opacity: brandAnim, zIndex: 99, alignItems: 'center', justifyContent: 'center', gap: 16 }]} pointerEvents="none">
-          <Image source={require('../../assets/scholr-logo.png')} style={styles.overlayLogo} resizeMode="contain" />
+          {foundSchool.logo_url ? (
+            <Image source={{ uri: foundSchool.logo_url }} style={styles.schoolLogo} resizeMode="contain" />
+          ) : (
+            <Image source={require('../../assets/scholr-logo.png')} style={styles.overlayLogo} resizeMode="contain" />
+          )}
           <ThemedText style={{ color: '#fff', fontSize: 20, fontWeight: '700', textAlign: 'center' }}>{foundSchool.name}</ThemedText>
         </Animated.View>
       )}
@@ -140,6 +144,7 @@ const styles = StyleSheet.create({
   logoArea: { alignItems: 'center' },
   mainLogo: { width: 200, height: 67 },
   overlayLogo: { width: 72, height: 72, tintColor: '#fff' },
+  schoolLogo: { width: 120, height: 120, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)' },
   sheet: {
     flex: 1,
     borderTopLeftRadius: 28,

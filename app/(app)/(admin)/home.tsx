@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, SafeAreaView, ScrollView, StyleSheet, Pressable, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,7 @@ import {
 import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { useCanAccess } from '../../../lib/roleScope';
+import { StreamPicker } from '../../../components/modules/StreamPicker';
 
 /**
  * Single RPC `get_admin_dashboard` replaces the old 5-query waterfall.
@@ -52,15 +53,20 @@ function useAdminDashboard(schoolId: string) {
           semester: semesterRes.data as any,
           presentToday: attData.filter((a: any) => a.status === 'present').length,
           totalAttToday: attData.length,
+          teacherCount: 0, // Fallback - RPC returns real count
         };
       }
       return data as {
         studentCount: number; staffCount: number; pendingReports: number;
         semester: any; presentToday: number; totalAttToday: number;
+        teacherCount?: number;
       };
     },
   });
 }
+
+const SUPER_ROLES = ['super_admin', 'school_super_admin'];
+const SCOPED_ADMIN_ROLES = ['principal', 'coordinator', 'hod']; // These see class picker
 
 export default function AdminHome() {
   const { colors } = useTheme();
@@ -68,10 +74,16 @@ export default function AdminHome() {
   const { data, isLoading, isError, refetch, isFetching } = useAdminDashboard(user?.schoolId ?? '');
   const canStudents = useCanAccess('students');
   const canStaff = useCanAccess('staff');
+  const canParents = useCanAccess('parents');
   const canReports = useCanAccess('reports');
   const canAttendance = useCanAccess('attendance');
   const canMarksMatrix = useCanAccess('marks_matrix');
   const canDaybook = useCanAccess('daybook');
+
+  const isSuper = user ? SUPER_ROLES.includes(user.activeRole) : false;
+  const isScopedAdmin = user ? SCOPED_ADMIN_ROLES.includes(user.activeRole) : false;
+
+  const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
 
   const TODAY = format(new Date(), 'EEEE, d MMM');
   const attPct = data?.totalAttToday
@@ -109,28 +121,43 @@ export default function AdminHome() {
           </Pressable>
         </View>
 
-        {/* ── Hero stat card ── */}
-        <FadeIn delay={40} style={styles.heroPad}>
-          {isLoading ? (
-            <View style={[styles.heroPlaceholder, { backgroundColor: colors.brand.primary }]}>
-              <StatCardSkeleton />
-            </View>
-          ) : (
-            <StatCard
-              variant="hero"
-              label="Students enrolled"
-              value={data?.studentCount ?? 0}
-              icon="people"
-              caption={data?.semester ? `Active: ${data.semester.name}` : undefined}
-              trend={
-                attPct !== null
-                  ? { direction: 'up', label: `${attPct}% present today` }
-                  : undefined
-              }
-              style={{ marginHorizontal: Spacing.screen }}
+        {/* ── Class picker for HOD / Coordinator / Principal ── */}
+        {isScopedAdmin && (
+          <FadeIn delay={30} style={{ marginHorizontal: Spacing.screen, marginTop: Spacing.md }}>
+            <StreamPicker
+              schoolId={user?.schoolId ?? ''}
+              selectedStreamId={selectedStreamId}
+              onSelect={setSelectedStreamId}
+              showAllOption
+              label="Filter by Class"
             />
-          )}
-        </FadeIn>
+          </FadeIn>
+        )}
+
+        {/* ── Hero stat card (non-super only) ── */}
+        {!isSuper && (
+          <FadeIn delay={40} style={styles.heroPad}>
+            {isLoading ? (
+              <View style={[styles.heroPlaceholder, { backgroundColor: colors.brand.primary }]}>
+                <StatCardSkeleton />
+              </View>
+            ) : (
+              <StatCard
+                variant="hero"
+                label="Students enrolled"
+                value={data?.studentCount ?? 0}
+                icon="people"
+                caption={data?.semester ? `Active: ${data.semester.name}` : undefined}
+                trend={
+                  attPct !== null
+                    ? { direction: 'up', label: `${attPct}% present today` }
+                    : undefined
+                }
+                style={{ marginHorizontal: Spacing.screen }}
+              />
+            )}
+          </FadeIn>
+        )}
 
         {/* ── Stat grid ── */}
         <FadeIn delay={120}>
@@ -143,32 +170,61 @@ export default function AdminHome() {
                 </View>
               ))}
             </View>
-          ) : (
+          ) : isSuper ? (
+            // Super admin: Staff, Students, Teachers
             <View style={styles.statRow}>
-            <StatCard
-              label="Staff"
-              value={data?.staffCount ?? 0}
-              icon="person"
-              iconBg={Colors.semantic.infoLight}
-              iconColor={Colors.semantic.info}
-              style={styles.statCell}
-            />
-            <StatCard
-              label="Reports Pending"
-              value={data?.pendingReports ?? 0}
-              icon="document-text"
-              iconBg={Colors.semantic.warningLight}
-              iconColor={Colors.semantic.warning}
-              style={styles.statCell}
-            />
-            <StatCard
-              label="Present Today"
-              value={attPct !== null ? `${attPct}%` : '—'}
-              icon="checkmark-circle"
-              iconBg={Colors.semantic.successLight}
-              iconColor={Colors.semantic.success}
-              style={styles.statCell}
-            />
+              <StatCard
+                label="Staff"
+                value={data?.staffCount ?? 0}
+                icon="people"
+                iconBg={Colors.semantic.infoLight}
+                iconColor={Colors.semantic.info}
+                style={styles.statCell}
+              />
+              <StatCard
+                label="Students"
+                value={data?.studentCount ?? 0}
+                icon="school"
+                iconBg={Colors.semantic.successLight}
+                iconColor={Colors.semantic.success}
+                style={styles.statCell}
+              />
+              <StatCard
+                label="Teachers"
+                value={data?.teacherCount ?? 0}
+                icon="id-card"
+                iconBg={Colors.semantic.warningLight}
+                iconColor={Colors.semantic.warning}
+                style={styles.statCell}
+              />
+            </View>
+          ) : (
+            // Regular admin: Staff, Reports Pending, Present Today
+            <View style={styles.statRow}>
+              <StatCard
+                label="Staff"
+                value={data?.staffCount ?? 0}
+                icon="person"
+                iconBg={Colors.semantic.infoLight}
+                iconColor={Colors.semantic.info}
+                style={styles.statCell}
+              />
+              <StatCard
+                label="Reports Pending"
+                value={data?.pendingReports ?? 0}
+                icon="document-text"
+                iconBg={Colors.semantic.warningLight}
+                iconColor={Colors.semantic.warning}
+                style={styles.statCell}
+              />
+              <StatCard
+                label="Present Today"
+                value={attPct !== null ? `${attPct}%` : '—'}
+                icon="checkmark-circle"
+                iconBg={Colors.semantic.successLight}
+                iconColor={Colors.semantic.success}
+                style={styles.statCell}
+              />
             </View>
           )}
         </FadeIn>
@@ -198,65 +254,74 @@ export default function AdminHome() {
         <FadeIn delay={200}>
         <SectionHeader title="Quick Actions" />
         <View style={styles.qaGrid}>
-          {canStudents && (
-            <QuickActionCard
-              title="Students"
-              subtitle="Manage enrolment"
-              icon="school-outline"
-              variant="surface"
-              onPress={() => router.push('/(app)/(hrt)/students' as any)}
-              style={styles.qaCard}
-            />
-          )}
-          {canStaff && (
-            <QuickActionCard
-              title="Staff"
-              subtitle="Roles & access"
-              icon="people-outline"
-              variant="surface"
-              onPress={() => router.push('/(app)/(admin)/staff' as any)}
-              style={styles.qaCard}
-            />
-          )}
-          {canReports && (
-            <QuickActionCard
-              title="Reports"
-              subtitle="Approve & release"
-              icon="document-text-outline"
-              variant="surface"
-              onPress={() => router.push('/(app)/(admin)/reports' as any)}
-              style={styles.qaCard}
-            />
-          )}
-          {canAttendance && (
-            <QuickActionCard
-              title="Attendance"
-              subtitle="View overview"
-              icon="calendar-outline"
-              variant="surface"
-              onPress={() => router.push('/(app)/(admin)/attendance-overview' as any)}
-              style={styles.qaCard}
-            />
-          )}
-          {canMarksMatrix && (
-            <QuickActionCard
-              title="Marks Matrix"
-              subtitle="Class completion view"
-              icon="grid-outline"
-              variant="surface"
-              onPress={() => router.push('/(app)/(admin)/marks-matrix' as any)}
-              style={styles.qaCard}
-            />
-          )}
-          {canDaybook && (
-            <QuickActionCard
-              title="Day Book"
-              subtitle="Student notes"
-              icon="book-outline"
-              variant="surface"
-              onPress={() => router.push('/(app)/(admin)/daybook' as any)}
-              style={styles.qaCard}
-            />
+          {isSuper ? (
+            // Super admin: Staff, Students, Parents
+            <>
+              {canStaff && (
+                <QuickActionCard
+                  title="Staff"
+                  subtitle="Manage staff"
+                  icon="people-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/staff' as any)}
+                  style={styles.qaCard}
+                />
+              )}
+              {canStudents && (
+                <QuickActionCard
+                  title="Students"
+                  subtitle="Manage enrolment"
+                  icon="school-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/students' as any)}
+                  style={styles.qaCard}
+                />
+              )}
+              {canParents && (
+                <QuickActionCard
+                  title="Parents"
+                  subtitle="Manage parents"
+                  icon="people-circle-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/parents' as any)}
+                  style={styles.qaCard}
+                />
+              )}
+            </>
+          ) : (
+            // Regular admin: Students, Staff, Attendance only
+            <>
+              {canStudents && (
+                <QuickActionCard
+                  title="Students"
+                  subtitle="Manage enrolment"
+                  icon="school-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(hrt)/students' as any)}
+                  style={styles.qaCard}
+                />
+              )}
+              {canStaff && (
+                <QuickActionCard
+                  title="Staff"
+                  subtitle="Roles & access"
+                  icon="people-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/staff' as any)}
+                  style={styles.qaCard}
+                />
+              )}
+              {canAttendance && (
+                <QuickActionCard
+                  title="Attendance"
+                  subtitle="View overview"
+                  icon="calendar-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/attendance-overview' as any)}
+                  style={styles.qaCard}
+                />
+              )}
+            </>
           )}
         </View>
         </FadeIn>
