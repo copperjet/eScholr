@@ -162,7 +162,7 @@ export default function LoginScreen() {
 
               <Button label="Sign In" onPress={handleLogin} loading={loading} fullWidth size="lg" />
 
-              <TouchableOpacity style={styles.forgotBtn}>
+              <TouchableOpacity style={styles.forgotBtn} onPress={() => router.push('/(auth)/forgot-password' as any)}>
                 <ThemedText style={{ color: colors.brand.primary, fontWeight: '600', fontSize: 15 }}>Forgot password?</ThemedText>
               </TouchableOpacity>
 

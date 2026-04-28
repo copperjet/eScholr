@@ -91,15 +91,15 @@ export function useHRTDayBook(staffId: string | null, schoolId: string, date?: s
       const { data, error } = await db
         .from('day_book_entries')
         .select(`
-          id, school_id, student_id, staff_id, category, note, send_to_parent,
-          entry_date, edit_window_closes_at, archived_at, created_at,
+          id, school_id, student_id, staff_id:created_by, category, note:description, send_to_parent,
+          entry_date:date, edit_window_closes_at, archived_at, created_at,
           students ( id, full_name, student_number, photo_url,
             streams ( name, grades ( name ) ) ),
-          staff:staff_id ( full_name )
+          staff:created_by ( full_name )
         `)
         .eq('school_id', schoolId)
-        .eq('staff_id', staffId)
-        .eq('entry_date', entryDate)
+        .eq('created_by', staffId)
+        .eq('date', entryDate)
         .is('archived_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -119,15 +119,15 @@ export function useSTDayBook(staffId: string | null, schoolId: string, date?: st
       const { data, error } = await db
         .from('day_book_entries')
         .select(`
-          id, school_id, student_id, staff_id, category, note, send_to_parent,
-          entry_date, edit_window_closes_at, archived_at, created_at,
+          id, school_id, student_id, staff_id:created_by, category, note:description, send_to_parent,
+          entry_date:date, edit_window_closes_at, archived_at, created_at,
           students ( id, full_name, student_number, photo_url,
             streams ( name, grades ( name ) ) ),
-          staff:staff_id ( full_name )
+          staff:created_by ( full_name )
         `)
         .eq('school_id', schoolId)
-        .eq('staff_id', staffId)
-        .eq('entry_date', entryDate)
+        .eq('created_by', staffId)
+        .eq('date', entryDate)
         .is('archived_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -146,15 +146,15 @@ export function useAdminDayBook(schoolId: string, params: { date?: string; searc
       let q = db
         .from('day_book_entries')
         .select(`
-          id, school_id, student_id, staff_id, category, note, send_to_parent,
-          entry_date, edit_window_closes_at, archived_at, created_at,
+          id, school_id, student_id, staff_id:created_by, category, note:description, send_to_parent,
+          entry_date:date, edit_window_closes_at, archived_at, created_at,
           students ( id, full_name, student_number, photo_url,
             streams ( name, grades ( name ) ) ),
-          staff:staff_id ( full_name )
+          staff:created_by ( full_name )
         `)
         .eq('school_id', schoolId);
 
-      if (params.date) q = q.eq('entry_date', params.date);
+      if (params.date) q = q.eq('date', params.date);
       if (params.archived) {
         q = q.not('archived_at', 'is', null);
       } else {
@@ -198,11 +198,11 @@ export function useParentDayBookInbox(parentId: string | null, schoolId: string)
       const { data, error } = await db
         .from('day_book_entries')
         .select(`
-          id, school_id, student_id, staff_id, category, note, send_to_parent,
-          entry_date, edit_window_closes_at, archived_at, created_at,
+          id, school_id, student_id, staff_id:created_by, category, note:description, send_to_parent,
+          entry_date:date, edit_window_closes_at, archived_at, created_at,
           students ( id, full_name, student_number, photo_url,
             streams ( name, grades ( name ) ) ),
-          staff:staff_id ( full_name )
+          staff:created_by ( full_name )
         `)
         .eq('school_id', schoolId)
         .eq('send_to_parent', true)
@@ -233,11 +233,11 @@ export function useCreateDayBookEntry(schoolId: string) {
       const { error } = await db.from('day_book_entries').insert({
         school_id: schoolId,
         student_id: params.studentId,
-        staff_id: params.staffId,
+        created_by: params.staffId,
         category: params.category,
-        note: params.note,
+        description: params.note,
         send_to_parent: params.sendToParent,
-        entry_date: format(now, 'yyyy-MM-dd'),
+        date: format(now, 'yyyy-MM-dd'),
         edit_window_closes_at: editWindowClosesAt,
         created_at: now.toISOString(),
       });
@@ -301,7 +301,7 @@ export function useEditDayBookEntry(schoolId: string) {
       const db = supabase as any;
       const { error } = await db
         .from('day_book_entries')
-        .update({ note: params.note, send_to_parent: params.sendToParent })
+        .update({ description: params.note, send_to_parent: params.sendToParent })
         .eq('id', params.entryId)
         .eq('school_id', schoolId);
       if (error) throw error;
@@ -320,7 +320,7 @@ export function useArchiveDayBookEntry(schoolId: string) {
       const db = supabase as any;
       const { error } = await db
         .from('day_book_entries')
-        .update({ archived_at: new Date().toISOString() })
+        .update({ archived_at: new Date().toISOString(), archived: true })
         .eq('id', entryId)
         .eq('school_id', schoolId);
       if (error) throw error;

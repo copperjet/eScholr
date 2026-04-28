@@ -201,10 +201,20 @@ export default function AdminStaffScreen() {
       if (!res.ok) throw new Error(json.error ?? 'Invite failed');
       return json;
     },
-    onSuccess: () => {
+    onSuccess: (json: any) => {
       haptics.success();
       queryClient.invalidateQueries({ queryKey: ['admin-staff'] });
-      Alert.alert('Invite Sent', 'An email has been sent with a login link.');
+      // Show the temp password to the admin so they can hand it to the user.
+      // The user will be forced to set a new password on first login.
+      if (json?.temp_password) {
+        Alert.alert(
+          'Temporary Password',
+          `Account created.\n\nEmail: ${json.email}\nTemporary password: ${json.temp_password}\n\nShare these with the staff member. They will be required to change the password on first login.`,
+          [{ text: 'Got it' }],
+        );
+      } else {
+        Alert.alert('Invite Sent', 'An email has been sent with a login link.');
+      }
     },
     onError: (err: any) => {
       haptics.error();

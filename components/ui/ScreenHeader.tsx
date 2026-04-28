@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Pressable, StyleSheet, ViewStyle } from 'react-native';
+import { View, Pressable, StyleSheet, ViewStyle, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from './ThemedText';
 import { useTheme } from '../../lib/theme';
+import { useAuthStore } from '../../stores/authStore';
 import { Spacing, Radius } from '../../constants/Typography';
 
 interface ScreenHeaderProps {
@@ -28,9 +29,20 @@ export function ScreenHeader({
 }: ScreenHeaderProps) {
   const router = useRouter();
   const { colors } = useTheme();
+  const school = useAuthStore((s) => s.school);
   const isLight = tint === 'light';
   const iconColor = isLight ? '#FFFFFF' : colors.textPrimary;
   const iconBg = isLight ? 'rgba(255,255,255,0.18)' : colors.surfaceSecondary;
+
+  // Default right-slot content: the school logo if available.
+  const rightContent = right ?? (school?.logo_url ? (
+    <Image
+      source={{ uri: school.logo_url }}
+      style={styles.logo}
+      resizeMode="contain"
+      accessibilityLabel={`${school.name} logo`}
+    />
+  ) : null);
 
   const handleBack = () => {
     if (onBack) { onBack(); } else { router.back(); }
@@ -76,7 +88,7 @@ export function ScreenHeader({
 
       {/* Right slot */}
       <View style={[styles.side, { alignItems: 'flex-end' }]}>
-        {right ?? null}
+        {rightContent}
       </View>
     </View>
   );
@@ -104,5 +116,10 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  logo: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.sm,
   },
 });

@@ -5,13 +5,14 @@
 
 import { useAuthStore } from '../stores/authStore';
 
-export type AdminRole = 'super_admin' | 'admin' | 'principal' | 'coordinator' | 'hod';
+export type AdminRole = 'super_admin' | 'school_super_admin' | 'admin' | 'principal' | 'coordinator' | 'hod';
 
 /**
  * Role hierarchy - higher number = more permissions
  */
 const ROLE_LEVEL: Record<string, number> = {
   super_admin: 100,
+  school_super_admin: 95,
   admin: 90,
   principal: 80,
   coordinator: 70,
@@ -32,27 +33,31 @@ export const ROLE_ACCESS: Record<string, AdminRole[]> = {
   // Platform admin only
   onboard_school: ['super_admin'],
 
+  // School-level governance (super_admin = platform; school_super_admin = school owner).
+  school_structure: ['super_admin', 'school_super_admin'],
+  school_settings:  ['super_admin', 'school_super_admin'],
+
   // Full admin access
-  students: ['super_admin', 'admin'],
-  staff: ['super_admin', 'admin'],
-  parents: ['super_admin', 'admin'],
-  assignments: ['super_admin', 'admin'],
-  timetable: ['super_admin', 'admin'],
-  semesters: ['super_admin', 'admin'],
-  promotion: ['super_admin', 'admin'],
-  audit: ['super_admin', 'admin'],
-  fee_structure: ['super_admin', 'admin'],
-  backup: ['super_admin', 'admin'],
+  students: ['super_admin', 'school_super_admin', 'admin'],
+  staff: ['super_admin', 'school_super_admin', 'admin'],
+  parents: ['super_admin', 'school_super_admin', 'admin'],
+  assignments: ['super_admin', 'school_super_admin', 'admin'],
+  timetable: ['super_admin', 'school_super_admin', 'admin'],
+  semesters: ['super_admin', 'school_super_admin', 'admin'],
+  promotion: ['super_admin', 'school_super_admin', 'admin'],
+  audit: ['super_admin', 'school_super_admin', 'admin'],
+  fee_structure: ['super_admin', 'school_super_admin', 'admin'],
+  backup: ['super_admin', 'school_super_admin', 'admin'],
 
   // Academic leadership (all academic roles)
-  marks_windows: ['super_admin', 'admin', 'hod'],
-  reports: ['super_admin', 'admin', 'principal', 'coordinator', 'hod'],
-  attendance: ['super_admin', 'admin', 'principal', 'coordinator'],
-  marks_matrix: ['super_admin', 'admin', 'principal', 'coordinator', 'hod'],
-  daybook: ['super_admin', 'admin', 'principal', 'coordinator', 'hod'],
-  announcements: ['super_admin', 'admin', 'principal', 'coordinator'],
-  calendar: ['super_admin', 'admin', 'principal', 'coordinator'],
-  notification_log: ['super_admin', 'admin', 'principal'],
+  marks_windows: ['super_admin', 'school_super_admin', 'admin', 'hod'],
+  reports: ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator', 'hod'],
+  attendance: ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator'],
+  marks_matrix: ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator', 'hod'],
+  daybook: ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator', 'hod'],
+  announcements: ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator'],
+  calendar: ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator'],
+  notification_log: ['super_admin', 'school_super_admin', 'admin', 'principal'],
 };
 
 /**

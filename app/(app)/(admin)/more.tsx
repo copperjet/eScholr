@@ -81,6 +81,7 @@ export default function AdminMore() {
     {
       title: 'Management',
       items: [
+        ...(can(role, 'school_structure') ? [{ icon: 'business-outline' as IoniconsName,          label: 'School Structure',     sublabel: 'Sections, grades, streams, subjects', onPress: () => router.push('/(app)/(admin)/school-structure' as any) }] : []),
         ...(can(role, 'attendance')       ? [{ icon: 'checkbox-outline' as IoniconsName,         label: 'Attendance Overview',  sublabel: "Today's submission status",        onPress: () => router.push('/(app)/(admin)/attendance-overview' as any) }] : []),
         ...(can(role, 'marks_matrix')     ? [{ icon: 'grid-outline' as IoniconsName,              label: 'Marks Matrix',         sublabel: 'Completion overview by class',     onPress: () => router.push('/(app)/(admin)/marks-matrix' as any) }] : []),
         ...(can(role, 'reports')          ? [{ icon: 'document-text-outline' as IoniconsName,     label: 'Reports Approval',     sublabel: 'Pending & released reports',       onPress: () => router.push('/(app)/(admin)/reports' as any) }] : []),

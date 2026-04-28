@@ -1,6 +1,6 @@
-import { Redirect, Stack, router } from 'expo-router';
+import { Redirect, Stack, router, usePathname } from 'expo-router';
 import { View, Platform } from 'react-native';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import { useAuthStore } from '../../stores/authStore';
 import { supabase } from '../../lib/supabase';
@@ -45,8 +45,23 @@ async function registerPushToken(userId: string, schoolId: string) {
 
 export default function AppLayout() {
   const { user, school, isReady } = useAuthStore();
+  const pathname = usePathname();
   const notifListener = useRef<any>(null);
   const responseListener = useRef<any>(null);
+  const [mustResetPassword, setMustResetPassword] = useState(false);
+
+  // Read the must_reset_password flag from the live session each time
+  // the user changes. Cheaper than wiring it through the auth store.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (cancelled) return;
+      const flag = (data.session?.user.user_metadata as any)?.must_reset_password === true;
+      setMustResetPassword(flag);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -72,6 +87,11 @@ export default function AppLayout() {
 
   if (isReady && !user) {
     return <Redirect href={school ? '/(auth)/login' : '/(auth)/school-code'} />;
+  }
+
+  // Force password reset on first login (temp password issued by admin).
+  if (user && mustResetPassword && pathname !== '/reset-password' && !pathname?.endsWith('/reset-password')) {
+    return <Redirect href="/(app)/reset-password" />;
   }
 
   return (

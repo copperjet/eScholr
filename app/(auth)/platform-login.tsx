@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, StatusBar, Pressable, Image,
+  ScrollView, StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,20 @@ import { ThemedText, Button, FormField } from '../../components/ui';
 import { useTheme } from '../../lib/theme';
 import { Spacing, Radius, Shadow } from '../../constants/Typography';
 import { haptics } from '../../lib/haptics';
+
+// Fire-and-forget audit log. Every attempt (success or fail) is recorded.
+async function logAttempt(email: string, success: boolean, reason?: string) {
+  try {
+    await (supabase as any).from('admin_login_attempts').insert({
+      email: email.trim().toLowerCase() || null,
+      success,
+      reason: reason ?? null,
+      user_agent: `eScholr-${Platform.OS}-${Platform.Version}`,
+    });
+  } catch {
+    /* ignore — never block login on audit failures */
+  }
+}
 
 export default function PlatformLoginScreen() {
   const { colors } = useTheme();
@@ -35,6 +49,7 @@ export default function PlatformLoginScreen() {
       setLoading(false);
       setError('Incorrect email or password.');
       haptics.error();
+      logAttempt(email, false, err?.message ?? 'invalid_credentials');
       return;
     }
 
@@ -44,8 +59,9 @@ export default function PlatformLoginScreen() {
     if (!roles.includes('super_admin')) {
       await supabase.auth.signOut();
       setLoading(false);
-      setError('This login is for eScholr platform administrators only.');
+      setError('Incorrect email or password.');
       haptics.error();
+      logAttempt(email, false, 'not_platform_admin');
       return;
     }
 
@@ -62,6 +78,7 @@ export default function PlatformLoginScreen() {
     });
 
     haptics.success();
+    logAttempt(email, true);
     router.replace('/');
   };
 
@@ -69,17 +86,9 @@ export default function PlatformLoginScreen() {
     <View style={{ flex: 1, backgroundColor: colors.brand.primaryDark }}>
       <StatusBar barStyle="light-content" />
 
+      {/* Wordmark only — no subtitle, no badge, no clue what this page is for. */}
       <View style={styles.hero}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <Ionicons name="chevron-back" size={24} color="rgba(255,255,255,0.7)" />
-        </Pressable>
-        <View style={styles.heroContent}>
-          <View style={styles.shieldBadge}>
-            <Ionicons name="shield-checkmark" size={28} color="#fff" />
-          </View>
-          <ThemedText style={styles.heroTitle}>Platform Admin</ThemedText>
-          <ThemedText style={styles.heroSub}>eScholr internal access only</ThemedText>
-        </View>
+        <ThemedText style={styles.wordmark}>eScholr</ThemedText>
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -87,8 +96,7 @@ export default function PlatformLoginScreen() {
           <View style={[styles.sheet, { backgroundColor: colors.background }]}>
             <View style={styles.form}>
               <FormField
-                label="Admin Email"
-                placeholder="admin@escholr.com"
+                placeholder="Email"
                 value={email}
                 onChangeText={(t) => { setEmail(t); setError(''); }}
                 iconLeft="mail-outline"
@@ -98,8 +106,7 @@ export default function PlatformLoginScreen() {
                 returnKeyType="next"
               />
               <FormField
-                label="Password"
-                placeholder="••••••••"
+                placeholder="Password"
                 value={password}
                 onChangeText={(t) => { setPassword(t); setError(''); }}
                 iconLeft="lock-closed-outline"
@@ -117,13 +124,6 @@ export default function PlatformLoginScreen() {
 
               <Button label="Sign In" onPress={handleLogin} loading={loading} fullWidth size="lg" />
             </View>
-
-            <View style={styles.warningBox}>
-              <Ionicons name="warning-outline" size={15} color="#92400E" />
-              <ThemedText style={{ fontSize: 12, color: '#92400E', flex: 1, marginLeft: 6 }}>
-                This area is restricted to eScholr staff. Unauthorised access attempts are logged.
-              </ThemedText>
-            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -133,26 +133,18 @@ export default function PlatformLoginScreen() {
 
 const styles = StyleSheet.create({
   hero: {
-    height: 240,
+    height: 200,
     paddingHorizontal: Spacing['2xl'],
-    paddingTop: 60,
+    paddingTop: 80,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
   },
-  backBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center', justifyContent: 'center',
+  wordmark: {
+    color: '#FFFFFF',
+    fontSize: 34,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
-  heroContent: {
-    flex: 1, justifyContent: 'flex-end', paddingBottom: Spacing['2xl'], alignItems: 'flex-start',
-  },
-  shieldBadge: {
-    width: 52, height: 52, borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: Spacing.md,
-  },
-  heroTitle: { color: '#FFFFFF', fontSize: 26, fontWeight: '700', letterSpacing: -0.3 },
-  heroSub:   { color: 'rgba(255,255,255,0.6)', fontSize: 14, marginTop: 4 },
   sheet: {
     flex: 1,
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
@@ -166,12 +158,5 @@ const styles = StyleSheet.create({
   errorBox: {
     flexDirection: 'row', alignItems: 'center',
     padding: Spacing.md, borderRadius: Radius.md,
-  },
-  warningBox: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    marginTop: Spacing['2xl'],
-    backgroundColor: '#FEF3C7',
-    padding: Spacing.md,
-    borderRadius: Radius.md,
   },
 });

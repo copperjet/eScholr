@@ -3,11 +3,26 @@
  *
  * POST /functions/v1/invite-user
  * Body: { staff_id?: string, parent_id?: string, student_id?: string, email: string, full_name: string, school_id: string }
- * Auth: Bearer <admin JWT> (caller must be admin/super_admin)
+ * Auth: Bearer <admin JWT> (caller must be admin/super_admin/school_super_admin)
  *
- * Creates a Supabase auth account, sets app_metadata, links to staff/parent record,
- * and sends a magic-link invite email.
+ * Creates a Supabase auth account WITH a generated temp password,
+ * sets app_metadata + user_metadata.must_reset_password = true,
+ * links to the staff/parent/student record, and returns the temp
+ * password so the admin can hand it to the user.
+ *
+ * The user is forced to change the password on first login (gate
+ * in app/(app)/_layout.tsx checks user_metadata.must_reset_password).
  */
+
+// 12-char temp password: 8 letters + 4 digits, easy to read out (no I/O/0/1).
+function generateTempPassword(): string {
+  const letters = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
+  const digits = "23456789";
+  let out = "";
+  for (let i = 0; i < 8; i++) out += letters[Math.floor(Math.random() * letters.length)];
+  for (let i = 0; i < 4; i++) out += digits[Math.floor(Math.random() * digits.length)];
+  return out;
+}
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const CORS = {
@@ -33,7 +48,8 @@ Deno.serve(async (req) => {
     const { data: { user: caller } } = await user.auth.getUser();
     if (!caller) return json({ error: "Unauthorized" }, 401);
     const callerRoles: string[] = (caller.app_metadata as any)?.roles ?? [];
-    if (!callerRoles.includes("admin") && !callerRoles.includes("super_admin")) {
+    const allowed = ["admin", "super_admin", "school_super_admin"];
+    if (!callerRoles.some((r) => allowed.includes(r))) {
       return json({ error: "Forbidden — admin role required" }, 403);
     }
 
@@ -58,19 +74,16 @@ Deno.serve(async (req) => {
       activeRole = "student";
     }
 
-    // ── Create auth user via admin invite ─────────────────────
-    const redirectTo = Deno.env.get("APP_REDIRECT_URL") ?? "escholr://";
-    const { data: inviteData, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: { full_name },
-      redirectTo,
-    });
-    if (inviteErr) return json({ error: inviteErr.message }, 400);
-
-    const authUserId = inviteData.user?.id;
-    if (!authUserId) return json({ error: "Failed to create auth user" }, 500);
-
-    // ── Set app_metadata immediately (bypass JWT hook bootstrap) ─
-    await admin.auth.admin.updateUserById(authUserId, {
+    // ── Create auth user with a temp password ─────────────────
+    const tempPassword = generateTempPassword();
+    const { data: createData, error: createErr } = await admin.auth.admin.createUser({
+      email: email.trim().toLowerCase(),
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: {
+        full_name,
+        must_reset_password: true,
+      },
       app_metadata: {
         school_id,
         staff_id: staff_id ?? null,
@@ -80,6 +93,10 @@ Deno.serve(async (req) => {
         active_role: activeRole,
       },
     });
+    if (createErr) return json({ error: createErr.message }, 400);
+
+    const authUserId = createData.user?.id;
+    if (!authUserId) return json({ error: "Failed to create auth user" }, 500);
 
     // ── Link auth_user_id to staff / parent / student record ────────────
     if (staff_id) {
@@ -90,7 +107,12 @@ Deno.serve(async (req) => {
       await admin.from("students").update({ auth_user_id: authUserId }).eq("id", student_id);
     }
 
-    return json({ success: true, auth_user_id: authUserId });
+    return json({
+      success: true,
+      auth_user_id: authUserId,
+      email: email.trim().toLowerCase(),
+      temp_password: tempPassword,
+    });
 
   } catch (err: any) {
     console.error("invite-user error:", err);

@@ -2,7 +2,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json } | 
 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'ap' | 'sick';
 export type UserRole =
-  | 'super_admin' | 'admin' | 'front_desk' | 'finance' | 'hr'
+  | 'super_admin' | 'school_super_admin' | 'admin' | 'front_desk' | 'finance' | 'hr'
   | 'principal' | 'coordinator' | 'hod' | 'hrt' | 'st' | 'parent' | 'student';
 export type ReportStatus =
   | 'draft' | 'pending_approval' | 'approved' | 'finance_pending' | 'under_review' | 'released';

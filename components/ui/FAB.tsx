@@ -12,6 +12,11 @@ import { useTheme } from '../../lib/theme';
 import { Shadow, Radius, Spacing } from '../../constants/Typography';
 import { haptics } from '../../lib/haptics';
 
+// Height of the floating pill tab bar (kept in sync with TAB_BAR_HEIGHT in
+// constants/Typography.ts). Inlined here to avoid a Metro cache issue where
+// the named import could resolve to undefined at module-load time.
+const FAB_TAB_BAR_CLEARANCE = 96;
+
 interface FABProps {
   icon: React.ReactNode;
   label?: string;
@@ -75,7 +80,7 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: Spacing['2xl'],
+    bottom: FAB_TAB_BAR_CLEARANCE + Spacing.md,
     right: Spacing.base,
     flexDirection: 'row',
     alignItems: 'center',

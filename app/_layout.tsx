@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -69,7 +69,13 @@ export default function RootLayout() {
     };
     bootstrap();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      // Password-recovery email link → land directly on the reset
+      // screen even though the user appears 'signed in' for a moment.
+      if (event === 'PASSWORD_RECOVERY') {
+        router.replace('/(app)/reset-password' as any);
+        return;
+      }
       if (!session) {
         setUser(null);
         setSchool(null);

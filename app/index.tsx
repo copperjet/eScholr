@@ -22,6 +22,7 @@ export default function Index() {
       return <Redirect href="/(app)/(hrt)/home" />;
     case 'st':
       return <Redirect href="/(app)/(st)/home" />;
+    case 'school_super_admin':
     case 'admin':
     case 'principal':
     case 'coordinator':
