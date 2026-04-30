@@ -1,7 +1,7 @@
 /**
  * Shared Timetable Viewer — all roles.
  * Shows the current timetable for the user's stream/grade.
- * PDF rendered via WebView; image via Image.
+ * PDF rendered via PDFViewer (WebView on native, iframe on web); image via Image.
  */
 import React, { useState } from 'react';
 import {
@@ -10,12 +10,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { WebView } from 'react-native-webview';
 import { format } from 'date-fns';
 import { useTheme } from '../../lib/theme';
 import { useAuthStore } from '../../stores/authStore';
 import {
-  ThemedText, Skeleton, EmptyState, ErrorState,
+  ThemedText, Skeleton, EmptyState, ErrorState, PDFViewer,
 } from '../../components/ui';
 import { Spacing, Radius } from '../../constants/Typography';
 import { useTimetableDocuments } from '../../hooks/useTimetable';
@@ -148,17 +147,9 @@ export default function TimetableViewer() {
                 />
               </ScrollView>
             ) : (
-              <WebView
+              <PDFViewer
+                uri={`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(selectedDoc.file_url)}`}
                 style={{ flex: 1 }}
-                source={{ uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(selectedDoc.file_url)}` }}
-                startInLoadingState
-                renderLoading={() => (
-                  <View style={styles.webviewLoader}>
-                    <ActivityIndicator size="large" color={colors.brand.primary} />
-                    <ThemedText variant="bodySm" color="muted" style={{ marginTop: Spacing.md }}>Loading PDF…</ThemedText>
-                  </View>
-                )}
-                onError={() => {}}
               />
             )
           )}

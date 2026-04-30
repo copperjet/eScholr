@@ -1,7 +1,7 @@
 /**
  * Report Viewer — /app/report-viewer?report_id=&pdf_url=&student_name=
  * Shared across Parent, HRT and Admin roles.
- * Uses WebView with Google Docs viewer for Expo Go compatibility.
+ * Uses PDFViewer (WebView on native, iframe on web) for cross-platform PDF viewing.
  */
 import React, { useCallback, useState } from 'react';
 import {
@@ -14,10 +14,9 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { WebView } from 'react-native-webview';
 import * as WebBrowser from 'expo-web-browser';
 import { useTheme } from '../../lib/theme';
-import { ThemedText } from '../../components/ui';
+import { ThemedText, PDFViewer } from '../../components/ui';
 import { Spacing } from '../../constants/Typography';
 import { Colors } from '../../constants/Colors';
 import { haptics } from '../../lib/haptics';
@@ -114,15 +113,12 @@ export default function ReportViewerScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <WebView
-            source={{ uri: viewerUri! }}
+          <PDFViewer
+            uri={viewerUri!}
             style={styles.webview}
             onLoad={() => setLoading(false)}
             onError={() => { setLoading(false); setError(true); }}
             startInLoadingState={false}
-            javaScriptEnabled
-            domStorageEnabled
-            scalesPageToFit
           />
         )}
       </View>

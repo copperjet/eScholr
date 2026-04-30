@@ -1,21 +1,24 @@
-import { Tabs, Redirect } from 'expo-router';
+import { Tabs, Redirect, Slot } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
-import { AppTabBar } from '../../../components/ui';
+import { AppTabBar, ResponsiveShell } from '../../../components/ui';
+import { useShouldShowSidebar } from '../../../lib/responsive';
 
 const ADMIN_ROLES = ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator', 'hod'];
 const SUPER_ROLES = ['super_admin', 'school_super_admin'];
 
-export default function AdminLayout() {
-  const { colors } = useTheme();
-  const { user } = useAuthStore();
-  if (user && !ADMIN_ROLES.includes(user.activeRole)) {
-    return <Redirect href="/" />;
-  }
+// Desktop layout with sidebar (no tabs)
+function DesktopAdminLayout({ isSuper, colors }: { isSuper: boolean; colors: any }) {
+  return (
+    <ResponsiveShell>
+      <Slot />
+    </ResponsiveShell>
+  );
+}
 
-  const isSuper = user ? SUPER_ROLES.includes(user.activeRole) : false;
-
+// Mobile layout with bottom tabs
+function MobileAdminLayout({ isSuper, colors }: { isSuper: boolean; colors: any }) {
   return (
     <Tabs
       tabBar={(props) => <AppTabBar {...props} />}
@@ -72,4 +75,22 @@ export default function AdminLayout() {
       <Tabs.Screen name="student-credentials" options={{ href: null }} />
     </Tabs>
   );
+}
+
+export default function AdminLayout() {
+  const { colors } = useTheme();
+  const { user } = useAuthStore();
+  const showSidebar = useShouldShowSidebar();
+
+  if (user && !ADMIN_ROLES.includes(user.activeRole)) {
+    return <Redirect href="/" />;
+  }
+
+  const isSuper = user ? SUPER_ROLES.includes(user.activeRole) : false;
+
+  if (showSidebar) {
+    return <DesktopAdminLayout isSuper={isSuper} colors={colors} />;
+  }
+
+  return <MobileAdminLayout isSuper={isSuper} colors={colors} />;
 }

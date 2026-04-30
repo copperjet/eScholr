@@ -65,6 +65,10 @@ export default function AppLayout() {
 
   useEffect(() => {
     if (!user) return;
+
+    // Push notifications not supported on web
+    if (Platform.OS === 'web') return;
+
     registerPushToken(user.id, user.schoolId ?? '');
 
     notifListener.current = Notifications.addNotificationReceivedListener(_notification => {

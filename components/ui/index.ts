@@ -24,6 +24,9 @@ export { FormField } from './FormField';
 export { AppTabBar } from './AppTabBar';
 export { FastList, type FastListProps } from './FastList';
 export { BiometricEnrollModal } from './BiometricEnrollModal';
+export { PDFViewer } from './PDFViewer';
+export { Sidebar } from './Sidebar';
+export { ResponsiveShell } from './ResponsiveShell';
 // Motion primitives
 export { PressableScale } from './PressableScale';
 export { AnimatedNumber } from './AnimatedNumber';

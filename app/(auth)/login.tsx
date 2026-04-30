@@ -3,6 +3,8 @@ import {
   View, StyleSheet, KeyboardAvoidingView, Platform,
   TouchableOpacity, ScrollView, StatusBar, Pressable, Image,
 } from 'react-native';
+
+const isWeb = Platform.OS === 'web';
 import { router, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -28,6 +30,9 @@ export default function LoginScreen() {
   const [biometricType, setBiometricType] = useState<'face' | 'fingerprint' | null>(null);
 
   useEffect(() => {
+    // Biometric auth not supported on web
+    if (isWeb) return;
+
     (async () => {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled  = await LocalAuthentication.isEnrolledAsync();
@@ -40,6 +45,7 @@ export default function LoginScreen() {
   }, []);
 
   const handleBiometric = async () => {
+    if (isWeb) return;
     haptics.light();
     const result = await LocalAuthentication.authenticateAsync({ promptMessage: `Sign in to ${displayName}`, fallbackLabel: 'Use Password' });
     if (result.success) {

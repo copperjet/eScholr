@@ -7,7 +7,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Modal, StyleSheet, TouchableOpacity,
-  Animated, Pressable,
+  Animated, Pressable, Platform,
 } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
@@ -24,6 +24,8 @@ interface Props {
   userId: string;
 }
 
+const isWeb = Platform.OS === 'web';
+
 export function BiometricEnrollModal({ userId }: Props) {
   const { colors } = useTheme();
   const [visible, setVisible]       = useState(false);
@@ -31,6 +33,9 @@ export function BiometricEnrollModal({ userId }: Props) {
   const [enrolling, setEnrolling]   = useState(false);
   const [scaleAnim]                 = useState(new Animated.Value(0.85));
   const [opacityAnim]               = useState(new Animated.Value(0));
+
+  // Biometric auth not supported on web
+  if (isWeb) return null;
 
   useEffect(() => {
     let cancelled = false;
