@@ -109,7 +109,7 @@ export default function StudentHomework() {
             <View style={styles.meta}>
               <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
               <ThemedText variant="caption" color="secondary">
-                Due: {item.assignment.due_date ? format(parseISO(item.assignment.due_date), 'd MMM yyyy') : '—'}
+                Due: {item.assignment.due_date ? format(parseISO(item.assignment.due_date), 'dd/MM/yy') : '—'}
               </ThemedText>
             </View>
             {item.submission?.score !== null && item.submission?.score !== undefined && (
@@ -171,7 +171,7 @@ export default function StudentHomework() {
               <View style={styles.metaRow}>
                 <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
                 <ThemedText variant="caption" color="secondary">
-                  Due: {viewing?.assignment?.due_date ? format(parseISO(viewing.assignment.due_date), 'd MMM yyyy') : '—'}
+                  Due: {viewing?.assignment?.due_date ? format(parseISO(viewing.assignment.due_date), 'dd/MM/yy') : '—'}
                 </ThemedText>
               </View>
               {viewing?.submission?.feedback && (

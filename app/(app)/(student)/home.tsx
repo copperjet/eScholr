@@ -14,7 +14,7 @@ import {
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 
-const TODAY = format(new Date(), 'EEEE, d MMM');
+const TODAY = format(new Date(), 'EEEE dd/MM');
 
 function useStudentDashboard(studentId: string | null, schoolId: string) {
   return useQuery({
@@ -285,7 +285,7 @@ export default function StudentHome() {
               <Badge label={entry.category} preset="info" variant="tonal" style={{ alignSelf: 'flex-start', marginBottom: Spacing.xs }} />
               <ThemedText variant="body">{entry.description}</ThemedText>
               <ThemedText variant="caption" color="muted" style={{ marginTop: 4 }}>
-                {entry.date ? format(new Date(entry.date), 'd MMM yyyy') : ''}
+                {entry.date ? format(new Date(entry.date), 'dd/MM/yy') : ''}
               </ThemedText>
             </Card>
           ))

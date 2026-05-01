@@ -79,6 +79,7 @@ export default function RootLayout() {
       if (!session) {
         setUser(null);
         setSchool(null);
+        router.replace('/(auth)/school-code' as any);
       }
     });
 

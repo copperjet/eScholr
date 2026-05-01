@@ -112,7 +112,7 @@ export default function AnnouncementsFeed() {
                     </ThemedText>
                   </View>
                   <ThemedText variant="caption" color="muted">
-                    {format(parseISO(item.published_at), 'dd MMM yyyy')}
+                    {format(parseISO(item.published_at), 'dd/MM/yy')}
                   </ThemedText>
                   {item.author_name && (
                     <ThemedText variant="caption" color="muted">· {item.author_name}</ThemedText>

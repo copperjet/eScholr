@@ -274,7 +274,7 @@ export default function HomeworkScreen() {
                 <View style={styles.metaRow}>
                   <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
                   <ThemedText variant="caption" color="secondary">
-                    Due: {item.due_date ? format(parseISO(item.due_date), 'd MMM yyyy') : '—'}
+                    Due: {item.due_date ? format(parseISO(item.due_date), 'dd/MM/yy') : '—'}
                   </ThemedText>
                 </View>
                 <ThemedText variant="caption" color="secondary">
@@ -441,7 +441,7 @@ function SubmissionsModal({
         </View>
 
         <ThemedText variant="bodySm" color="secondary" style={styles.modalSubtitle}>
-          Due: {homework.due_date ? format(parseISO(homework.due_date), 'd MMM yyyy') : '—'} · Max: {homework.max_score}
+          Due: {homework.due_date ? format(parseISO(homework.due_date), 'dd/MM/yy') : '—'} · Max: {homework.max_score}
         </ThemedText>
 
         {loading ? (

@@ -219,7 +219,7 @@ export default function MarksWindowsScreen() {
                     {win.grade_name} · {win.stream_name}
                   </ThemedText>
                   <ThemedText variant="caption" color="muted" style={{ marginTop: 1 }}>
-                    {format(parseISO(win.opens_at), 'dd MMM')} – {format(parseISO(win.closes_at), 'dd MMM yyyy')}
+                    {format(parseISO(win.opens_at), 'dd/MM')} – {format(parseISO(win.closes_at), 'dd/MM/yy')}
                     {withinSchedule && (
                       <ThemedText variant="caption" style={{ color: Colors.semantic.success }}> · In schedule</ThemedText>
                     )}

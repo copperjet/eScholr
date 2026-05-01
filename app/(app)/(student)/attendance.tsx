@@ -88,7 +88,7 @@ export default function StudentAttendance() {
                 <Card key={i} style={{ marginHorizontal: Spacing.screen, marginBottom: Spacing.sm, padding: Spacing.md }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <View>
-                      <ThemedText style={{ fontWeight: '600' }}>{r.date ? format(new Date(r.date), 'EEEE, d MMM yyyy') : ''}</ThemedText>
+                      <ThemedText style={{ fontWeight: '600' }}>{r.date ? format(new Date(r.date), 'EEEE dd/MM/yy') : ''}</ThemedText>
                       <ThemedText variant="caption" color="muted">{r.semesters?.name}</ThemedText>
                     </View>
                     <Badge

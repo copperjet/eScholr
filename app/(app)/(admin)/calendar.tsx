@@ -222,8 +222,8 @@ export default function CalendarScreen() {
                   </View>
                   <ThemedText variant="caption" color="muted" style={{ marginTop: 2 }}>
                     {sameDay
-                      ? format(parseISO(item.start_date), 'dd MMM yyyy')
-                      : `${format(parseISO(item.start_date), 'dd MMM')} – ${format(parseISO(item.end_date), 'dd MMM yyyy')}`}
+                      ? format(parseISO(item.start_date), 'dd/MM/yy')
+                      : `${format(parseISO(item.start_date), 'dd/MM')} – ${format(parseISO(item.end_date), 'dd/MM/yy')}`}
                   </ThemedText>
                   {item.affects_attendance && (
                     <ThemedText variant="caption" style={{ color: Colors.semantic.info, marginTop: 2 }}>

@@ -365,7 +365,7 @@ export default function TimetableUploadScreen() {
                       ? `Teacher · ${doc.staff_name ?? '—'}`
                       : (doc.grade_name ? `${doc.grade_name}${doc.stream_name ? ` · ${doc.stream_name}` : ''}` : 'Whole School')}
                     {' · '}
-                    {format(new Date(doc.effective_from), 'dd MMM yyyy')}
+                    {format(new Date(doc.effective_from), 'dd/MM/yy')}
                     {doc.file_size_bytes ? ` · ${formatBytes(doc.file_size_bytes)}` : ''}
                   </ThemedText>
                 </View>

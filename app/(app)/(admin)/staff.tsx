@@ -477,7 +477,7 @@ export default function AdminStaffScreen() {
                 { icon: 'mail-outline',     label: selectedStaff.email },
                 { icon: 'call-outline',     label: selectedStaff.phone ?? '—' },
                 { icon: 'business-outline', label: selectedStaff.department ?? '—' },
-                { icon: 'calendar-outline', label: selectedStaff.date_joined ? `Joined ${format(parseISO(selectedStaff.date_joined), 'd MMM yyyy')}` : '—' },
+                { icon: 'calendar-outline', label: selectedStaff.date_joined ? `Joined ${format(parseISO(selectedStaff.date_joined), 'dd/MM/yy')}` : '—' },
               ].map(row => (
                 <View key={row.icon} style={styles.detailRow}>
                   <Ionicons name={row.icon as any} size={16} color={colors.textMuted} />

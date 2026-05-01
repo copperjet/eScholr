@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Pressable,
   ViewStyle,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from './ThemedText';
@@ -67,6 +68,7 @@ export function FormField({
           style={[
             styles.input,
             { color: colors.textPrimary, minHeight: textarea ? 88 : undefined },
+            Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined,
             style,
           ]}
           placeholderTextColor={colors.textMuted}

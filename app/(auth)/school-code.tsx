@@ -105,7 +105,7 @@ export default function SchoolCodeScreen() {
                 autoCorrect={false}
                 returnKeyType="done"
                 onSubmitEditing={handleContinue}
-                style={{ flex: 1, fontSize: 18, fontWeight: '700', letterSpacing: 3, color: colors.brand.primary }}
+                style={[{ flex: 1, fontSize: 18, fontWeight: '700', letterSpacing: 3, color: colors.brand.primary }, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]}
               />
             </View>
 

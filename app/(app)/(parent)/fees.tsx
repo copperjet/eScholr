@@ -276,8 +276,8 @@ function InvoiceCard({ invoice, colors }: { invoice: Invoice; colors: any }) {
             {isOverdue && <Badge label="OVERDUE" preset="error" />}
           </View>
           <ThemedText variant="caption" color="muted">
-            Issued {format(parseISO(invoice.issue_date), 'd MMM yyyy')}
-            {invoice.due_date ? ` · Due ${format(parseISO(invoice.due_date), 'd MMM yyyy')}` : ''}
+            Issued {format(parseISO(invoice.issue_date), 'dd/MM/yy')}
+            {invoice.due_date ? ` · Due ${format(parseISO(invoice.due_date), 'dd/MM/yy')}` : ''}
           </ThemedText>
         </View>
         <View style={{ alignItems: 'flex-end' }}>

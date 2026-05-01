@@ -6,7 +6,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import {
-  View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Pressable,
+  View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Pressable, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -424,7 +424,7 @@ export default function SchoolStructureScreen() {
         snapHeight={editor?.kind === 'subject' ? 480 : 360}
       >
         {editor && (
-          <ScrollView contentContainerStyle={{ padding: Spacing.base, gap: Spacing.base }}>
+          <View style={{ padding: Spacing.base, gap: Spacing.base }}>
             {/* Parent picker for grade / stream when adding without preselected parent */}
             {editor.kind === 'grade' && editor.mode === 'add' && !editor.parentSectionId && (
               <View>
@@ -469,7 +469,7 @@ export default function SchoolStructureScreen() {
             )}
 
             <Button label={editor.mode === 'add' ? 'Create' : 'Save'} onPress={handleSave} loading={saveEntity.isPending} fullWidth size="lg" />
-          </ScrollView>
+          </View>
         )}
       </BottomSheet>
     </View>

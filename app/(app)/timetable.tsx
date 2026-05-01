@@ -125,7 +125,7 @@ export default function TimetableViewer() {
                 {selectedDoc.label}
               </ThemedText>
               <ThemedText variant="caption" color="muted">
-                From {format(new Date(selectedDoc.effective_from), 'dd MMM yyyy')}
+                From {format(new Date(selectedDoc.effective_from), 'dd/MM/yy')}
               </ThemedText>
             </View>
           )}

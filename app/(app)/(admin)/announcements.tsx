@@ -61,7 +61,7 @@ function AnnouncementCard({ item, colors, onDelete }: { item: Announcement; colo
               </ThemedText>
             </View>
             <ThemedText variant="caption" color="muted">
-              {format(parseISO(item.published_at), 'dd MMM yyyy, HH:mm')}
+              {format(parseISO(item.published_at), 'dd/MM/yy HH:mm')}
             </ThemedText>
             {item.author_name && (
               <ThemedText variant="caption" color="muted">· {item.author_name}</ThemedText>

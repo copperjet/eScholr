@@ -136,7 +136,7 @@ export default function VisitorLogScreen() {
     const d = parseISO(iso);
     if (isToday(d)) return `Today ${format(d, 'HH:mm')}`;
     if (isYesterday(d)) return `Yesterday ${format(d, 'HH:mm')}`;
-    return format(d, 'dd MMM HH:mm');
+    return format(d, 'dd/MM HH:mm');
   };
 
   const renderVisitor = useCallback(({ item }: { item: any }) => {

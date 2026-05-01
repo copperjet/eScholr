@@ -15,7 +15,7 @@ import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typo
 import { Colors, resolveAttBg, resolveAttColor } from '../../../constants/Colors';
 
 const TODAY      = format(new Date(), 'yyyy-MM-dd');
-const TODAY_LABEL = format(new Date(), 'EEEE, d MMM');
+const TODAY_LABEL = format(new Date(), 'EEEE dd/MM');
 
 /**
  * Single RPC `get_hrt_dashboard` replaces the old 5-query waterfall.
@@ -216,7 +216,7 @@ export default function HRTHome() {
               <ProgressBar value={data?.marksEntered ?? 0} max={data?.totalStudents || 1} color={colors.brand.primary} />
               <ThemedText variant="caption" color="muted">
                 {data?.semesterEndDate
-                  ? `Marks window closes ${format(new Date(data.semesterEndDate), 'd MMM yyyy')}`
+                  ? `Marks window closes ${format(new Date(data.semesterEndDate), 'dd/MM/yy')}`
                   : 'Marks window open'}
               </ThemedText>
             </View>

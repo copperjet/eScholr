@@ -124,7 +124,7 @@ export default function STDayBookScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScreenHeader
         title="Day Book"
-        subtitle={format(new Date(), 'EEEE, d MMM yyyy')}
+        subtitle={format(new Date(), 'EEEE dd/MM/yy')}
         showBack
       />
 

@@ -142,7 +142,7 @@ export default function InquiriesScreen() {
               <ListItem
                 title={inq.name}
                 subtitle={[inq.nature_of_inquiry, inq.contact_phone].filter(Boolean).join(' · ')}
-                caption={inq.date ? format(parseISO(inq.date), 'd MMM yyyy') : undefined}
+                caption={inq.date ? format(parseISO(inq.date), 'dd/MM/yy') : undefined}
                 leading={
                   <IconChip
                     icon={<ThemedText style={{ color: STATUS_META[inq.status].color, fontSize: 16, fontWeight: '700' }}>{(inq.name ?? '?')[0].toUpperCase()}</ThemedText>}

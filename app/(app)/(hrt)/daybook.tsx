@@ -173,7 +173,7 @@ export default function DayBookScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScreenHeader
           title="Day Book"
-          subtitle={format(new Date(), 'EEE, d MMM yyyy')}
+          subtitle={format(new Date(), 'EEE dd/MM/yy')}
           showBack
         />
 

@@ -184,8 +184,8 @@ function InfoTab({ school, colors, refetch, isFetching }: { school: any; colors:
           { label: 'Country',  value: school.country  ?? '—' },
           { label: 'Timezone', value: school.timezone ?? '—' },
           { label: 'Currency', value: school.currency ?? '—' },
-          { label: 'Created',  value: format(new Date(school.created_at), 'd MMM yyyy') },
-          { label: 'Renewal',  value: school.renewal_date ? format(new Date(school.renewal_date), 'd MMM yyyy') : '—' },
+          { label: 'Created',  value: format(new Date(school.created_at), 'dd/MM/yy') },
+          { label: 'Renewal',  value: school.renewal_date ? format(new Date(school.renewal_date), 'dd/MM/yy') : '—' },
         ].map((row, i, arr) => (
           <View key={row.label} style={[styles.metaRow, i < arr.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
             <ThemedText variant="caption" color="muted" style={{ flex: 1 }}>{row.label}</ThemedText>
@@ -598,7 +598,7 @@ export default function SchoolDetail() {
                 <ThemedText style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{school.code}</ThemedText>
               </View>
               <ThemedText style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12 }}>
-                {school.country ?? '—'} · {format(new Date(school.created_at), 'd MMM yyyy')}
+                {school.country ?? '—'} · {format(new Date(school.created_at), 'dd/MM/yy')}
               </ThemedText>
             </View>
           </View>

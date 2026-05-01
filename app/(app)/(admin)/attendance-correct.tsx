@@ -43,7 +43,7 @@ export default function AttendanceCorrectScreen() {
   const streamId   = params.streamId;
   const date       = params.date ?? format(new Date(), 'yyyy-MM-dd');
   const streamName = params.streamName ?? 'Stream';
-  const dateDisplay = format(new Date(date + 'T00:00:00'), 'EEE, d MMM yyyy');
+  const dateDisplay = format(new Date(date + 'T00:00:00'), 'EEE dd/MM/yy');
 
   const { data, isLoading, isError, refetch } = useStreamRegister(
     streamId,

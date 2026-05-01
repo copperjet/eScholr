@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -141,7 +142,7 @@ export default function SemestersScreen() {
                   Academic Year {sem.academic_year}
                 </ThemedText>
                 <ThemedText variant="caption" color="muted">
-                  {format(parseISO(sem.start_date), 'dd MMM yyyy')} – {format(parseISO(sem.end_date), 'dd MMM yyyy')}
+                  {format(parseISO(sem.start_date), 'dd/MM/yy')} – {format(parseISO(sem.end_date), 'dd/MM/yy')}
                 </ThemedText>
               </View>
               {!sem.is_active && (
@@ -186,23 +187,23 @@ export default function SemestersScreen() {
           <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
             <View style={{ flex: 1 }}>
               <ThemedText variant="label" color="muted" style={styles.fieldLabel}>START DATE</ThemedText>
-              <TextInput
-                value={startDate}
-                onChangeText={setStartDate}
-                placeholder="yyyy-mm-dd"
-                placeholderTextColor={colors.textMuted}
-                style={[styles.input, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, color: colors.textPrimary }]}
-              />
+              {Platform.OS === 'web' ? (
+                <input type="date" value={startDate} onChange={(e: any) => setStartDate(e.target.value)}
+                  style={{ backgroundColor: colors.surfaceSecondary, borderColor: colors.border, color: colors.textPrimary, borderWidth: 1, borderStyle: 'solid', borderRadius: 8, padding: 12, fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' } as any} />
+              ) : (
+                <TextInput value={startDate} onChangeText={setStartDate} placeholder="yyyy-mm-dd" placeholderTextColor={colors.textMuted}
+                  style={[styles.input, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, color: colors.textPrimary }]} />
+              )}
             </View>
             <View style={{ flex: 1 }}>
               <ThemedText variant="label" color="muted" style={styles.fieldLabel}>END DATE</ThemedText>
-              <TextInput
-                value={endDate}
-                onChangeText={setEndDate}
-                placeholder="yyyy-mm-dd"
-                placeholderTextColor={colors.textMuted}
-                style={[styles.input, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, color: colors.textPrimary }]}
-              />
+              {Platform.OS === 'web' ? (
+                <input type="date" value={endDate} onChange={(e: any) => setEndDate(e.target.value)}
+                  style={{ backgroundColor: colors.surfaceSecondary, borderColor: colors.border, color: colors.textPrimary, borderWidth: 1, borderStyle: 'solid', borderRadius: 8, padding: 12, fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' } as any} />
+              ) : (
+                <TextInput value={endDate} onChangeText={setEndDate} placeholder="yyyy-mm-dd" placeholderTextColor={colors.textMuted}
+                  style={[styles.input, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, color: colors.textPrimary }]} />
+              )}
             </View>
           </View>
 

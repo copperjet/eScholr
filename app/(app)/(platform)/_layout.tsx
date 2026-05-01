@@ -10,8 +10,7 @@ export default function PlatformLayout() {
   const { user } = useAuthStore();
   const showSidebar = useShouldShowSidebar();
 
-  // Platform routes: only pure super_admin (no school) allowed
-  if (!user || user.activeRole !== 'super_admin' || user.schoolId) {
+  if (!user || user.activeRole !== 'super_admin') {
     return <Redirect href="/" />;
   }
 

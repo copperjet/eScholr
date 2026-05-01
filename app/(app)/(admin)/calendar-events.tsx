@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import {
   View, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, TextInput,
-  Alert, Pressable, ScrollView, RefreshControl,
+  Alert, Pressable, ScrollView, RefreshControl, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
@@ -216,7 +216,7 @@ function SemestersPanel({ schoolId, colors }: { schoolId: string; colors: any })
                 </View>
                 <ThemedText variant="caption" color="muted">AY {sem.academic_year}</ThemedText>
                 <ThemedText variant="caption" color="muted">
-                  {format(parseISO(sem.start_date), 'd MMM yyyy')} – {format(parseISO(sem.end_date), 'd MMM yyyy')}
+                  {format(parseISO(sem.start_date), 'dd/MM/yy')} – {format(parseISO(sem.end_date), 'dd/MM/yy')}
                 </ThemedText>
               </View>
               {!sem.is_active && (
@@ -236,8 +236,8 @@ function SemestersPanel({ schoolId, colors }: { schoolId: string; colors: any })
           <Field label="SEMESTER NAME" value={name} onChangeText={setName} placeholder="e.g. Term 1 2026" colors={colors} />
           <Field label="ACADEMIC YEAR" value={academicYear} onChangeText={setAcademicYear} keyboardType="numeric" colors={colors} />
           <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-            <View style={{ flex: 1 }}><Field label="START" value={startDate} onChangeText={setStartDate} placeholder="yyyy-mm-dd" colors={colors} /></View>
-            <View style={{ flex: 1 }}><Field label="END" value={endDate} onChangeText={setEndDate} placeholder="yyyy-mm-dd" colors={colors} /></View>
+            <View style={{ flex: 1 }}><Field label="START" value={startDate} onChangeText={setStartDate} placeholder="yyyy-mm-dd" colors={colors} isDate /></View>
+            <View style={{ flex: 1 }}><Field label="END" value={endDate} onChangeText={setEndDate} placeholder="yyyy-mm-dd" colors={colors} isDate /></View>
           </View>
           <TouchableOpacity
             onPress={handleCreate}
@@ -338,8 +338,8 @@ function EventsPanel({ tab, schoolId, colors }: { tab: Exclude<Tab, 'semesters'>
               <View style={{ flex: 1 }}>
                 <ThemedText style={{ fontWeight: '700' }}>{ev.title}</ThemedText>
                 <ThemedText variant="caption" color="muted">
-                  {format(parseISO(ev.start_date), 'd MMM yyyy')}
-                  {ev.end_date ? ` – ${format(parseISO(ev.end_date), 'd MMM yyyy')}` : ''}
+                  {format(parseISO(ev.start_date), 'dd/MM/yy')}
+                  {ev.end_date ? ` – ${format(parseISO(ev.end_date), 'dd/MM/yy')}` : ''}
                 </ThemedText>
                 {ev.description ? <ThemedText variant="caption" color="muted" numberOfLines={2}>{ev.description}</ThemedText> : null}
               </View>
@@ -356,8 +356,8 @@ function EventsPanel({ tab, schoolId, colors }: { tab: Exclude<Tab, 'semesters'>
           <Field label="TITLE *" value={title} onChangeText={setTitle} placeholder={`e.g. ${eventType === 'holiday' ? 'Independence Day' : eventType === 'break' ? 'Mid-term break' : 'Sports Day'}`} colors={colors} />
           <Field label="DESCRIPTION (optional)" value={desc} onChangeText={setDesc} placeholder="Notes" colors={colors} multiline />
           <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-            <View style={{ flex: 1 }}><Field label="START *" value={startDate} onChangeText={setStartDate} placeholder="yyyy-mm-dd" colors={colors} /></View>
-            <View style={{ flex: 1 }}><Field label="END" value={endDate} onChangeText={setEndDate} placeholder="yyyy-mm-dd" colors={colors} /></View>
+            <View style={{ flex: 1 }}><Field label="START *" value={startDate} onChangeText={setStartDate} placeholder="yyyy-mm-dd" colors={colors} isDate /></View>
+            <View style={{ flex: 1 }}><Field label="END" value={endDate} onChangeText={setEndDate} placeholder="yyyy-mm-dd" colors={colors} isDate /></View>
           </View>
 
           <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm }}>
@@ -380,7 +380,33 @@ function EventsPanel({ tab, schoolId, colors }: { tab: Exclude<Tab, 'semesters'>
   );
 }
 
-function Field({ label, value, onChangeText, placeholder, colors, keyboardType, multiline }: any) {
+function Field({ label, value, onChangeText, placeholder, colors, keyboardType, multiline, isDate }: any) {
+  if (isDate && Platform.OS === 'web') {
+    return (
+      <View>
+        <ThemedText variant="label" color="muted" style={styles.fieldLabel}>{label}</ThemedText>
+        <input
+          type="date"
+          value={value}
+          onChange={(e) => onChangeText(e.target.value)}
+          style={{
+            backgroundColor: colors.surfaceSecondary,
+            borderColor: colors.border,
+            color: colors.textPrimary,
+            borderWidth: 1,
+            borderStyle: 'solid',
+            borderRadius: 8,
+            padding: 12,
+            fontSize: 14,
+            fontFamily: 'inherit',
+            outline: 'none',
+            width: '100%',
+            boxSizing: 'border-box',
+          } as any}
+        />
+      </View>
+    );
+  }
   return (
     <View>
       <ThemedText variant="label" color="muted" style={styles.fieldLabel}>{label}</ThemedText>
@@ -391,7 +417,7 @@ function Field({ label, value, onChangeText, placeholder, colors, keyboardType, 
         placeholderTextColor={colors.textMuted}
         keyboardType={keyboardType}
         multiline={multiline}
-        style={[styles.input, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, color: colors.textPrimary, minHeight: multiline ? 60 : undefined, textAlignVertical: multiline ? 'top' : undefined }]}
+        style={[styles.input, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, color: colors.textPrimary, minHeight: multiline ? 60 : undefined, textAlignVertical: multiline ? 'top' : undefined }, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]}
       />
     </View>
   );

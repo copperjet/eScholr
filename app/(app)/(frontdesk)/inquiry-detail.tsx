@@ -218,7 +218,7 @@ export default function InquiryDetailScreen() {
               </View>
 
               <View style={{ gap: Spacing.xs, marginTop: Spacing.sm }}>
-                <InfoLine icon="calendar-outline" text={format(parseISO(inquiry.date), 'dd MMM yyyy')} colors={colors} />
+                <InfoLine icon="calendar-outline" text={format(parseISO(inquiry.date), 'dd/MM/yy')} colors={colors} />
                 <InfoLine icon="bookmark-outline" text={inquiry.nature_of_inquiry} colors={colors} />
                 {inquiry.contact_phone && <InfoLine icon="call-outline" text={inquiry.contact_phone} colors={colors} />}
                 {inquiry.contact_email && <InfoLine icon="mail-outline" text={inquiry.contact_email} colors={colors} />}

@@ -38,7 +38,7 @@ function formatNotifDate(dateStr: string): string {
   const d = parseISO(dateStr);
   if (isToday(d)) return `Today · ${format(d, 'h:mm a')}`;
   if (isYesterday(d)) return `Yesterday · ${format(d, 'h:mm a')}`;
-  return format(d, 'd MMM yyyy');
+  return format(d, 'dd/MM/yy');
 }
 
 function useNotifications(userId: string, schoolId: string) {

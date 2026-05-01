@@ -154,7 +154,7 @@ export default function ApplicationsScreen() {
           </View>
 
           <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.sm }}>
-            Submitted {format(parseISO(item.submitted_at), 'dd MMM yyyy')}
+            Submitted {format(parseISO(item.submitted_at), 'dd/MM/yy')}
           </ThemedText>
         </Card>
       </TouchableOpacity>

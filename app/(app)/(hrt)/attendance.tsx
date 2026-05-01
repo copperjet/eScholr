@@ -34,7 +34,7 @@ import { haptics } from '../../../lib/haptics';
 import type { AttendanceStatus } from '../../../types/database';
 
 const TODAY = format(new Date(), 'yyyy-MM-dd');
-const TODAY_DISPLAY = format(new Date(), 'EEE, d MMM yyyy');
+const TODAY_DISPLAY = format(new Date(), 'EEE dd/MM/yy');
 
 const STATUSES: { value: AttendanceStatus; label: string; icon: string }[] = [
   { value: 'present', label: 'Present',              icon: 'checkmark-circle' },

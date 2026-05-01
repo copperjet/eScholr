@@ -273,8 +273,8 @@ function OverviewTab({ student, colors, loading }: { student: any; colors: any; 
         <InfoRow label="Full Name" value={student.full_name} colors={colors} />
         <InfoRow label="Student ID" value={student.student_number} colors={colors} />
         <InfoRow label="Gender" value={student.gender ?? '—'} colors={colors} />
-        <InfoRow label="Date of Birth" value={student.date_of_birth ? format(new Date(student.date_of_birth), 'd MMM yyyy') : '—'} colors={colors} />
-        <InfoRow label="Enrolled" value={student.enrollment_date ? format(new Date(student.enrollment_date), 'd MMM yyyy') : '—'} colors={colors} last />
+        <InfoRow label="Date of Birth" value={student.date_of_birth ? format(new Date(student.date_of_birth), 'dd/MM/yy') : '—'} colors={colors} />
+        <InfoRow label="Enrolled" value={student.enrollment_date ? format(new Date(student.enrollment_date), 'dd/MM/yy') : '—'} colors={colors} last />
       </View>
       <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
         <ThemedText variant="label" color="muted" style={styles.sectionLabel}>CLASS</ThemedText>
@@ -353,7 +353,7 @@ function AttendanceTab({ query, colors, scheme }: { query: any; colors: any; sch
         <View key={i} style={[styles.attRow, { backgroundColor: resolveAttBg(r.status as any, scheme), borderColor: resolveAttColor(r.status as any) + '40' }]}>
           <Ionicons name="calendar-outline" size={14} color={resolveAttColor(r.status as any)} />
           <ThemedText variant="bodySm" style={{ flex: 1, marginLeft: Spacing.sm }}>
-            {r.date ? format(new Date(r.date), 'EEE, d MMM yyyy') : ''}
+            {r.date ? format(new Date(r.date), 'EEE dd/MM/yy') : ''}
           </ThemedText>
           <ThemedText variant="label" style={{ color: resolveAttColor(r.status as any), fontWeight: '700', textTransform: 'uppercase', fontSize: 11 }}>
             {r.status}
@@ -422,7 +422,7 @@ function DayBookTab({ query, colors }: { query: any; colors: any }) {
           </View>
           <ThemedText variant="body">{e.description}</ThemedText>
           <ThemedText variant="caption" color="muted" style={{ marginTop: 4 }}>
-            {e.date ? format(new Date(e.date), 'EEE, d MMM yyyy') : ''}
+            {e.date ? format(new Date(e.date), 'EEE dd/MM/yy') : ''}
           </ThemedText>
         </View>
       ))}

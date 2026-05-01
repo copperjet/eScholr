@@ -120,7 +120,7 @@ export default function FinanceReportsScreen() {
                   {report.semesters?.name ?? ''}
                 </ThemedText>
                 <ThemedText variant="caption" color="muted">
-                  Held since {format(parseISO(report.updated_at), 'dd MMM yyyy')}
+                  Held since {format(parseISO(report.updated_at), 'dd/MM/yy')}
                 </ThemedText>
               </View>
               <TouchableOpacity
