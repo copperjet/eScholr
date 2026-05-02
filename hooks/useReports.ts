@@ -52,9 +52,9 @@ export const STATUS_META: Record<ReportStatus, { label: string; preset: 'success
 
 // ─── HRT hooks ────────────────────────────────────────────────────────────────
 
-export function useHRTStreamReports(staffId: string | null, schoolId: string) {
+export function useHRTStreamReports(staffId: string | null, schoolId: string, overrideSemesterId?: string | null) {
   return useQuery<{ reports: ReportSummary[]; semesterId: string | null; streamId: string | null; streamName: string }>({
-    queryKey: ['hrt-reports', staffId, schoolId],
+    queryKey: ['hrt-reports', staffId, schoolId, overrideSemesterId ?? null],
     enabled: !!staffId && !!schoolId,
     staleTime: 1000 * 60 * 2,
     queryFn: async () => {
@@ -69,6 +69,7 @@ export function useHRTStreamReports(staffId: string | null, schoolId: string) {
       if (!assignment) return { reports: [], semesterId: null, streamId: null, streamName: '' };
 
       const { stream_id, semester_id } = assignment;
+      const activeSemId = overrideSemesterId ?? semester_id;
       const { data: students } = await db
         .from('students')
         .select('id')
@@ -77,7 +78,7 @@ export function useHRTStreamReports(staffId: string | null, schoolId: string) {
         .eq('status', 'active');
       const studentIds = (students ?? []).map((s: any) => s.id);
       if (studentIds.length === 0) {
-        return { reports: [], semesterId: semester_id, streamId: stream_id, streamName: assignment.streams?.name ?? '' };
+        return { reports: [], semesterId: activeSemId, streamId: stream_id, streamName: assignment.streams?.name ?? '' };
       }
 
       const { data, error } = await db
@@ -86,13 +87,13 @@ export function useHRTStreamReports(staffId: string | null, schoolId: string) {
                  students ( id, full_name, student_number, photo_url ),
                  semesters ( id, name )`)
         .eq('school_id', schoolId)
-        .eq('semester_id', semester_id)
+        .eq('semester_id', activeSemId)
         .in('student_id', studentIds)
         .order('created_at', { ascending: true });
       if (error) throw error;
       return {
         reports: ((data ?? []) as any[]).map(normaliseReport),
-        semesterId: semester_id,
+        semesterId: activeSemId,
         streamId: stream_id,
         streamName: assignment.streams?.name ?? '',
       };
@@ -164,9 +165,9 @@ export function useMarksCompletionForStream(
 
 // ─── Admin hooks ──────────────────────────────────────────────────────────────
 
-export function useAdminReports(schoolId: string, status: ReportStatus | 'all') {
+export function useAdminReports(schoolId: string, status: ReportStatus | 'all', semesterId?: string | null) {
   return useQuery<ReportSummary[]>({
-    queryKey: ['admin-reports', schoolId, status],
+    queryKey: ['admin-reports', schoolId, status, semesterId ?? null],
     enabled: !!schoolId,
     staleTime: 1000 * 60,
     queryFn: async () => {
@@ -180,6 +181,7 @@ export function useAdminReports(schoolId: string, status: ReportStatus | 'all') 
         .order('updated_at', { ascending: false })
         .limit(500);
       if (status !== 'all') q = q.eq('status', status);
+      if (semesterId) q = q.eq('semester_id', semesterId);
       const { data, error } = await q;
       if (error) throw error;
       return ((data ?? []) as any[]).map(normaliseReport);

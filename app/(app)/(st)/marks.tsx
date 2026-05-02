@@ -3,7 +3,7 @@
  * Shows all subject/stream assignments with entry progress.
  * Tap any card → marks-entry screen for that assignment.
  */
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -18,7 +18,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, ProgressBar, Badge, Skeleton, EmptyState, ErrorState, ScreenHeader,
+  ThemedText, ProgressBar, Badge, Skeleton, EmptyState, ErrorState, ScreenHeader, AcademicPeriodPicker,
 } from '../../../components/ui';
 import { MarksWindowBanner } from '../../../components/modules/MarksWindowBanner';
 import { Spacing, Radius, Shadow } from '../../../constants/Typography';
@@ -97,11 +97,17 @@ function useSTAssignmentsOverview(staffId: string | null, schoolId: string) {
 export default function STMarksOverview() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
+  const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null);
 
-  const { data, isLoading, isError, refetch } = useSTAssignmentsOverview(
+  const { data: allData, isLoading, isError, refetch } = useSTAssignmentsOverview(
     user?.staffId ?? null,
     user?.schoolId ?? '',
   );
+
+  // Filter assignments by selected semester (client-side since all semesters are loaded)
+  const data = selectedSemesterId
+    ? (allData ?? []).filter((a: any) => a.semester_id === selectedSemesterId)
+    : allData;
 
   const anyWindowClosed = (data ?? []).some((a: any) => !a.semesters?.marks_window_open);
 
@@ -118,6 +124,11 @@ export default function STMarksOverview() {
       <ScreenHeader
         title="My Marks"
         subtitle={data && data.length > 0 ? `${data.filter((a: any) => a.isComplete).length}/${data.length} complete` : undefined}
+      />
+      <AcademicPeriodPicker
+        schoolId={user?.schoolId ?? ''}
+        semesterId={selectedSemesterId}
+        onChangeSemester={setSelectedSemesterId}
       />
 
       {anyWindowClosed && <MarksWindowBanner isOpen={false} />}
@@ -154,6 +165,17 @@ export default function STMarksOverview() {
                   params: { assignmentId: assignment.id },
                 } as any);
               }}
+              onAnalysis={() => {
+                haptics.light();
+                router.push({
+                  pathname: '/(app)/(st)/analysis',
+                  params: {
+                    subjectId: assignment.subject_id,
+                    streamId: assignment.stream_id,
+                    semesterId: assignment.semester_id,
+                  },
+                } as any);
+              }}
             />
           ))}
         </ScrollView>
@@ -166,10 +188,12 @@ function AssignmentCard({
   assignment,
   colors,
   onPress,
+  onAnalysis,
 }: {
   assignment: any;
   colors: any;
   onPress: () => void;
+  onAnalysis: () => void;
 }) {
   const { entered, total, isComplete } = assignment;
   const isWindowOpen = assignment.semesters?.marks_window_open ?? true;
@@ -236,9 +260,17 @@ function AssignmentCard({
             color={isComplete ? Colors.semantic.success : colors.brand.primary}
             height={4}
           />
-          <ThemedText variant="caption" color="muted" style={{ marginTop: 4 }}>
-            {pct}% entered
-          </ThemedText>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+            <ThemedText variant="caption" color="muted">{pct}% entered</ThemedText>
+            <TouchableOpacity
+              onPress={(e) => { e.stopPropagation(); onAnalysis(); }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={[styles.analysisBtn, { backgroundColor: colors.brand.primary + '14', borderColor: colors.brand.primary + '40' }]}
+            >
+              <Ionicons name="bar-chart-outline" size={11} color={colors.brand.primary} />
+              <ThemedText variant="caption" style={{ color: colors.brand.primary, fontWeight: '600', marginLeft: 3 }}>Analysis</ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -260,6 +292,14 @@ const styles = StyleSheet.create({
   accentStrip: { width: 4 },
   cardBody: { flex: 1, padding: 14, gap: 10 },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  analysisBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
   completeBadge: {
     flexDirection: 'row',
     alignItems: 'center',

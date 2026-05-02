@@ -31,3 +31,4 @@ export { ResponsiveShell } from './ResponsiveShell';
 export { PressableScale } from './PressableScale';
 export { AnimatedNumber } from './AnimatedNumber';
 export { FadeIn } from './FadeIn';
+export { AcademicPeriodPicker } from './AcademicPeriodPicker';

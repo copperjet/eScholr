@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  ThemedText, Avatar, Badge, BottomSheet, Skeleton, EmptyState, ErrorState, ScreenHeader, FastList,
+  ThemedText, Avatar, Badge, BottomSheet, Skeleton, EmptyState, ErrorState, ScreenHeader, FastList, AcademicPeriodPicker,
 } from '../../../components/ui';
 import {
   useAdminReports, useAdminReportCounts, useAdminApproveReport, useReleaseReports,
@@ -46,8 +46,9 @@ export default function AdminReportsScreen() {
 
   const [activeTab, setActiveTab] = useState<ReportStatus | 'all'>('pending_approval');
   const [sheetReport, setSheetReport] = useState<ReportSummary | null>(null);
+  const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null);
 
-  const { data: reports = [], isLoading, isError, refetch } = useAdminReports(schoolId, activeTab);
+  const { data: reports = [], isLoading, isError, refetch } = useAdminReports(schoolId, activeTab, selectedSemesterId);
   const { data: counts = {} as Partial<Record<ReportStatus, number>> } = useAdminReportCounts(schoolId);
   const approveMutation = useAdminApproveReport(schoolId);
   const releaseMutation = useReleaseReports(schoolId);
@@ -128,6 +129,12 @@ export default function AdminReportsScreen() {
             </TouchableOpacity>
           ) : null
         }
+      />
+
+      <AcademicPeriodPicker
+        schoolId={schoolId}
+        semesterId={selectedSemesterId}
+        onChangeSemester={setSelectedSemesterId}
       />
 
       {/* Pipeline */}

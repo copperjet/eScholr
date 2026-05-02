@@ -81,6 +81,7 @@ export default function AdminStaffScreen() {
   const [detailVisible, setDetailVisible] = useState(false);
   const [addVisible, setAddVisible] = useState(false);
   const [editRolesMode, setEditRolesMode] = useState(false);
+  const [confirmLogin, setConfirmLogin] = useState(false);
 
   // Add Staff form state
   const [form, setForm] = useState({ full_name: '', email: '', department: '', phone: '' });
@@ -218,7 +219,8 @@ export default function AdminStaffScreen() {
     },
     onError: (err: any) => {
       haptics.error();
-      Alert.alert('Invite Failed', err.message ?? 'Could not send invite.');
+      console.error('invite-user error:', err);
+      Alert.alert('Login Creation Failed', err.message ?? 'Could not create login. Check the edge function is deployed and the staff member has a valid email.');
     },
   });
 
@@ -465,7 +467,7 @@ export default function AdminStaffScreen() {
       {/* ── Staff Detail Sheet ──────────────────────────────── */}
       <BottomSheet
         visible={detailVisible && !!selectedStaff}
-        onClose={() => { setDetailVisible(false); setEditRolesMode(false); }}
+        onClose={() => { setDetailVisible(false); setEditRolesMode(false); setConfirmLogin(false); }}
         title={selectedStaff?.full_name ?? 'Staff'}
         snapHeight={editRolesMode ? 560 : 500}
       >
@@ -521,20 +523,35 @@ export default function AdminStaffScreen() {
                   </ThemedText>
                 </View>
                 {!selectedStaff.auth_user_id && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      Alert.alert('Generate Login Password', `Create a login for ${selectedStaff.email}? A temporary password will be shown for you to share.`, [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Generate', onPress: () => sendInvite.mutate(selectedStaff) },
-                      ]);
-                    }}
-                    disabled={sendInvite.isPending}
-                    style={[styles.inviteBtn, { backgroundColor: Colors.semantic.warning }]}
-                  >
-                    <ThemedText variant="label" style={{ color: '#fff', fontWeight: '700' }}>
-                      {sendInvite.isPending ? '…' : 'Create Login'}
-                    </ThemedText>
-                  </TouchableOpacity>
+                  confirmLogin ? (
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      <TouchableOpacity
+                        onPress={() => { setConfirmLogin(false); sendInvite.mutate(selectedStaff); }}
+                        disabled={sendInvite.isPending}
+                        style={[styles.inviteBtn, { backgroundColor: Colors.semantic.warning }]}
+                      >
+                        <ThemedText variant="label" style={{ color: '#fff', fontWeight: '700' }}>
+                          {sendInvite.isPending ? '…' : 'Yes, create'}
+                        </ThemedText>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => setConfirmLogin(false)}
+                        style={[styles.inviteBtn, { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.border }]}
+                      >
+                        <ThemedText variant="label" style={{ color: colors.textPrimary, fontWeight: '600' }}>Cancel</ThemedText>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => setConfirmLogin(true)}
+                      disabled={sendInvite.isPending}
+                      style={[styles.inviteBtn, { backgroundColor: Colors.semantic.warning }]}
+                    >
+                      <ThemedText variant="label" style={{ color: '#fff', fontWeight: '700' }}>
+                        Create Login
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )
                 )}
               </View>
 

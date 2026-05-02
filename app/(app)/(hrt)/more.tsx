@@ -56,6 +56,7 @@ export default function HRTMore() {
         { icon: 'book-outline',          label: 'Day Book',            sublabel: 'Student daily notes',      onPress: () => router.push('/(app)/(hrt)/daybook' as any) },
         { icon: 'person-add-outline',    label: 'CREED Ratings',       sublabel: 'Character assessments',    onPress: () => router.push('/(app)/(hrt)/creed' as any) },
         { icon: 'chatbubble-ellipses-outline', label: 'Parent Messages', sublabel: 'Message parents of your students', onPress: () => router.push('/(app)/(hrt)/messages' as any) },
+        { icon: 'bar-chart-outline',           label: 'Class Analysis',  sublabel: 'Performance breakdown for your class', onPress: () => router.push('/(app)/(hrt)/analysis' as any) },
       ],
     },
     {

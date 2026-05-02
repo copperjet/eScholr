@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  ThemedText, Avatar, Badge, FAB, Skeleton, EmptyState, ErrorState, ScreenHeader,
+  ThemedText, Avatar, Badge, FAB, Skeleton, EmptyState, ErrorState, ScreenHeader, AcademicPeriodPicker,
 } from '../../../components/ui';
 import {
   useHRTStreamReports, useMarksCompletionForStream,
@@ -41,10 +41,12 @@ export default function HRTReportsScreen() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const [activeFilter, setActiveFilter] = useState<'all' | ReportStatus>('all');
+  const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch } = useHRTStreamReports(
     user?.staffId ?? null,
     user?.schoolId ?? '',
+    selectedSemesterId,
   );
 
   const { data: marksCompletion } = useMarksCompletionForStream(
@@ -82,6 +84,12 @@ export default function HRTReportsScreen() {
         title="Report Cards"
         subtitle={`${data?.streamName ?? '—'} · ${releasedCount}/${reports.length} released`}
         showBack
+      />
+
+      <AcademicPeriodPicker
+        schoolId={user?.schoolId ?? ''}
+        semesterId={selectedSemesterId ?? data?.semesterId ?? null}
+        onChangeSemester={setSelectedSemesterId}
       />
 
       {/* Pipeline */}

@@ -23,7 +23,7 @@ import { haptics } from '../../../lib/haptics';
 interface Section  { id: string; name: string; order_index: number }
 interface Grade    { id: string; section_id: string; name: string; order_index: number }
 interface Stream   { id: string; grade_id: string; name: string; order_index: number }
-interface Subject  { id: string; name: string; code: string | null; department: string | null }
+interface Subject  { id: string; name: string; code: string | null; department: string | null; section_id: string | null }
 
 type EntityKind = 'section' | 'grade' | 'stream' | 'subject';
 
@@ -52,7 +52,7 @@ function useSchoolStructure(schoolId: string) {
         db.from('school_sections').select('id,name,order_index').eq('school_id', schoolId).order('order_index'),
         db.from('grades').select('id,section_id,name,order_index').eq('school_id', schoolId).order('order_index'),
         db.from('streams').select('id,grade_id,name,order_index').eq('school_id', schoolId).order('order_index'),
-        db.from('subjects').select('id,name,code,department').eq('school_id', schoolId).order('name'),
+        db.from('subjects').select('id,name,code,department,section_id').eq('school_id', schoolId).order('name'),
       ]);
       return {
         sections: (sections ?? []) as Section[],
@@ -105,6 +105,7 @@ export default function SchoolStructureScreen() {
   const { user } = useAuthStore();
   const schoolId = user?.schoolId ?? '';
 
+  const qc = useQueryClient();
   const { data, isLoading, isFetching, refetch } = useSchoolStructure(schoolId);
   const saveEntity = useSaveEntity(schoolId);
   const deleteEntity = useDeleteEntity(schoolId);
@@ -117,6 +118,7 @@ export default function SchoolStructureScreen() {
   const [code, setCode] = useState('');
   const [dept, setDept] = useState('');
   const [parent, setParent] = useState<string | null>(null);
+  const [sectionId, setSectionId] = useState<string | null>(null);
   const [editorError, setEditorError] = useState('');
 
   const tree = useMemo(() => {
@@ -134,7 +136,7 @@ export default function SchoolStructureScreen() {
 
   const openAdd = (kind: EntityKind, parentId?: string) => {
     setAddPickerOpen(false);
-    setName(''); setCode(''); setDept(''); setParent(parentId ?? null); setEditorError('');
+    setName(''); setCode(''); setDept(''); setParent(parentId ?? null); setSectionId(null); setEditorError('');
     if (kind === 'section')      setEditor({ kind, mode: 'add' });
     else if (kind === 'grade')   setEditor({ kind, mode: 'add', parentSectionId: parentId });
     else if (kind === 'stream')  setEditor({ kind, mode: 'add', parentGradeId: parentId });
@@ -146,6 +148,7 @@ export default function SchoolStructureScreen() {
     setCode(row.code ?? '');
     setDept(row.department ?? '');
     setParent(row.section_id ?? row.grade_id ?? null);
+    setSectionId(kind === 'subject' ? (row.section_id ?? null) : null);
     setEditorError('');
     if (kind === 'section')      setEditor({ kind, mode: 'edit', row });
     else if (kind === 'grade')   setEditor({ kind, mode: 'edit', row, parentSectionId: row.section_id });
@@ -249,6 +252,8 @@ export default function SchoolStructureScreen() {
     if (editor.kind === 'subject') {
       payload.code = code.trim() || null;
       payload.department = dept.trim() || null;
+      if (!sectionId) { setEditorError('Select a section.'); return; }
+      payload.section_id = sectionId;
     }
     if (editor.kind === 'grade') {
       const sectionId = editor.mode === 'add' ? (editor.parentSectionId ?? parent) : (editor.row as Grade)?.section_id;
@@ -264,11 +269,30 @@ export default function SchoolStructureScreen() {
     setEditorError('');
     haptics.medium();
     try {
-      await saveEntity.mutateAsync({
-        kind: editor.kind,
-        id: editor.mode === 'edit' ? editor.row?.id : undefined,
-        payload,
-      });
+      const db = supabase as any;
+      if (editor.kind === 'subject' && editor.mode === 'add') {
+        // Insert subject
+        const { data: newSub, error: subErr } = await db
+          .from('subjects')
+          .insert({ ...payload, school_id: schoolId })
+          .select('id')
+          .single();
+        if (subErr) throw subErr;
+        // Auto-assign to all grades in the selected section
+        const gradesInSection = (data?.grades ?? []).filter((g: Grade) => g.section_id === sectionId);
+        if (gradesInSection.length > 0) {
+          await db.from('grade_subject_assignments').insert(
+            gradesInSection.map((g: Grade) => ({ school_id: schoolId, grade_id: g.id, subject_id: newSub.id, is_mandatory: true }))
+          );
+        }
+        qc.invalidateQueries({ queryKey: ['school-structure', schoolId] });
+      } else {
+        await saveEntity.mutateAsync({
+          kind: editor.kind,
+          id: editor.mode === 'edit' ? editor.row?.id : undefined,
+          payload,
+        });
+      }
       haptics.success();
       setEditor(null);
     } catch (e: any) {
@@ -364,24 +388,47 @@ export default function SchoolStructureScreen() {
           ) : (data?.subjects.length ?? 0) === 0 ? (
             <EmptyState title="No subjects yet" description="Tap + and choose Subject." />
           ) : (
-            data!.subjects.map((sub) => (
-              <Pressable
-                key={sub.id}
-                onPress={() => openEdit(sub, 'subject')}
-                onLongPress={() => handleLongPress(sub, 'subject')}
-                delayLongPress={350}
-                style={[styles.subjectRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              >
-                <View style={{ flex: 1 }}>
-                  <ThemedText style={{ fontWeight: '600' }}>{sub.name}</ThemedText>
-                  <ThemedText variant="caption" color="muted">
-                    {sub.code ? `Code ${sub.code}` : 'No curriculum code'}
-                    {sub.department ? ` · ${sub.department}` : ''}
-                  </ThemedText>
+            (() => {
+              const sections = data?.sections ?? [];
+              const subjects = data?.subjects ?? [];
+              // Group subjects by section_id; unassigned last
+              const groups: { sectionId: string | null; sectionName: string; items: Subject[] }[] = [];
+              for (const s of sections) {
+                const items = subjects.filter(sub => sub.section_id === s.id);
+                if (items.length > 0) groups.push({ sectionId: s.id, sectionName: s.name, items });
+              }
+              const unassigned = subjects.filter(sub => !sub.section_id);
+              if (unassigned.length > 0) groups.push({ sectionId: null, sectionName: 'Unassigned', items: unassigned });
+              return groups.map((group) => (
+                <View key={group.sectionId ?? '__none'} style={{ gap: Spacing.xs }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 2 }}>
+                    <Ionicons name="business-outline" size={12} color={colors.brand.primary} />
+                    <ThemedText variant="label" style={{ color: colors.brand.primary, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      {group.sectionName}
+                    </ThemedText>
+                    <View style={{ flex: 1, height: 1, backgroundColor: colors.border, marginLeft: 4 }} />
+                  </View>
+                  {group.items.map((sub) => (
+                    <Pressable
+                      key={sub.id}
+                      onPress={() => openEdit(sub, 'subject')}
+                      onLongPress={() => handleLongPress(sub, 'subject')}
+                      delayLongPress={350}
+                      style={[styles.subjectRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={{ fontWeight: '600' }}>{sub.name}</ThemedText>
+                        <ThemedText variant="caption" color="muted">
+                          {sub.code ? `Code ${sub.code}` : 'No curriculum code'}
+                          {sub.department ? ` · ${sub.department}` : ''}
+                        </ThemedText>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                    </Pressable>
+                  ))}
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-              </Pressable>
-            ))
+              ));
+            })()
           )}
         </View>
       </ScrollView>
@@ -427,7 +474,7 @@ export default function SchoolStructureScreen() {
         visible={!!editor}
         onClose={() => setEditor(null)}
         title={editor ? `${editor.mode === 'add' ? 'Add' : 'Edit'} ${editor.kind}` : ''}
-        snapHeight={editor?.kind === 'subject' ? 480 : 360}
+        snapHeight={editor?.kind === 'subject' ? 540 : 360}
       >
         {editor && (
           <View style={{ padding: Spacing.base, gap: Spacing.base }}>
@@ -469,6 +516,20 @@ export default function SchoolStructureScreen() {
 
             {editor.kind === 'subject' && (
               <>
+                <View>
+                  <ThemedText variant="label" color="muted" style={{ marginBottom: Spacing.sm }}>SECTION *</ThemedText>
+                  <View style={styles.optionWrap}>
+                    {(data?.sections ?? []).map(s => (
+                      <Pressable
+                        key={s.id}
+                        onPress={() => setSectionId(s.id)}
+                        style={[styles.optionPill, { backgroundColor: sectionId === s.id ? colors.brand.primary : colors.surfaceSecondary, borderColor: sectionId === s.id ? colors.brand.primary : colors.border }]}
+                      >
+                        <ThemedText style={{ color: sectionId === s.id ? '#fff' : colors.textPrimary, fontSize: 13, fontWeight: '600' }}>{s.name}</ThemedText>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
                 <FormField label="Curriculum Code" placeholder="e.g. 0625 (IGCSE Physics)" value={code} onChangeText={setCode} iconLeft="barcode-outline" autoCapitalize="characters" />
                 <FormField label="Department" placeholder="e.g. Sciences" value={dept} onChangeText={setDept} iconLeft="business-outline" />
               </>

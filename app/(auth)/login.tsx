@@ -135,7 +135,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           bounces={false}
         >
-          <View style={[styles.sheet, { backgroundColor: colors.background }]}>
+          <View style={[styles.sheet, Platform.OS !== 'web' && { flex: 1 }, { backgroundColor: colors.background }]}>
             <View style={styles.form}>
               <FormField
                 label="Email address"

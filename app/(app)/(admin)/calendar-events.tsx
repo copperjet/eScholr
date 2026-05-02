@@ -425,8 +425,8 @@ function Field({ label, value, onChangeText, placeholder, colors, keyboardType, 
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  tabStrip: { paddingHorizontal: Spacing.base, paddingVertical: Spacing.md, gap: Spacing.sm },
-  tabBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1.5 },
+  tabStrip: { paddingHorizontal: Spacing.base, paddingVertical: Spacing.md, gap: Spacing.sm, alignItems: 'center' },
+  tabBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1.5, height: 36 },
   list: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT + Spacing.xl, gap: Spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', padding: Spacing.base, borderRadius: Radius.lg, borderWidth: 1.5, gap: Spacing.sm },
   eventDot: { width: 4, alignSelf: 'stretch', borderRadius: 2 },

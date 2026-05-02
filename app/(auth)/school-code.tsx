@@ -85,7 +85,7 @@ export default function SchoolCodeScreen() {
       {/* ── White sheet ── */}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
-          <View style={[styles.sheet, { backgroundColor: colors.background }]}>
+          <View style={[styles.sheet, Platform.OS !== 'web' && { flex: 1 }, { backgroundColor: colors.background }]}>
             <Animated.View style={[styles.form, { transform: [{ translateX: shakeAnim }] }]}>
               <ThemedText variant="h2" style={{ marginBottom: Spacing.xs }}>Enter school code</ThemedText>
               <ThemedText variant="body" color="muted" style={{ marginBottom: Spacing.lg }}>

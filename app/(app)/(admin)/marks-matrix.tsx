@@ -18,7 +18,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, BottomSheet, Skeleton, EmptyState, ErrorState, ScreenHeader,
+  ThemedText, BottomSheet, Skeleton, EmptyState, ErrorState, ScreenHeader, AcademicPeriodPicker,
 } from '../../../components/ui';
 import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -51,9 +51,9 @@ interface MatrixData {
 
 // ─── data hook ────────────────────────────────────────────────────────────────
 
-function useMarksMatrix(schoolId: string) {
+function useMarksMatrix(schoolId: string, overrideSemesterId?: string | null) {
   return useQuery<MatrixData>({
-    queryKey: ['admin-marks-matrix', schoolId],
+    queryKey: ['admin-marks-matrix', schoolId, overrideSemesterId ?? null],
     enabled: !!schoolId,
     staleTime: 1000 * 60 * 2,
     queryFn: async () => {
@@ -68,19 +68,16 @@ function useMarksMatrix(schoolId: string) {
             semesters ( name, is_active, marks_window_open )
           `)
           .eq('school_id', schoolId),
-        db.from('semesters')
-          .select('id, name')
-          .eq('school_id', schoolId)
-          .eq('is_active', true)
-          .limit(1)
-          .single(),
+        overrideSemesterId
+          ? db.from('semesters').select('id, name').eq('id', overrideSemesterId).limit(1).single()
+          : db.from('semesters').select('id, name').eq('school_id', schoolId).eq('is_active', true).limit(1).single(),
       ]);
 
       const assignments: any[] = assignmentsRes.data ?? [];
       const activeSemId: string = activeRes.data?.id ?? '';
       const semName: string = activeRes.data?.name ?? '';
 
-      // Filter to active semester
+      // Filter to selected semester
       const active = assignments.filter((a: any) => a.semester_id === activeSemId);
       if (active.length === 0) {
         return { subjectIds: [], subjectNames: {}, rows: [], semesterName: semName };
@@ -182,7 +179,8 @@ function cellBg(cell: MatrixCell | undefined): string {
 export default function MarksMatrixScreen() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
-  const { data, isLoading, isError, refetch } = useMarksMatrix(user?.schoolId ?? '');
+  const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null);
+  const { data, isLoading, isError, refetch } = useMarksMatrix(user?.schoolId ?? '', selectedSemesterId);
 
   const [sheetVisible, setSheetVisible] = useState(false);
   const [sheetCell, setSheetCell] = useState<{
@@ -213,6 +211,11 @@ export default function MarksMatrixScreen() {
         title="Marks Matrix"
         subtitle={`${data?.semesterName ?? '—'} · ${completedCells}/${totalCells} complete`}
         showBack
+      />
+      <AcademicPeriodPicker
+        schoolId={user?.schoolId ?? ''}
+        semesterId={selectedSemesterId}
+        onChangeSemester={setSelectedSemesterId}
       />
 
       {isLoading ? (
