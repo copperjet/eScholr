@@ -95,6 +95,8 @@ export default function AdminHome() {
   const canAttendance = useCanAccess('attendance');
   const canMarksMatrix = useCanAccess('marks_matrix');
   const canDaybook = useCanAccess('daybook');
+  const canSchoolStructure = useCanAccess('school_structure');
+  const canCalendar = useCanAccess('calendar_events');
 
   const TODAY = format(new Date(), 'EEEE, d MMM');
   const attPct = data?.totalAttToday
@@ -128,7 +130,7 @@ export default function AdminHome() {
             <Ionicons name="notifications-outline" size={20} color={colors.textPrimary} />
           </Pressable>
           <Pressable onPress={() => router.push('/(app)/switch-role' as any)}>
-            <Avatar name={user?.fullName ?? 'A'} size={42} />
+            <Avatar name={user?.fullName ?? 'A'} photoUrl={school?.logo_url} size={42} />
           </Pressable>
         </View>
 
@@ -295,6 +297,26 @@ export default function AdminHome() {
                   icon="people-circle-outline"
                   variant="surface"
                   onPress={() => router.push('/(app)/(admin)/parents' as any)}
+                  style={styles.qaCard}
+                />
+              )}
+              {canSchoolStructure && (
+                <QuickActionCard
+                  title="Structure"
+                  subtitle="Sections & grades"
+                  icon="business-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/school-structure' as any)}
+                  style={styles.qaCard}
+                />
+              )}
+              {canCalendar && (
+                <QuickActionCard
+                  title="Calendar"
+                  subtitle="Semesters & events"
+                  icon="calendar-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/calendar-events' as any)}
                   style={styles.qaCard}
                 />
               )}

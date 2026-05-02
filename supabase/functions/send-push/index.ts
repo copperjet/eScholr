@@ -31,12 +31,13 @@ function json(data: unknown, status = 200) {
 }
 
 interface SendPushBody {
-  type: "user" | "role" | "stream" | "grade" | "school";
-  school_id: string;
+  type: "user" | "role" | "stream" | "grade" | "school" | "platform";
+  school_id?: string;
   user_ids?: string[];
   roles?: string[];
   stream_id?: string;
   grade_id?: string;
+  audience?: "all" | "staff" | "parents"; // used with type "platform"
   title: string;
   body: string;
   data?: Record<string, unknown>;
@@ -62,12 +63,16 @@ Deno.serve(async (req) => {
     const payload = (await req.json()) as SendPushBody;
     const {
       type, school_id, user_ids, roles, stream_id, grade_id,
+      audience = "all",
       title, body, data = {}, trigger_event = "app_update",
       is_safeguarding = false, related_student_id = null, deep_link_url = null,
     } = payload;
 
-    if (!school_id || !title || !body) {
-      return json({ error: "school_id, title, and body are required" }, 400);
+    if (!title || !body) {
+      return json({ error: "title and body are required" }, 400);
+    }
+    if (type !== "platform" && !school_id) {
+      return json({ error: "school_id required for non-platform sends" }, 400);
     }
 
     const VALID_EVENTS = new Set([
@@ -77,6 +82,80 @@ Deno.serve(async (req) => {
     ]);
     if (!VALID_EVENTS.has(trigger_event)) {
       return json({ error: `invalid trigger_event '${trigger_event}'` }, 400);
+    }
+
+    // Platform broadcast requires super_admin caller
+    if (type === "platform") {
+      const callerClient = createClient(supabaseUrl, serviceKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user: caller } } = await callerClient.auth.getUser();
+      const callerRoles: string[] = (caller?.app_metadata as any)?.roles ?? [];
+      if (!callerRoles.includes("super_admin")) {
+        return json({ error: "Forbidden — super_admin required for platform broadcast" }, 403);
+      }
+
+      // Fetch all active schools
+      const { data: schools } = await db.from("schools")
+        .select("id")
+        .eq("subscription_status", "active");
+
+      const schoolIds = (schools ?? []).map((s: any) => s.id);
+      if (!schoolIds.length) return json({ sent: 0, targeted: 0, message: "No active schools" });
+
+      let totalSent = 0;
+      let totalTargeted = 0;
+
+      for (const sid of schoolIds) {
+        const queries = [];
+        if (audience === "all" || audience === "staff") {
+          queries.push(db.from("staff").select("auth_user_id").eq("school_id", sid).eq("status", "active").not("auth_user_id", "is", null));
+        }
+        if (audience === "all" || audience === "parents") {
+          queries.push(db.from("parents").select("auth_user_id").eq("school_id", sid).not("auth_user_id", "is", null));
+        }
+
+        const results = await Promise.all(queries);
+        const uids = [...new Set(results.flatMap((r) => (r.data ?? []).map((x: any) => x.auth_user_id)))];
+        if (!uids.length) continue;
+
+        const { data: tokenRows } = await db.from("push_tokens")
+          .select("user_id, push_token")
+          .eq("school_id", sid)
+          .in("user_id", uids);
+
+        const tokens = (tokenRows ?? []).map((r: any) => r.push_token).filter(Boolean);
+        totalTargeted += uids.length;
+
+        if (tokens.length) {
+          const BATCH = 100;
+          for (let i = 0; i < tokens.length; i += BATCH) {
+            const batch = tokens.slice(i, i + BATCH).map((t: string) => ({
+              to: t, title, body, data: { ...data, deep_link_url, trigger_event }, sound: "default", badge: 1,
+            }));
+            const resp = await fetch(EXPO_PUSH_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Accept: "application/json" },
+              body: JSON.stringify(batch),
+            });
+            if (resp.ok) {
+              const result = await resp.json();
+              totalSent += (result?.data ?? []).filter((d: any) => d.status === "ok").length;
+            }
+          }
+        }
+
+        // Log to notification_logs for each recipient
+        const logRows = uids.map((uid) => ({
+          school_id: sid, recipient_user_id: uid, trigger_event, channel: "push" as const,
+          title, body, deep_link_url, delivery_status: "delivered", is_safeguarding, is_read: false,
+          created_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        }));
+        if (logRows.length) await db.from("notification_logs").insert(logRows);
+      }
+
+      return json({ sent: totalSent, targeted: totalTargeted, schools: schoolIds.length });
     }
 
     // ── Resolve target user IDs ───────────────────────────────────────────────

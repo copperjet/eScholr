@@ -75,7 +75,7 @@ export default function FrontDeskHome() {
             <ThemedText variant="h2">Front Desk</ThemedText>
           </View>
           <Pressable onPress={() => router.push('/(app)/switch-role' as any)}>
-            <Avatar name={user?.fullName ?? 'F'} size={44} />
+            <Avatar name={user?.fullName ?? 'F'} photoUrl={school?.logo_url} size={44} />
           </Pressable>
         </View>
 

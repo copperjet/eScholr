@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
+import { Image } from 'expo-image';
 import {
   ThemedText, Avatar, ErrorState, StatCard, SectionHeader,
   StatCardSkeleton, ListItemSkeleton,
@@ -150,7 +151,11 @@ export default function PlatformHome() {
             <Ionicons name="notifications-outline" size={20} color={colors.textPrimary} />
           </Pressable>
           <Pressable onPress={() => router.push('/(app)/(platform)/more' as any)}>
-            <Avatar name={user?.fullName ?? 'SA'} size={42} />
+            <Image
+              source={require('../../../assets/scholr-logo.png')}
+              style={{ width: 42, height: 42, borderRadius: 21 }}
+              contentFit="contain"
+            />
           </Pressable>
         </View>
 

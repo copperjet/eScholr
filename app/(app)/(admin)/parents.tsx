@@ -115,7 +115,10 @@ export default function AdminParentsScreen() {
         } as any)
         .select('id')
         .single();
-      if (error) throw new Error(error.message);
+      if (error) {
+        if (error.code === '23505') throw new Error('This email is already linked to an existing or deactivated account.');
+        throw new Error(error.message);
+      }
       return (np as any).id;
     },
     onSuccess: () => {

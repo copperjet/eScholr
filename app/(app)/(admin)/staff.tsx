@@ -108,7 +108,10 @@ export default function AdminStaffScreen() {
         } as any)
         .select('id')
         .single();
-      if (error) throw new Error(error.message);
+      if (error) {
+        if (error.code === '23505') throw new Error('This email is already linked to an existing or deactivated account.');
+        throw new Error(error.message);
+      }
 
       const staffId = (newStaff as any).id;
       const { error: roleErr } = await (supabase as any)
@@ -295,6 +298,15 @@ export default function AdminStaffScreen() {
       <ScreenHeader
         title={`Staff${data ? ` (${data.filter((s: any) => s.status === 'active').length} active)` : ''}`}
         showBack
+        right={
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/(admin)/staff-import' as any)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: colors.brand.primary + '14' }}
+          >
+            <Ionicons name="download-outline" size={15} color={colors.brand.primary} />
+            <ThemedText variant="caption" style={{ color: colors.brand.primary, fontWeight: '700' }}>Import</ThemedText>
+          </TouchableOpacity>
+        }
       />
 
       {/* Search + filter chips */}

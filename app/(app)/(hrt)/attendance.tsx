@@ -239,7 +239,16 @@ export default function AttendanceScreen() {
       return;
     }
     haptics.selection();
-    setLocalStatuses(prev => ({ ...prev, [selectedStudent!.id]: status }));
+    setLocalStatuses(prev => {
+      const current = prev[selectedStudent!.id] ?? null;
+      if (current === status) {
+        // Untick: deselect so teacher can pick a different status
+        const next = { ...prev };
+        delete next[selectedStudent!.id];
+        return next;
+      }
+      return { ...prev, [selectedStudent!.id]: status };
+    });
     setSheetVisible(false);
   }, [selectedStudent]);
 

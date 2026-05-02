@@ -52,7 +52,7 @@ function formatK(v: number) {
 
 export default function FinanceHome() {
   const { colors } = useTheme();
-  const { user } = useAuthStore();
+  const { user, school } = useAuthStore();
   const queryClient = useQueryClient();
   const schoolId = user?.schoolId ?? '';
 
@@ -130,6 +130,9 @@ export default function FinanceHome() {
             <ThemedText style={{ color: '#fff', fontWeight: '700', fontSize: 13, marginLeft: 4 }}>Reports</ThemedText>
           </Pressable>
         )}
+        <Pressable onPress={() => router.push('/(app)/switch-role' as any)}>
+          <Avatar name={user?.fullName ?? 'F'} photoUrl={school?.logo_url} size={40} />
+        </Pressable>
       </View>
 
       {/* ── Summary stat row ── */}

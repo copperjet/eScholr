@@ -99,7 +99,7 @@ export default function STHome() {
             <ThemedText variant="bodySm" color="muted" style={{ marginTop: 2 }}>{user?.fullName ?? 'Teacher'}</ThemedText>
           </View>
           <Pressable onPress={() => router.push('/(app)/switch-role' as any)}>
-            <Avatar name={user?.fullName ?? 'T'} size={44} />
+            <Avatar name={user?.fullName ?? 'T'} photoUrl={school?.logo_url} size={44} />
           </Pressable>
         </View>
 

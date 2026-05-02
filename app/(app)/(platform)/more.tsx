@@ -66,6 +66,12 @@ export default function PlatformMore() {
           sublabel: 'Add a new school tenant',
           onPress: () => router.push('/(app)/(platform)/onboard' as any),
         },
+        {
+          icon: 'megaphone-outline',
+          label: 'Broadcast Notification',
+          sublabel: 'Send to one school or all schools',
+          onPress: () => router.push('/(app)/(platform)/broadcast' as any),
+        },
       ],
     },
     {

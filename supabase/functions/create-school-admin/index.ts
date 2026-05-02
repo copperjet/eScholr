@@ -79,8 +79,8 @@ Deno.serve(async (req) => {
         school_id,
         staff_id: null,
         parent_id: null,
-        roles: ["admin"],
-        active_role: "admin",
+        roles: ["school_super_admin"],
+        active_role: "school_super_admin",
       },
     });
     if (createErr) return json({ error: createErr.message }, 400);
@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
     await adminClient.from("staff_roles").insert({
       staff_id: staff.id,
       school_id,
-      role: "admin",
+      role: "school_super_admin",
     });
 
     // Link staff_id into app_metadata
@@ -121,8 +121,8 @@ Deno.serve(async (req) => {
         school_id,
         staff_id: staff.id,
         parent_id: null,
-        roles: ["admin"],
-        active_role: "admin",
+        roles: ["school_super_admin"],
+        active_role: "school_super_admin",
       },
     });
 

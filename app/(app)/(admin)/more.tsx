@@ -82,6 +82,7 @@ export default function AdminMore() {
       title: 'Governance',
       items: [
         ...(can(role, 'school_structure') ? [{ icon: 'business-outline' as IoniconsName,         label: 'School Structure',    sublabel: 'Sections, grades, streams, subjects', onPress: () => router.push('/(app)/(admin)/school-structure' as any) }] : []),
+        ...(can(role, 'school_settings')  ? [{ icon: 'color-palette-outline' as IoniconsName,    label: 'School Settings',     sublabel: 'Name, logo, brand colours',           onPress: () => router.push('/(app)/(admin)/school-settings' as any) }] : []),
         ...(can(role, 'calendar_events')  ? [{ icon: 'calendar-outline' as IoniconsName,         label: 'Calendar & Events',   sublabel: 'Semesters, holidays, breaks, events', onPress: () => router.push('/(app)/(admin)/calendar-events' as any) }] : []),
         ...(can(role, 'promotion')        ? [{ icon: 'arrow-up-circle-outline' as IoniconsName,  label: 'Promotion Wizard',    sublabel: 'Year-end promote / graduate',         onPress: () => router.push('/(app)/(admin)/promotion-wizard' as any) }] : []),
         ...(can(role, 'marks_windows')    ? [{ icon: 'create-outline' as IoniconsName,           label: 'Marks Windows',       sublabel: 'Open / close entry windows',          onPress: () => router.push('/(app)/(admin)/marks-windows' as any) }] : []),

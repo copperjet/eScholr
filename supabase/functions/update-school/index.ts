@@ -29,8 +29,10 @@ Deno.serve(async (req) => {
     const { data: { user: caller } } = await callerClient.auth.getUser();
     if (!caller) return json({ error: "Unauthorized" }, 401);
     const callerRoles: string[] = (caller.app_metadata as any)?.roles ?? [];
-    if (!callerRoles.includes("super_admin")) {
-      return json({ error: "Forbidden — super_admin role required" }, 403);
+    const isPlatformAdmin = callerRoles.includes("super_admin");
+    const isSchoolSuperAdmin = callerRoles.includes("school_super_admin");
+    if (!isPlatformAdmin && !isSchoolSuperAdmin) {
+      return json({ error: "Forbidden — super_admin or school_super_admin role required" }, 403);
     }
 
     const { school_id, ...patch } = await req.json() as {
@@ -46,7 +48,18 @@ Deno.serve(async (req) => {
 
     if (!school_id) return json({ error: "school_id required" }, 400);
 
-    const ALLOWED = ['subscription_plan', 'subscription_status', 'name', 'logo_url', 'primary_color', 'secondary_color', 'renewal_date'];
+    // school_super_admin must only update their own school
+    if (isSchoolSuperAdmin && !isPlatformAdmin) {
+      const callerSchoolId = (caller.app_metadata as any)?.school_id;
+      if (callerSchoolId !== school_id) {
+        return json({ error: "Forbidden — can only update your own school" }, 403);
+      }
+    }
+
+    // school_super_admin can only edit branding fields — not subscription or billing
+    const ALLOWED = isPlatformAdmin
+      ? ['subscription_plan', 'subscription_status', 'name', 'logo_url', 'primary_color', 'secondary_color', 'renewal_date']
+      : ['name', 'logo_url', 'primary_color', 'secondary_color'];
     const safe: Record<string, any> = {};
     for (const key of ALLOWED) {
       if (patch[key as keyof typeof patch] !== undefined) safe[key] = patch[key as keyof typeof patch];

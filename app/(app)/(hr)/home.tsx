@@ -8,7 +8,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, Card, Badge, StatCard,
+  ThemedText, Avatar, Card, Badge, StatCard,
   EmptyState, ErrorState, SectionHeader,
 } from '../../../components/ui';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
@@ -38,7 +38,7 @@ function useHRDashboard(schoolId: string) {
 
 export default function HRHome() {
   const { colors } = useTheme();
-  const { user } = useAuthStore();
+  const { user, school } = useAuthStore();
   const schoolId = user?.schoolId ?? '';
 
   const { data, isLoading, isError, refetch, isRefetching } = useHRDashboard(schoolId);
@@ -65,6 +65,9 @@ export default function HRHome() {
           </View>
           <Pressable onPress={() => router.push('/(app)/notifications' as any)} style={[styles.iconBtn, { backgroundColor: colors.surfaceSecondary }]}>
             <Ionicons name="notifications-outline" size={20} color={colors.textPrimary} />
+          </Pressable>
+          <Pressable onPress={() => router.push('/(app)/switch-role' as any)}>
+            <Avatar name={user?.fullName ?? 'HR'} photoUrl={school?.logo_url} size={40} />
           </Pressable>
         </View>
 

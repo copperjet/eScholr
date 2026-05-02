@@ -38,6 +38,7 @@ export default function PlatformLayout() {
       <Tabs.Screen name="onboard"           options={{ href: null }} />
       <Tabs.Screen name="metrics"           options={{ href: null }} />
       <Tabs.Screen name="impersonation-log" options={{ href: null }} />
+      <Tabs.Screen name="broadcast"         options={{ href: null }} />
     </Tabs>
   );
 }
