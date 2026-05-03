@@ -1,36 +1,36 @@
-student_id,first_name,last_name,email,date_of_birth,gender,class,arm,admission_date,status,blood_group,genotype,address,parent_email,homeroom_teacher_id
-STU2024001,Adaeze,Nwosu,adaeze.nwosu@student.escholr.demo,2010-04-12,female,JSS1,A,2024-09-02,active,O+,AA,"12 Adeniyi Close, Ikeja, Lagos",chidi.nwosu@parent.escholr.demo,STF007
-STU2024002,Emeka,Chukwuemeka,emeka.chukwuemeka@student.escholr.demo,2010-07-25,male,JSS1,A,2024-09-02,active,A+,AS,"5 Bello Street, Surulere, Lagos",grace.chukwuemeka@parent.escholr.demo,STF007
-STU2024003,Fatima,Garba,fatima.garba@student.escholr.demo,2010-11-03,female,JSS1,A,2024-09-02,active,B+,AA,"23 Unity Road, Yaba, Lagos",ibrahim.garba@parent.escholr.demo,STF007
-STU2024004,Tunde,Akinlade,tunde.akinlade@student.escholr.demo,2010-02-17,male,JSS1,B,2024-09-02,active,O-,SS,"8 Palm Avenue, Mushin, Lagos",wole.akinlade@parent.escholr.demo,STF008
-STU2024005,Blessing,Okeke,blessing.okeke@student.escholr.demo,2010-09-08,female,JSS1,B,2024-09-02,active,AB+,AC,"17 Afolabi Lane, Shomolu, Lagos",ngozi.okeke@parent.escholr.demo,STF008
-STU2024006,Usman,Bello,usman.bello@student.escholr.demo,2010-06-14,male,JSS1,B,2024-09-02,active,A+,AA,"4 Hassan Road, Ketu, Lagos",maryam.bello@parent.escholr.demo,STF008
-STU2024007,Chioma,Eze,chioma.eze@student.escholr.demo,2009-03-21,female,JSS2,A,2023-09-01,active,O+,AS,"31 Olawale Drive, Gbagada, Lagos",paul.eze@parent.escholr.demo,STF009
-STU2024008,Kelechi,Obi,kelechi.obi@student.escholr.demo,2009-08-30,male,JSS2,A,2023-09-01,active,B+,AA,"9 Emeka Street, Ikorodu, Lagos",stella.obi@parent.escholr.demo,STF009
-STU2024009,Hauwa,Musa,hauwa.musa@student.escholr.demo,2009-01-15,female,JSS2,A,2023-09-01,active,O+,AA,"22 Sule Close, Maryland, Lagos",ahmed.musa@parent.escholr.demo,STF009
-STU2024010,Seun,Adeyemi,seun.adeyemi@student.escholr.demo,2009-05-27,male,JSS2,B,2023-09-01,active,A+,AS,"14 Nwosu Avenue, Oshodi, Lagos",funke.adeyemi@parent.escholr.demo,STF010
-STU2024011,Amara,Igwe,amara.igwe@student.escholr.demo,2009-12-02,female,JSS2,B,2023-09-01,active,AB+,AA,"6 Akintunde Street, Agege, Lagos",chukwudi.igwe@parent.escholr.demo,STF010
-STU2024012,Ridwan,Suleiman,ridwan.suleiman@student.escholr.demo,2009-04-19,male,JSS2,B,2023-09-01,active,O+,AC,"18 Olawale Close, Ifako, Lagos",rashida.suleiman@parent.escholr.demo,STF010
-STU2024013,Chiamaka,Okonkwo,chiamaka.okonkwo@student.escholr.demo,2008-07-11,female,JSS3,A,2022-09-01,active,B+,AS,"3 Musa Lane, Bariga, Lagos",ernest.okonkwo@parent.escholr.demo,STF007
-STU2024014,Damilola,Fashola,damilola.fashola@student.escholr.demo,2008-10-06,male,JSS3,A,2022-09-01,active,A+,AA,"11 Igbo Road, Isolo, Lagos",tunde.fashola@parent.escholr.demo,STF007
-STU2024015,Zainab,Abdullahi,zainab.abdullahi@student.escholr.demo,2008-02-28,female,JSS3,A,2022-09-01,active,O+,AS,"25 Fashola Drive, Egbe, Lagos",sulayman.abdullahi@parent.escholr.demo,STF007
-STU2024016,Tobechukwu,Nwachukwu,tobechukwu.nwachukwu@student.escholr.demo,2008-09-16,male,JSS3,B,2022-09-01,active,O-,AA,"7 Suleiman Street, Ejigbo, Lagos",obiageli.nwachukwu@parent.escholr.demo,STF008
-STU2024017,Mariam,Yusuf,mariam.yusuf@student.escholr.demo,2008-06-03,female,JSS3,B,2022-09-01,active,A+,AC,"19 Chukwu Avenue, Alimosho, Lagos",musa.yusuf@parent.escholr.demo,STF008
-STU2024018,Oluwatobi,Akintunde,oluwatobi.akintunde@student.escholr.demo,2008-11-24,male,JSS3,B,2022-09-01,active,B+,AA,"2 Abiodun Close, Badagry, Lagos",kayode.akintunde@parent.escholr.demo,STF008
-STU2024019,Adunola,Rasaq,adunola.rasaq@student.escholr.demo,2007-03-09,female,SSS1,A,2021-09-01,active,O+,AS,"30 Igwe Road, Apapa, Lagos",lateef.rasaq@parent.escholr.demo,STF009
-STU2024020,Chinedu,Amadi,chinedu.amadi@student.escholr.demo,2007-08-22,male,SSS1,A,2021-09-01,active,AB-,AA,"15 Obi Street, Festac, Lagos",chidinma.amadi@parent.escholr.demo,STF009
-STU2024021,Aisha,Ibrahim,aisha.ibrahim@student.escholr.demo,2007-01-14,female,SSS1,A,2021-09-01,active,O+,AS,"28 Rasaq Lane, Ajegunle, Lagos",hassan.ibrahim@parent.escholr.demo,STF009
-STU2024022,Oluwafemi,Adeola,oluwafemi.adeola@student.escholr.demo,2007-05-31,male,SSS1,B,2021-09-01,active,A+,AA,"10 Okonkwo Road, Ibeju-Lekki, Lagos",kunle.adeola@parent.escholr.demo,STF010
-STU2024023,Ugochi,Nnaji,ugochi.nnaji@student.escholr.demo,2007-10-17,female,SSS1,B,2021-09-01,active,B+,AS,"20 Abdullahi Drive, Epe, Lagos",cosmas.nnaji@parent.escholr.demo,STF010
-STU2024024,Abdulrahman,Sadiq,abdulrahman.sadiq@student.escholr.demo,2007-07-04,male,SSS1,B,2021-09-01,active,O+,AA,"5 Okeke Street, Lekki, Lagos",fatima.sadiq@parent.escholr.demo,STF010
-STU2024025,Nnenna,Obiora,nnenna.obiora@student.escholr.demo,2006-04-28,female,SSS2,A,2020-09-01,active,A+,AC,"33 Adeola Close, Victoria Island, Lagos",obiora.obiora@parent.escholr.demo,STF007
-STU2024026,Kayode,Balogun,kayode.balogun@student.escholr.demo,2006-09-13,male,SSS2,A,2020-09-01,active,O+,AA,"16 Amadi Road, Ikoyi, Lagos",yetunde.balogun@parent.escholr.demo,STF007
-STU2024027,Hafsat,Karim,hafsat.karim@student.escholr.demo,2006-12-07,female,SSS2,A,2020-09-01,active,B+,AS,"8 Sadiq Avenue, Magodo, Lagos",karim.karim@parent.escholr.demo,STF007
-STU2024028,Emeka,Okafor,emeka.okafor@student.escholr.demo,2006-02-19,male,SSS2,B,2020-09-01,active,O+,AA,"21 Ogundele Lane, Ojodu, Lagos",adaeze.okafor@parent.escholr.demo,STF008
-STU2024029,Sola,Ogundele,sola.ogundele@student.escholr.demo,2006-06-25,female,SSS2,B,2020-09-01,active,A+,AS,"13 Balogun Street, Ojota, Lagos",biodun.ogundele@parent.escholr.demo,STF008
-STU2024030,Nnamdi,Chukwu,nnamdi.chukwu@student.escholr.demo,2006-11-11,male,SSS2,B,2020-09-01,active,AB+,AA,"27 Nnaji Close, Ojokoro, Lagos",ifeoma.chukwu@parent.escholr.demo,STF008
-STU2024031,Toluwani,Omotosho,toluwani.omotosho@student.escholr.demo,2005-03-06,female,SSS3,A,2019-09-01,active,O+,AS,"4 Omotosho Drive, Kosofe, Lagos",rotimi.omotosho@parent.escholr.demo,STF009
-STU2024032,Ikenna,Nwofor,ikenna.nwofor@student.escholr.demo,2005-07-18,male,SSS3,A,2019-09-01,active,B+,AA,"9 Nwofor Road, Eti-Osa, Lagos",adaeze.nwofor@parent.escholr.demo,STF009
-STU2024033,Fatimah,Abubakar,fatimah.abubakar@student.escholr.demo,2005-01-30,female,SSS3,A,2019-09-01,active,O+,AS,"12 Abubakar Lane, Epe, Lagos",abubakar.abubakar@parent.escholr.demo,STF009
-STU2024034,Oluwasegun,Taiwo,oluwasegun.taiwo@student.escholr.demo,2005-10-22,male,SSS3,B,2019-09-01,active,A+,AA,"7 Taiwo Street, Ikorodu, Lagos",abiola.taiwo@parent.escholr.demo,STF010
-STU2024035,Ifeoma,Okorie,ifeoma.okorie@student.escholr.demo,2005-05-14,female,SSS3,B,2019-09-01,active,O+,AC,"3 Okorie Road, Alimosho, Lagos",mark.okorie@parent.escholr.demo,STF010
+first_name,last_name,class,email,gender,date_of_birth,parent_email,parent_phone,student_id
+Adaeze,Nwosu,JSS1 A,adaeze.nwosu@student.escholr.demo,female,2010-04-12,chidi.nwosu@parent.escholr.demo,+254700000001,STU2024001
+Emeka,Chukwuemeka,JSS1 A,emeka.chukwuemeka@student.escholr.demo,male,2010-07-25,grace.chukwuemeka@parent.escholr.demo,+254700000002,STU2024002
+Fatima,Garba,JSS1 A,fatima.garba@student.escholr.demo,female,2010-11-03,ibrahim.garba@parent.escholr.demo,+254700000003,STU2024003
+Tunde,Akinlade,JSS1 B,tunde.akinlade@student.escholr.demo,male,2010-02-17,wole.akinlade@parent.escholr.demo,+254700000004,STU2024004
+Blessing,Okeke,JSS1 B,blessing.okeke@student.escholr.demo,female,2010-09-08,ngozi.okeke@parent.escholr.demo,+254700000005,STU2024005
+Usman,Bello,JSS1 B,usman.bello@student.escholr.demo,male,2010-06-14,maryam.bello@parent.escholr.demo,+254700000006,STU2024006
+Chioma,Eze,JSS2 A,chioma.eze@student.escholr.demo,female,2009-03-21,paul.eze@parent.escholr.demo,+254700000007,STU2024007
+Kelechi,Obi,JSS2 A,kelechi.obi@student.escholr.demo,male,2009-08-30,stella.obi@parent.escholr.demo,+254700000008,STU2024008
+Hauwa,Musa,JSS2 A,hauwa.musa@student.escholr.demo,female,2009-01-15,ahmed.musa@parent.escholr.demo,+254700000009,STU2024009
+Seun,Adeyemi,JSS2 B,seun.adeyemi@student.escholr.demo,male,2009-05-27,funke.adeyemi@parent.escholr.demo,+254700000010,STU2024010
+Amara,Igwe,JSS2 B,amara.igwe@student.escholr.demo,female,2009-12-02,chukwudi.igwe@parent.escholr.demo,+254700000011,STU2024011
+Ridwan,Suleiman,JSS2 B,ridwan.suleiman@student.escholr.demo,male,2009-04-19,rashida.suleiman@parent.escholr.demo,+254700000012,STU2024012
+Chiamaka,Okonkwo,JSS3 A,chiamaka.okonkwo@student.escholr.demo,female,2008-07-11,ernest.okonkwo@parent.escholr.demo,+254700000013,STU2024013
+Damilola,Fashola,JSS3 A,damilola.fashola@student.escholr.demo,male,2008-10-06,tunde.fashola@parent.escholr.demo,+254700000014,STU2024014
+Zainab,Abdullahi,JSS3 A,zainab.abdullahi@student.escholr.demo,female,2008-02-28,sulayman.abdullahi@parent.escholr.demo,+254700000015,STU2024015
+Tobechukwu,Nwachukwu,JSS3 B,tobechukwu.nwachukwu@student.escholr.demo,male,2008-09-16,obiageli.nwachukwu@parent.escholr.demo,+254700000016,STU2024016
+Mariam,Yusuf,JSS3 B,mariam.yusuf@student.escholr.demo,female,2008-06-03,musa.yusuf@parent.escholr.demo,+254700000017,STU2024017
+Oluwatobi,Akintunde,JSS3 B,oluwatobi.akintunde@student.escholr.demo,male,2008-11-24,kayode.akintunde@parent.escholr.demo,+254700000018,STU2024018
+Adunola,Rasaq,SSS1 A,adunola.rasaq@student.escholr.demo,female,2007-03-09,lateef.rasaq@parent.escholr.demo,+254700000019,STU2024019
+Chinedu,Amadi,SSS1 A,chinedu.amadi@student.escholr.demo,male,2007-08-22,chidinma.amadi@parent.escholr.demo,+254700000020,STU2024020
+Aisha,Ibrahim,SSS1 A,aisha.ibrahim@student.escholr.demo,female,2007-01-14,hassan.ibrahim@parent.escholr.demo,+254700000021,STU2024021
+Oluwafemi,Adeola,SSS1 B,oluwafemi.adeola@student.escholr.demo,male,2007-05-31,kunle.adeola@parent.escholr.demo,+254700000022,STU2024022
+Ugochi,Nnaji,SSS1 B,ugochi.nnaji@student.escholr.demo,female,2007-10-17,cosmas.nnaji@parent.escholr.demo,+254700000023,STU2024023
+Abdulrahman,Sadiq,SSS1 B,abdulrahman.sadiq@student.escholr.demo,male,2007-07-04,fatima.sadiq@parent.escholr.demo,+254700000024,STU2024024
+Nnenna,Obiora,SSS2 A,nnenna.obiora@student.escholr.demo,female,2006-04-28,obiora.obiora@parent.escholr.demo,+254700000025,STU2024025
+Kayode,Balogun,SSS2 A,kayode.balogun@student.escholr.demo,male,2006-09-13,yetunde.balogun@parent.escholr.demo,+254700000026,STU2024026
+Hafsat,Karim,SSS2 A,hafsat.karim@student.escholr.demo,female,2006-12-07,karim.karim@parent.escholr.demo,+254700000027,STU2024027
+Emeka,Okafor,SSS2 B,emeka.okafor@student.escholr.demo,male,2006-02-19,adaeze.okafor@parent.escholr.demo,+254700000028,STU2024028
+Sola,Ogundele,SSS2 B,sola.ogundele@student.escholr.demo,female,2006-06-25,biodun.ogundele@parent.escholr.demo,+254700000029,STU2024029
+Nnamdi,Chukwu,SSS2 B,nnamdi.chukwu@student.escholr.demo,male,2006-11-11,ifeoma.chukwu@parent.escholr.demo,+254700000030,STU2024030
+Toluwani,Omotosho,SSS3 A,toluwani.omotosho@student.escholr.demo,female,2005-03-06,rotimi.omotosho@parent.escholr.demo,+254700000031,STU2024031
+Ikenna,Nwofor,SSS3 A,ikenna.nwofor@student.escholr.demo,male,2005-07-18,adaeze.nwofor@parent.escholr.demo,+254700000032,STU2024032
+Fatimah,Abubakar,SSS3 A,fatimah.abubakar@student.escholr.demo,female,2005-01-30,abubakar.abubakar@parent.escholr.demo,+254700000033,STU2024033
+Oluwasegun,Taiwo,SSS3 B,oluwasegun.taiwo@student.escholr.demo,male,2005-10-22,abiola.taiwo@parent.escholr.demo,+254700000034,STU2024034
+Ifeoma,Okorie,SSS3 B,ifeoma.okorie@student.escholr.demo,female,2005-05-14,mark.okorie@parent.escholr.demo,+254700000035,STU2024035

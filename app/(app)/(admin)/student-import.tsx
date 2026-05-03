@@ -1,13 +1,25 @@
 /**
  * Admin — Bulk Student CSV Import
  * 4-step wizard: template → upload → preview/validate → import
+ *
+ * Receives optional route params:
+ *   stream_id    — pre-selected stream (class). Empty string = "All" (multi-class mode).
+ *   stream_label — human-readable name, e.g. "Form 1 A"
+ *
+ * Single-class mode (stream_id provided):
+ *   CSV columns: first_name, last_name, email*, gender*, date_of_birth*, parent_email*, parent_phone*, student_id*
+ *   The "class" column is NOT required — every row goes into the pre-selected stream.
+ *
+ * Multi-class mode (All / no stream_id):
+ *   CSV columns: first_name, last_name, class, email*, gender*, date_of_birth*, parent_email*, parent_phone*, student_id*
+ *   "class" must match stream names in School Structure (e.g. "Form 1 A" or "Form 1" + arm "A").
  */
 import React, { useState } from 'react';
 import {
   View, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, Alert, Platform,
+  TouchableOpacity, Platform,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -16,21 +28,29 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
-import { ThemedText, Skeleton } from '../../../components/ui';
+import { webAlert } from '../../../lib/alert';
+import { ThemedText } from '../../../components/ui';
 import { useBulkImportStudents } from '../../../hooks/useStudents';
 import { Spacing, Radius } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
-// Required: first_name, last_name, class. Others are optional.
-// Class can be "Form 1A" (full stream) or class+arm ("JSS1" + "A" => "JSS1 A").
-const CSV_HEADERS = [
-  'student_id', 'first_name', 'last_name', 'email', 'date_of_birth', 'gender',
-  'class', 'arm', 'admission_date', 'status', 'address', 'parent_email', 'parent_phone',
+// ── Single-class template (no class column needed) ────────────
+const CSV_HEADERS_SINGLE = [
+  'first_name', 'last_name', 'email', 'gender', 'date_of_birth', 'parent_email', 'parent_phone', 'student_id',
 ];
-const TEMPLATE_ROWS = [
-  'STU001,Jane,Wanjiku,jane@student.edu,2010-03-15,female,Form 1,A,2024-09-01,active,123 School Road,parent.jane@example.com,+254700000000',
-  'STU002,John,Omondi,john@student.edu,2010-07-22,male,Form 1,A,2024-09-01,active,456 Education Ave,parent.john@example.com,+254700000001',
+const TEMPLATE_ROWS_SINGLE = [
+  'Jane,Wanjiku,jane@student.edu,female,2010-03-15,parent.jane@example.com,+254700000000,STU001',
+  'John,Omondi,john@student.edu,male,2010-07-22,parent.john@example.com,+254700000001,STU002',
+];
+
+// ── Multi-class template (class column required) ──────────────
+const CSV_HEADERS_MULTI = [
+  'first_name', 'last_name', 'class', 'email', 'gender', 'date_of_birth', 'parent_email', 'parent_phone', 'student_id',
+];
+const TEMPLATE_ROWS_MULTI = [
+  'Jane,Wanjiku,Form 1 A,jane@student.edu,female,2010-03-15,parent.jane@example.com,+254700000000,STU001',
+  'John,Omondi,Form 1 B,john@student.edu,male,2010-07-22,parent.john@example.com,+254700000001,STU002',
 ];
 
 function useStreams(schoolId: string) {
@@ -45,6 +65,9 @@ function useStreams(schoolId: string) {
     },
   });
 }
+
+const REQUIRED_SINGLE = ['first_name', 'last_name'];
+const REQUIRED_MULTI  = ['first_name', 'last_name', 'class'];
 
 function useActiveSemester(schoolId: string) {
   return useQuery({
@@ -65,13 +88,9 @@ interface ParsedRow {
   last_name: string;
   full_name: string;
   class_name: string;
-  arm: string;
   date_of_birth: string;
   gender: string;
   email: string;
-  admission_date: string;
-  status: string;
-  address: string;
   parent_email: string;
   parent_phone: string;
   stream_id: string | null;
@@ -93,86 +112,116 @@ function parseCSVLine(line: string): string[] {
   return cols;
 }
 
-function parseCSV(text: string, streams: any[]): ParsedRow[] {
-  // Build stream lookup by multiple keys: "Form 1A", "form 1 a", "jss1 a", etc.
-  const streamMap: Record<string, string> = {};
+function buildStreamMap(streams: any[]): Record<string, string> {
+  const map: Record<string, string> = {};
   streams.forEach((s: any) => {
-    streamMap[s.name.toLowerCase().trim()] = s.id;
+    map[s.name.toLowerCase().trim()] = s.id;
     if (s.grades?.name) {
       const grade = s.grades.name.toLowerCase().trim();
-      const arm = s.name.toLowerCase().trim();
-      streamMap[`${grade} ${arm}`] = s.id;
-      streamMap[`${grade}${arm}`] = s.id;
+      const arm   = s.name.toLowerCase().trim();
+      map[`${grade} ${arm}`] = s.id;
+      map[`${grade}${arm}`]  = s.id;
     }
   });
+  return map;
+}
 
+/**
+ * Parse CSV in single-class mode: no class column, stream_id is supplied externally.
+ * Required: first_name, last_name.  Optional: email, gender, date_of_birth, parent_email, parent_phone, student_id.
+ */
+function parseCSVSingle(text: string, fixedStreamId: string): ParsedRow[] {
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
   const firstLower = lines[0]?.toLowerCase() ?? '';
-  const hasHeader = firstLower.includes('first_name') || firstLower.includes('student_id') || firstLower.includes('class');
+  const hasHeader = firstLower.includes('first_name') || firstLower.includes('last_name');
   const headers = hasHeader ? parseCSVLine(lines[0]).map(h => h.toLowerCase().trim()) : [];
   const start = hasHeader ? 1 : 0;
-
-  // Build a header-indexed row reader so column order can vary
   const idx = (name: string) => headers.indexOf(name);
   const hasHeaders = headers.length > 0;
 
   return lines.slice(start).map((line) => {
     const cols = parseCSVLine(line);
     const get = (name: string, fallbackPos: number): string => {
-      if (hasHeaders) {
-        const i = idx(name);
-        return i >= 0 ? (cols[i] ?? '').replace(/^"|"$/g, '') : '';
-      }
+      if (hasHeaders) { const i = idx(name); return i >= 0 ? (cols[i] ?? '').replace(/^"|"$/g, '') : ''; }
       return (cols[fallbackPos] ?? '').replace(/^"|"$/g, '');
     };
 
-    const student_id      = get('student_id', 0);
-    const first_name      = get('first_name', 1);
-    const last_name       = get('last_name', 2);
-    const email           = get('email', 3).toLowerCase();
-    const date_of_birth   = get('date_of_birth', 4);
-    const gender          = get('gender', 5).toLowerCase();
-    const class_name      = get('class', 6);
-    const arm             = get('arm', 7);
-    const admission_date  = get('admission_date', 8);
-    const status          = get('status', 9).toLowerCase();
-    const address         = get('address', 10);
-    const parent_email    = get('parent_email', 11).toLowerCase();
-    const parent_phone    = get('parent_phone', 12);
+    const first_name    = get('first_name', 0).trim();
+    const last_name     = get('last_name',  1).trim();
+    const email         = get('email',      2).toLowerCase().trim();
+    const gender        = get('gender',     3).toLowerCase().trim();
+    const date_of_birth = get('date_of_birth', 4).trim();
+    const parent_email  = get('parent_email',  5).toLowerCase().trim();
+    const parent_phone  = get('parent_phone',  6).trim();
+    const student_id    = get('student_id',    7).trim();
 
-    const full_name = [first_name, last_name].filter(Boolean).join(' ').trim();
+    const full_name = [first_name, last_name].filter(Boolean).join(' ');
     const errors: string[] = [];
-
-    if (!full_name) errors.push('First or last name required');
-
-    // Resolve stream: try combined "class arm", then class alone
-    const combinedKey = [class_name, arm].filter(Boolean).join(' ').toLowerCase().trim();
-    const stream_id =
-      streamMap[combinedKey] ??
-      streamMap[class_name.toLowerCase().trim()] ??
-      null;
-    if (!stream_id) {
-      errors.push(`Class "${[class_name, arm].filter(Boolean).join(' ')}" not found — check stream names in School Structure`);
-    }
-
-    if (date_of_birth && !/^\d{4}-\d{2}-\d{2}$/.test(date_of_birth)) {
-      errors.push('date_of_birth must be yyyy-mm-dd');
-    }
-    if (admission_date && !/^\d{4}-\d{2}-\d{2}$/.test(admission_date)) {
-      errors.push('admission_date must be yyyy-mm-dd');
-    }
-    if (gender && !['male', 'female', 'other'].includes(gender)) {
-      errors.push('gender must be male/female/other');
-    }
-    if (parent_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parent_email)) {
-      errors.push('parent_email is not a valid email');
-    }
+    if (!full_name) errors.push('First and/or last name required');
+    if (date_of_birth && !/^\d{4}-\d{2}-\d{2}$/.test(date_of_birth)) errors.push('date_of_birth must be yyyy-mm-dd');
+    if (gender && !['male', 'female', 'other'].includes(gender))        errors.push('gender must be male / female / other');
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))           errors.push('email is not valid');
+    if (parent_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parent_email)) errors.push('parent_email is not valid');
 
     return {
-      student_id, first_name, last_name, full_name, class_name, arm,
-      date_of_birth, gender, email, admission_date, status, address,
+      student_id, first_name, last_name, full_name,
+      class_name: '', date_of_birth, gender, email,
       parent_email, parent_phone,
-      stream_id, errors, valid: errors.length === 0,
+      stream_id: fixedStreamId,
+      errors, valid: errors.length === 0,
+    };
+  });
+}
+
+/**
+ * Parse CSV in multi-class mode: "class" column required, resolved against stream names.
+ */
+function parseCSVMulti(text: string, streams: any[]): ParsedRow[] {
+  const streamMap = buildStreamMap(streams);
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  const firstLower = lines[0]?.toLowerCase() ?? '';
+  const hasHeader = firstLower.includes('first_name') || firstLower.includes('class');
+  const headers = hasHeader ? parseCSVLine(lines[0]).map(h => h.toLowerCase().trim()) : [];
+  const start = hasHeader ? 1 : 0;
+  const idx = (name: string) => headers.indexOf(name);
+  const hasHeaders = headers.length > 0;
+
+  return lines.slice(start).map((line) => {
+    const cols = parseCSVLine(line);
+    const get = (name: string, fallbackPos: number): string => {
+      if (hasHeaders) { const i = idx(name); return i >= 0 ? (cols[i] ?? '').replace(/^"|"$/g, '') : ''; }
+      return (cols[fallbackPos] ?? '').replace(/^"|"$/g, '');
+    };
+
+    const first_name    = get('first_name',    0).trim();
+    const last_name     = get('last_name',     1).trim();
+    const class_name    = get('class',         2).trim();
+    const email         = get('email',         3).toLowerCase().trim();
+    const gender        = get('gender',        4).toLowerCase().trim();
+    const date_of_birth = get('date_of_birth', 5).trim();
+    const parent_email  = get('parent_email',  6).toLowerCase().trim();
+    const parent_phone  = get('parent_phone',  7).trim();
+    const student_id    = get('student_id',    8).trim();
+
+    const full_name = [first_name, last_name].filter(Boolean).join(' ');
+    const errors: string[] = [];
+    if (!full_name) errors.push('First and/or last name required');
+
+    const stream_id = streamMap[class_name.toLowerCase()] ?? null;
+    if (!class_name) errors.push('class is required');
+    else if (!stream_id) errors.push(`Class "${class_name}" not found — check stream names in School Structure`);
+
+    if (date_of_birth && !/^\d{4}-\d{2}-\d{2}$/.test(date_of_birth)) errors.push('date_of_birth must be yyyy-mm-dd');
+    if (gender && !['male', 'female', 'other'].includes(gender))        errors.push('gender must be male / female / other');
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))           errors.push('email is not valid');
+    if (parent_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parent_email)) errors.push('parent_email is not valid');
+
+    return {
+      student_id, first_name, last_name, full_name,
+      class_name, date_of_birth, gender, email,
+      parent_email, parent_phone,
+      stream_id,
+      errors, valid: errors.length === 0,
     };
   });
 }
@@ -219,6 +268,12 @@ export default function StudentImportScreen() {
   const { user } = useAuthStore();
   const schoolId = user?.schoolId ?? '';
 
+  // Route params: stream_id='' means All (multi-class mode)
+  const params = useLocalSearchParams<{ stream_id?: string; stream_label?: string }>();
+  const fixedStreamId    = params.stream_id    ?? '';
+  const fixedStreamLabel = params.stream_label ?? '';
+  const isSingleClass = !!fixedStreamId;
+
   const [step, setStep] = useState<Step>(1);
   const [rows, setRows] = useState<ParsedRow[]>([]);
 
@@ -226,28 +281,33 @@ export default function StudentImportScreen() {
   const { data: semester } = useActiveSemester(schoolId);
   const importMutation = useBulkImportStudents(schoolId);
 
+  const csvHeaders   = isSingleClass ? CSV_HEADERS_SINGLE   : CSV_HEADERS_MULTI;
+  const templateRows = isSingleClass ? TEMPLATE_ROWS_SINGLE : TEMPLATE_ROWS_MULTI;
+  const requiredCols = isSingleClass ? REQUIRED_SINGLE      : REQUIRED_MULTI;
+  const optionalCols = csvHeaders.filter(h => !requiredCols.includes(h));
+
   const handleDownloadTemplate = async () => {
-    const content = [CSV_HEADERS.join(','), ...TEMPLATE_ROWS].join('\n');
+    const content = [csvHeaders.join(','), ...templateRows].join('\n');
+    const filename = isSingleClass
+      ? `students_${fixedStreamLabel.replace(/\s+/g, '_') || 'class'}_template.csv`
+      : 'students_all_classes_template.csv';
 
     if (Platform.OS === 'web') {
       const blob = new Blob([content], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = 'student_import_template.csv';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
       return;
     }
 
-    const path = FileSystem.cacheDirectory + 'student_import_template.csv';
+    const path = (FileSystem.cacheDirectory ?? '') + filename;
     await FileSystem.writeAsStringAsync(path, content, { encoding: FileSystem.EncodingType.UTF8 });
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: 'Save student template' });
     } else {
-      Alert.alert('Template ready', `Saved to: ${path}`);
+      webAlert('Template ready', `Saved to: ${path}`);
     }
   };
 
@@ -262,16 +322,18 @@ export default function StudentImportScreen() {
       text = await FileSystem.readAsStringAsync(result.assets[0].uri, { encoding: FileSystem.EncodingType.UTF8 });
     }
 
-    const parsed = parseCSV(text, streams);
-    if (!parsed.length) { Alert.alert('Empty file', 'No rows found in the CSV.'); return; }
+    const parsed = isSingleClass
+      ? parseCSVSingle(text, fixedStreamId)
+      : parseCSVMulti(text, streams);
+    if (!parsed.length) { webAlert('Empty file', 'No rows found in the CSV.'); return; }
     setRows(parsed);
     setStep(3);
   };
 
   const handleImport = async () => {
     const valid = rows.filter((r) => r.valid);
-    if (!valid.length) { Alert.alert('No valid rows', 'Fix all errors before importing.'); return; }
-    if (!semester?.id) { Alert.alert('No active semester', 'Activate a semester before importing students.'); return; }
+    if (!valid.length) { webAlert('No valid rows', 'Fix all errors before importing.'); return; }
+    if (!semester?.id) { webAlert('No active semester', 'Activate a semester before importing students.'); return; }
     haptics.medium();
     try {
       await importMutation.mutateAsync({
@@ -281,8 +343,6 @@ export default function StudentImportScreen() {
           stream_id: r.stream_id!,
           date_of_birth: r.date_of_birth || undefined,
           gender: r.gender || undefined,
-          admission_date: r.admission_date || undefined,
-          status: r.status || undefined,
           parent_email: r.parent_email || undefined,
           parent_phone: r.parent_phone || undefined,
         })),
@@ -292,7 +352,7 @@ export default function StudentImportScreen() {
       setStep(4);
     } catch (e: any) {
       haptics.error();
-      Alert.alert('Import failed', e.message ?? 'Could not import students.');
+      webAlert('Import failed', (e as any).message ?? 'Could not import students.');
     }
   };
 
@@ -309,6 +369,20 @@ export default function StudentImportScreen() {
         <View style={{ width: 24 }} />
       </View>
 
+      {/* Class context banner */}
+      <View style={[styles.classBanner, { backgroundColor: isSingleClass ? colors.brand.primary + '12' : colors.surfaceSecondary, borderColor: isSingleClass ? colors.brand.primary + '30' : colors.border }]}>
+        <Ionicons
+          name={isSingleClass ? 'people' : 'school-outline'}
+          size={14}
+          color={isSingleClass ? colors.brand.primary : colors.textMuted}
+        />
+        <ThemedText variant="caption" style={{ marginLeft: 6, fontWeight: '600', color: isSingleClass ? colors.brand.primary : colors.textMuted }}>
+          {isSingleClass
+            ? `Importing into: ${fixedStreamLabel}`
+            : 'All classes — CSV must include a "class" column'}
+        </ThemedText>
+      </View>
+
       <StepBar step={step} />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -317,21 +391,23 @@ export default function StudentImportScreen() {
           <View style={{ gap: Spacing.base }}>
             <View style={[styles.infoBox, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
               <ThemedText variant="label" color="muted" style={{ fontSize: 10, marginBottom: 8 }}>REQUIRED COLUMNS</ThemedText>
-              {['first_name', 'last_name', 'class'].map((h) => (
+              {requiredCols.map((h) => (
                 <View key={h} style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 4 }}>
                   <View style={[styles.dot, { backgroundColor: colors.brand.primary }]} />
                   <ThemedText variant="bodySm" style={{ fontFamily: 'monospace' }}>{h}</ThemedText>
                 </View>
               ))}
               <ThemedText variant="label" color="muted" style={{ fontSize: 10, marginTop: 12, marginBottom: 8 }}>OPTIONAL COLUMNS</ThemedText>
-              {['student_id', 'email', 'date_of_birth', 'gender', 'arm', 'admission_date', 'status', 'address', 'parent_email', 'parent_phone'].map((h) => (
+              {optionalCols.map((h) => (
                 <View key={h} style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 4 }}>
                   <View style={[styles.dot, { backgroundColor: colors.textMuted }]} />
                   <ThemedText variant="bodySm" style={{ fontFamily: 'monospace', color: colors.textMuted }}>{h}</ThemedText>
                 </View>
               ))}
               <ThemedText variant="caption" color="muted" style={{ marginTop: 8 }}>
-                Class must match stream names (e.g. "Form 1A"), or provide class + arm separately (e.g. "JSS1" + "A"). Dates: yyyy-mm-dd. student_id is stored as student_number; if omitted, it is auto-generated. parent_email links/creates a parent record and links them to the student.
+                {isSingleClass
+                  ? `All students will be placed in ${fixedStreamLabel}. Dates must be yyyy-mm-dd. student_id is stored as student_number and auto-generated if omitted.`
+                  : 'class must match stream names in School Structure (e.g. "Form 1 A"). Dates: yyyy-mm-dd. student_id auto-generated if omitted.'}
               </ThemedText>
             </View>
 
@@ -387,7 +463,9 @@ export default function StudentImportScreen() {
                 <View style={{ flex: 1 }}>
                   <ThemedText variant="bodySm" style={{ fontWeight: '600' }}>{row.full_name || '—'}</ThemedText>
                   <ThemedText variant="caption" color="muted">
-                    {row.class_name}{row.date_of_birth ? ' · ' + row.date_of_birth : ''}{row.gender ? ' · ' + row.gender : ''}
+                    {isSingleClass ? fixedStreamLabel : row.class_name}
+                    {row.gender ? ' · ' + row.gender : ''}
+                    {row.date_of_birth ? ' · ' + row.date_of_birth : ''}
                   </ThemedText>
                   {row.parent_email ? (
                     <ThemedText variant="caption" color="muted">Parent: {row.parent_email}</ThemedText>
@@ -455,6 +533,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: Spacing.base, paddingVertical: Spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth, gap: Spacing.sm,
+  },
+  classBanner: {
+    flexDirection: 'row', alignItems: 'center',
+    marginHorizontal: Spacing.base, marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.md, paddingVertical: 8,
+    borderRadius: Radius.lg, borderWidth: 1,
   },
   scroll: { padding: Spacing.base, paddingBottom: 40 },
   infoBox: { padding: Spacing.base, borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth },

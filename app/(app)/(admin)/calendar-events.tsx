@@ -173,18 +173,39 @@ function SemestersPanel({ schoolId, colors }: { schoolId: string; colors: any })
       await createMutation.mutateAsync({ name: name.trim(), academicYear: academicYear.trim(), startDate, endDate });
       haptics.success();
       setSheetVisible(false); reset();
-    } catch {
+    } catch (e: any) {
       haptics.error();
-      Alert.alert('Error', 'Could not create semester.');
+      const msg = e?.message ?? 'Could not create semester.';
+      if (Platform.OS === 'web') {
+        // eslint-disable-next-line no-alert
+        window.alert(`Error: ${msg}`);
+      } else {
+        Alert.alert('Error', msg);
+      }
     }
   };
 
   const handleActivate = (sem: Semester) => {
     if (sem.is_active) return;
-    Alert.alert('Activate Semester', `Set "${sem.name}" as active? All others will deactivate.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Activate', onPress: async () => { haptics.medium(); try { await activateMutation.mutateAsync(sem.id); haptics.success(); } catch { haptics.error(); } } },
-    ]);
+    const doActivate = async () => {
+      haptics.medium();
+      try { await activateMutation.mutateAsync(sem.id); haptics.success(); }
+      catch (e: any) {
+        haptics.error();
+        const msg = e?.message ?? 'Could not activate semester.';
+        if (Platform.OS === 'web') window.alert(`Error: ${msg}`);
+        else Alert.alert('Error', msg);
+      }
+    };
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      if (window.confirm(`Set "${sem.name}" as active? All others will deactivate.`)) doActivate();
+    } else {
+      Alert.alert('Activate Semester', `Set "${sem.name}" as active? All others will deactivate.`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Activate', onPress: doActivate },
+      ]);
+    }
   };
 
   const canCreate = name.trim().length > 0 && startDate.length === 10 && endDate.length === 10;
@@ -285,7 +306,9 @@ function EventsPanel({ tab, schoolId, colors }: { tab: Exclude<Tab, 'semesters'>
 
   const handleSave = async () => {
     if (!title.trim() || startDate.length !== 10) {
-      Alert.alert('Validation', 'Title and start date are required.');
+      const msg = 'Title and start date are required.';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Validation', msg);
       return;
     }
     haptics.medium();
@@ -302,15 +325,30 @@ function EventsPanel({ tab, schoolId, colors }: { tab: Exclude<Tab, 'semesters'>
       setSheetVisible(false);
     } catch (e: any) {
       haptics.error();
-      Alert.alert('Error', e?.message ?? 'Could not save.');
+      const msg = e?.message ?? 'Could not save.';
+      if (Platform.OS === 'web') window.alert(`Error: ${msg}`);
+      else Alert.alert('Error', msg);
     }
   };
 
   const handleDelete = (ev: CalendarEvent) => {
-    Alert.alert('Delete', `Delete "${ev.title}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { try { await deleteMutation.mutateAsync(ev.id); haptics.success(); } catch { haptics.error(); } } },
-    ]);
+    const doDelete = async () => {
+      try { await deleteMutation.mutateAsync(ev.id); haptics.success(); }
+      catch (e: any) {
+        haptics.error();
+        const msg = e?.message ?? 'Could not delete.';
+        if (Platform.OS === 'web') window.alert(`Error: ${msg}`);
+        else Alert.alert('Error', msg);
+      }
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Delete "${ev.title}"?`)) doDelete();
+    } else {
+      Alert.alert('Delete', `Delete "${ev.title}"?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: doDelete },
+      ]);
+    }
   };
 
   return (

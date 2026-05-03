@@ -78,7 +78,19 @@ export default function AdminStudentsScreen() {
           </ThemedText>
         </Pressable>
         <Pressable
-          onPress={() => router.push('/(app)/(admin)/student-import' as any)}
+          onPress={() => {
+            const selectedStream = streams.find((s: any) => s.id === streamFilter);
+            const streamLabel = selectedStream
+              ? `${selectedStream.grades?.name ?? ''} ${selectedStream.name}`.trim()
+              : '';
+            router.push({
+              pathname: '/(app)/(admin)/student-import' as any,
+              params: {
+                stream_id: streamFilter ?? '',
+                stream_label: streamLabel,
+              },
+            });
+          }}
           style={[styles.pill, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
         >
           <Ionicons name="cloud-upload-outline" size={14} color={colors.brand.primary} />
