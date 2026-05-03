@@ -1,6 +1,6 @@
 /**
  * delete-user — Supabase Edge Function
- *
+ *fafa
  * POST /functions/v1/delete-user
  * Body: { user_id: string, type: 'staff' | 'parent' | 'student', record_id: string, school_id: string }
  * Auth: Bearer <admin JWT> (caller must be school_super_admin or admin)
@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "Unauthorized" }, 401);
+    if (!authHeader) return json({ error: "Unauthorised" }, 401);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

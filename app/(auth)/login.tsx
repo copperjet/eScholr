@@ -20,7 +20,7 @@ export default function LoginScreen() {
   const { school, setUser, clearSchool } = useAuthStore();
   const navigation = useNavigation();
   const canGoBack = navigation.canGoBack();
-  const displayName = school?.name ?? 'Your School';
+  const displayName = school?.name ?? '';
 
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -116,13 +116,9 @@ export default function LoginScreen() {
               style={styles.schoolLogo}
               resizeMode="contain"
             />
+          ) : displayName ? (
+            <ThemedText style={styles.schoolNameText}>{displayName}</ThemedText>
           ) : null}
-          <View style={styles.schoolPill}>
-            <View style={styles.schoolDot} />
-            <ThemedText style={{ color: colors.brand.primary, fontSize: 12, fontWeight: '700', letterSpacing: 0.3 }}>
-              {displayName}
-            </ThemedText>
-          </View>
           <ThemedText style={styles.heroTitle}>Welcome back</ThemedText>
           <ThemedText style={styles.heroSub}>Sign in to your eScholr account</ThemedText>
         </View>
@@ -170,15 +166,6 @@ export default function LoginScreen() {
 
               <TouchableOpacity style={[styles.forgotBtn, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]} onPress={() => router.push('/(auth)/forgot-password' as any)}>
                 <ThemedText style={{ color: colors.brand.primary, fontWeight: '600', fontSize: 15 }}>Forgot password?</ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.forgotBtn, { marginTop: -Spacing.sm }, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]}
-                onPress={() => { clearSchool(); router.replace('/(auth)/school-code' as any); }}
-              >
-                <ThemedText style={{ color: colors.textMuted, fontSize: 13 }}>
-                  Not {displayName}? <ThemedText style={{ color: colors.brand.primary, fontWeight: '600' }}>Change school</ThemedText>
-                </ThemedText>
               </TouchableOpacity>
 
               {biometricAvailable && (
@@ -279,6 +266,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: Spacing.md,
     alignSelf: 'center',
+  },
+  schoolNameText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textAlign: 'center',
+    marginBottom: Spacing.base,
+    opacity: 0.95,
   },
   forgotBtn: {
     alignItems: 'center',

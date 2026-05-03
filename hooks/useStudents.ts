@@ -304,6 +304,10 @@ export function useBulkImportStudents(schoolId: string) {
         stream_id: string;
         date_of_birth?: string;
         gender?: string;
+        admission_date?: string;
+        status?: string;
+        parent_email?: string;
+        parent_phone?: string;
       }>;
       semesterId: string;
     }) => {
@@ -311,17 +315,33 @@ export function useBulkImportStudents(schoolId: string) {
       const now = new Date().toISOString();
       const today = now.slice(0, 10);
 
-      const studentInserts = params.rows.map((r) => ({
-        school_id: schoolId,
-        full_name: r.full_name.trim(),
-        ...(r.student_number ? { student_number: r.student_number.trim() } : {}),
-        stream_id: r.stream_id,
-        date_of_birth: r.date_of_birth || null,
-        gender: r.gender || null,
-        status: 'active',
-        enrollment_date: today,
-        created_at: now,
-      }));
+      // Need grade_id and section_id — fetch stream details
+      const streamIds = Array.from(new Set(params.rows.map((r) => r.stream_id)));
+      const { data: streamRows } = await db
+        .from('streams')
+        .select('id, grade_id, grades ( section_id )')
+        .in('id', streamIds);
+      const streamMeta: Record<string, { grade_id: string; section_id: string }> = {};
+      ((streamRows ?? []) as any[]).forEach((s: any) => {
+        streamMeta[s.id] = { grade_id: s.grade_id, section_id: s.grades?.section_id };
+      });
+
+      const studentInserts = params.rows.map((r) => {
+        const meta = streamMeta[r.stream_id] ?? {} as any;
+        return {
+          school_id: schoolId,
+          full_name: r.full_name.trim(),
+          ...(r.student_number ? { student_number: r.student_number.trim() } : {}),
+          stream_id: r.stream_id,
+          grade_id: meta.grade_id,
+          section_id: meta.section_id,
+          date_of_birth: r.date_of_birth || null,
+          gender: r.gender || null,
+          status: (r.status as any) || 'active',
+          enrollment_date: r.admission_date || today,
+          created_at: now,
+        };
+      });
 
       const { data: inserted, error } = await db
         .from('students')
@@ -335,13 +355,73 @@ export function useBulkImportStudents(schoolId: string) {
         student_id: s.id,
         semester_id: params.semesterId,
         stream_id: s.stream_id,
+        enrollment_date: today,
+        effective_start_date: today,
         created_at: now,
       }));
       if (yearRecords.length) {
         await db.from('student_year_records').insert(yearRecords);
       }
 
-      return { count: inserted?.length ?? 0 };
+      // ── Link parents by email: find existing parent or create new one ─────
+      let linkedParents = 0;
+      const parentRows = params.rows
+        .map((r, i) => ({ row: r, studentId: (inserted ?? [])[i]?.id as string | undefined }))
+        .filter((x) => !!x.row.parent_email && !!x.studentId);
+
+      if (parentRows.length) {
+        const parentEmails = Array.from(new Set(parentRows.map((p) => p.row.parent_email!.toLowerCase())));
+        const { data: existingParents } = await db
+          .from('parents')
+          .select('id, email')
+          .eq('school_id', schoolId)
+          .in('email', parentEmails);
+        const parentByEmail: Record<string, string> = {};
+        ((existingParents ?? []) as any[]).forEach((p: any) => { parentByEmail[p.email.toLowerCase()] = p.id; });
+
+        // Create missing parents
+        const toCreate = parentRows
+          .filter((p) => !parentByEmail[p.row.parent_email!.toLowerCase()])
+          .reduce((acc: Record<string, { row: any }>, p) => {
+            const key = p.row.parent_email!.toLowerCase();
+            if (!acc[key]) acc[key] = p;
+            return acc;
+          }, {});
+        const parentInserts = Object.values(toCreate).map((p: any) => ({
+          school_id: schoolId,
+          full_name: p.row.full_name + "'s Parent", // placeholder; parent-import can update
+          email: p.row.parent_email.toLowerCase(),
+          phone: p.row.parent_phone || null,
+        }));
+        if (parentInserts.length) {
+          const { data: newParents } = await db
+            .from('parents')
+            .insert(parentInserts)
+            .select('id, email');
+          ((newParents ?? []) as any[]).forEach((p: any) => { parentByEmail[p.email.toLowerCase()] = p.id; });
+        }
+
+        // Build student↔parent links (dedupe by pair)
+        const seen = new Set<string>();
+        const linkInserts = parentRows
+          .map((p) => {
+            const pid = parentByEmail[p.row.parent_email!.toLowerCase()];
+            if (!pid || !p.studentId) return null;
+            const key = `${p.studentId}:${pid}`;
+            if (seen.has(key)) return null;
+            seen.add(key);
+            return { school_id: schoolId, student_id: p.studentId, parent_id: pid };
+          })
+          .filter(Boolean);
+
+        if (linkInserts.length) {
+          // Use upsert semantics via onConflict-like ignore: insert and ignore duplicates
+          const { data: links } = await db.from('student_parent_links').insert(linkInserts).select('id');
+          linkedParents = links?.length ?? 0;
+        }
+      }
+
+      return { count: inserted?.length ?? 0, linkedParents };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['all-students', schoolId] });

@@ -244,7 +244,19 @@ export default function AdminParentsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <ScreenHeader title={`Parents${data ? ` (${data.length})` : ''}`} showBack />
+      <ScreenHeader
+        title={`Parents${data ? ` (${data.length})` : ''}`}
+        showBack
+        right={
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/(admin)/parent-import' as any)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: colors.brand.primary + '14' }}
+          >
+            <Ionicons name="download-outline" size={15} color={colors.brand.primary} />
+            <ThemedText variant="caption" style={{ color: colors.brand.primary, fontWeight: '600' }}>Import</ThemedText>
+          </TouchableOpacity>
+        }
+      />
 
       {/* Search */}
       <View style={{ paddingHorizontal: Spacing.base, paddingVertical: Spacing.sm }}>

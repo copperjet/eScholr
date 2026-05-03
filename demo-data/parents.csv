@@ -1,36 +1,36 @@
 parent_id,first_name,last_name,email,phone,gender,relationship,occupation,employer,address,student_id,emergency_contact
-PAR001,Chidi,Nwosu,chidi.nwosu@parent.escholr.demo,+2348021001001,male,father,Civil Engineer,LASG Ministry of Works,12 Adeniyi Close, Ikeja, Lagos,STU2024001,+2348021001001
-PAR002,Grace,Chukwuemeka,grace.chukwuemeka@parent.escholr.demo,+2348021001002,female,mother,Nurse,Lagos University Teaching Hospital,5 Bello Street, Surulere, Lagos,STU2024002,+2348021001002
-PAR003,Ibrahim,Garba,ibrahim.garba@parent.escholr.demo,+2348021001003,male,father,Accountant,First Bank Nigeria,23 Unity Road, Yaba, Lagos,STU2024003,+2348021001003
-PAR004,Wole,Akinlade,wole.akinlade@parent.escholr.demo,+2348021001004,male,father,Pharmacist,MedPlus Pharmacy,8 Palm Avenue, Mushin, Lagos,STU2024004,+2348021001004
-PAR005,Ngozi,Okeke,ngozi.okeke@parent.escholr.demo,+2348021001005,female,mother,Teacher,Corona Schools,17 Afolabi Lane, Shomolu, Lagos,STU2024005,+2348021001005
-PAR006,Maryam,Bello,maryam.bello@parent.escholr.demo,+2348021001006,female,mother,Trader,Self-employed,4 Hassan Road, Ketu, Lagos,STU2024006,+2348021001006
-PAR007,Paul,Eze,paul.eze@parent.escholr.demo,+2348021001007,male,father,Lawyer,Eze & Partners Chambers,31 Olawale Drive, Gbagada, Lagos,STU2024007,+2348021001007
-PAR008,Stella,Obi,stella.obi@parent.escholr.demo,+2348021001008,female,mother,Banker,Zenith Bank,9 Emeka Street, Ikorodu, Lagos,STU2024008,+2348021001008
-PAR009,Ahmed,Musa,ahmed.musa@parent.escholr.demo,+2348021001009,male,father,Business Owner,Musa General Merchandise,22 Sule Close, Maryland, Lagos,STU2024009,+2348021001009
-PAR010,Funke,Adeyemi,funke.adeyemi@parent.escholr.demo,+2348021001010,female,mother,Doctor,Lagos Island General Hospital,14 Nwosu Avenue, Oshodi, Lagos,STU2024010,+2348021001010
-PAR011,Chukwudi,Igwe,chukwudi.igwe@parent.escholr.demo,+2348021001011,male,father,Architect,LEAP Africa,6 Akintunde Street, Agege, Lagos,STU2024011,+2348021001011
-PAR012,Rashida,Suleiman,rashida.suleiman@parent.escholr.demo,+2348021001012,female,mother,Fashion Designer,Self-employed,18 Olawale Close, Ifako, Lagos,STU2024012,+2348021001012
-PAR013,Ernest,Okonkwo,ernest.okonkwo@parent.escholr.demo,+2348021001013,male,father,IT Consultant,Andela Nigeria,3 Musa Lane, Bariga, Lagos,STU2024013,+2348021001013
-PAR014,Tunde,Fashola,tunde.fashola@parent.escholr.demo,+2348021001014,male,father,Estate Agent,LandMark Realty,11 Igbo Road, Isolo, Lagos,STU2024014,+2348021001014
-PAR015,Sulayman,Abdullahi,sulayman.abdullahi@parent.escholr.demo,+2348021001015,male,father,Military Officer,Nigerian Army,25 Fashola Drive, Egbe, Lagos,STU2024015,+2348021001015
-PAR016,Obiageli,Nwachukwu,obiageli.nwachukwu@parent.escholr.demo,+2348021001016,female,mother,Lecturer,University of Lagos,7 Suleiman Street, Ejigbo, Lagos,STU2024016,+2348021001016
-PAR017,Musa,Yusuf,musa.yusuf@parent.escholr.demo,+2348021001017,male,father,Police Officer,Nigeria Police Force,19 Chukwu Avenue, Alimosho, Lagos,STU2024017,+2348021001017
-PAR018,Kayode,Akintunde,kayode.akintunde@parent.escholr.demo,+2348021001018,male,father,Journalist,The Punch Newspaper,2 Abiodun Close, Badagry, Lagos,STU2024018,+2348021001018
-PAR019,Lateef,Rasaq,lateef.rasaq@parent.escholr.demo,+2348021001019,male,father,Electrical Engineer,Eko Electricity Distribution,30 Igwe Road, Apapa, Lagos,STU2024019,+2348021001019
-PAR020,Chidinma,Amadi,chidinma.amadi@parent.escholr.demo,+2348021001020,female,mother,Nutritionist,Lagos State Nutrition Program,15 Obi Street, Festac, Lagos,STU2024020,+2348021001020
-PAR021,Hassan,Ibrahim,hassan.ibrahim@parent.escholr.demo,+2348021001021,male,father,Customs Officer,Nigeria Customs Service,28 Rasaq Lane, Ajegunle, Lagos,STU2024021,+2348021001021
-PAR022,Kunle,Adeola,kunle.adeola@parent.escholr.demo,+2348021001022,male,father,Surgeon,St. Nicholas Hospital,10 Okonkwo Road, Ibeju-Lekki, Lagos,STU2024022,+2348021001022
-PAR023,Cosmas,Nnaji,cosmas.nnaji@parent.escholr.demo,+2348021001023,male,father,Petroleum Engineer,Chevron Nigeria,20 Abdullahi Drive, Epe, Lagos,STU2024023,+2348021001023
-PAR024,Fatima,Sadiq,fatima.sadiq@parent.escholr.demo,+2348021001024,female,mother,Pharmacist,HealthPlus Pharmacy,5 Okeke Street, Lekki, Lagos,STU2024024,+2348021001024
-PAR025,Obiora,Obiora,obiora.obiora@parent.escholr.demo,+2348021001025,male,father,Banker,Access Bank,33 Adeola Close, Victoria Island, Lagos,STU2024025,+2348021001025
-PAR026,Yetunde,Balogun,yetunde.balogun@parent.escholr.demo,+2348021001026,female,mother,Public Relations,Halogen Security,16 Amadi Road, Ikoyi, Lagos,STU2024026,+2348021001026
-PAR027,Karim,Karim,karim.karim@parent.escholr.demo,+2348021001027,male,father,Imam,Lagos Central Mosque,8 Sadiq Avenue, Magodo, Lagos,STU2024027,+2348021001027
-PAR028,Adaeze,Okafor,adaeze.okafor@parent.escholr.demo,+2348021001028,female,mother,Caterer,AO Catering Services,21 Ogundele Lane, Ojodu, Lagos,STU2024028,+2348021001028
-PAR029,Biodun,Ogundele,biodun.ogundele@parent.escholr.demo,+2348021001029,male,father,Pilot,Air Peace Airlines,13 Balogun Street, Ojota, Lagos,STU2024029,+2348021001029
-PAR030,Ifeoma,Chukwu,ifeoma.chukwu@parent.escholr.demo,+2348021001030,female,mother,Social Worker,NAPTIP,27 Nnaji Close, Ojokoro, Lagos,STU2024030,+2348021001030
-PAR031,Rotimi,Omotosho,rotimi.omotosho@parent.escholr.demo,+2348021001031,male,father,Senator,National Assembly,4 Omotosho Drive, Kosofe, Lagos,STU2024031,+2348021001031
-PAR032,Adaeze,Nwofor,adaeze.nwofor@parent.escholr.demo,+2348021001032,female,mother,Auditor,KPMG Nigeria,9 Nwofor Road, Eti-Osa, Lagos,STU2024032,+2348021001032
-PAR033,Abubakar,Abubakar,abubakar.abubakar@parent.escholr.demo,+2348021001033,male,father,Transport Operator,ABC Transport,12 Abubakar Lane, Epe, Lagos,STU2024033,+2348021001033
-PAR034,Abiola,Taiwo,abiola.taiwo@parent.escholr.demo,+2348021001034,female,mother,Interior Designer,Decora Design Studio,7 Taiwo Street, Ikorodu, Lagos,STU2024034,+2348021001034
-PAR035,Mark,Okorie,mark.okorie@parent.escholr.demo,+2348021001035,male,father,Pastor,RCCG Victory Parish,3 Okorie Road, Alimosho, Lagos,STU2024035,+2348021001035
+PAR001,Chidi,Nwosu,chidi.nwosu@parent.escholr.demo,+2348021001001,male,father,Civil Engineer,LASG Ministry of Works,"12 Adeniyi Close, Ikeja, Lagos",STU2024001,+2348021001001
+PAR002,Grace,Chukwuemeka,grace.chukwuemeka@parent.escholr.demo,+2348021001002,female,mother,Nurse,Lagos University Teaching Hospital,"5 Bello Street, Surulere, Lagos",STU2024002,+2348021001002
+PAR003,Ibrahim,Garba,ibrahim.garba@parent.escholr.demo,+2348021001003,male,father,Accountant,First Bank Nigeria,"23 Unity Road, Yaba, Lagos",STU2024003,+2348021001003
+PAR004,Wole,Akinlade,wole.akinlade@parent.escholr.demo,+2348021001004,male,father,Pharmacist,MedPlus Pharmacy,"8 Palm Avenue, Mushin, Lagos",STU2024004,+2348021001004
+PAR005,Ngozi,Okeke,ngozi.okeke@parent.escholr.demo,+2348021001005,female,mother,Teacher,Corona Schools,"17 Afolabi Lane, Shomolu, Lagos",STU2024005,+2348021001005
+PAR006,Maryam,Bello,maryam.bello@parent.escholr.demo,+2348021001006,female,mother,Trader,Self-employed,"4 Hassan Road, Ketu, Lagos",STU2024006,+2348021001006
+PAR007,Paul,Eze,paul.eze@parent.escholr.demo,+2348021001007,male,father,Lawyer,Eze & Partners Chambers,"31 Olawale Drive, Gbagada, Lagos",STU2024007,+2348021001007
+PAR008,Stella,Obi,stella.obi@parent.escholr.demo,+2348021001008,female,mother,Banker,Zenith Bank,"9 Emeka Street, Ikorodu, Lagos",STU2024008,+2348021001008
+PAR009,Ahmed,Musa,ahmed.musa@parent.escholr.demo,+2348021001009,male,father,Business Owner,Musa General Merchandise,"22 Sule Close, Maryland, Lagos",STU2024009,+2348021001009
+PAR010,Funke,Adeyemi,funke.adeyemi@parent.escholr.demo,+2348021001010,female,mother,Doctor,Lagos Island General Hospital,"14 Nwosu Avenue, Oshodi, Lagos",STU2024010,+2348021001010
+PAR011,Chukwudi,Igwe,chukwudi.igwe@parent.escholr.demo,+2348021001011,male,father,Architect,LEAP Africa,"6 Akintunde Street, Agege, Lagos",STU2024011,+2348021001011
+PAR012,Rashida,Suleiman,rashida.suleiman@parent.escholr.demo,+2348021001012,female,mother,Fashion Designer,Self-employed,"18 Olawale Close, Ifako, Lagos",STU2024012,+2348021001012
+PAR013,Ernest,Okonkwo,ernest.okonkwo@parent.escholr.demo,+2348021001013,male,father,IT Consultant,Andela Nigeria,"3 Musa Lane, Bariga, Lagos",STU2024013,+2348021001013
+PAR014,Tunde,Fashola,tunde.fashola@parent.escholr.demo,+2348021001014,male,father,Estate Agent,LandMark Realty,"11 Igbo Road, Isolo, Lagos",STU2024014,+2348021001014
+PAR015,Sulayman,Abdullahi,sulayman.abdullahi@parent.escholr.demo,+2348021001015,male,father,Military Officer,Nigerian Army,"25 Fashola Drive, Egbe, Lagos",STU2024015,+2348021001015
+PAR016,Obiageli,Nwachukwu,obiageli.nwachukwu@parent.escholr.demo,+2348021001016,female,mother,Lecturer,University of Lagos,"7 Suleiman Street, Ejigbo, Lagos",STU2024016,+2348021001016
+PAR017,Musa,Yusuf,musa.yusuf@parent.escholr.demo,+2348021001017,male,father,Police Officer,Nigeria Police Force,"19 Chukwu Avenue, Alimosho, Lagos",STU2024017,+2348021001017
+PAR018,Kayode,Akintunde,kayode.akintunde@parent.escholr.demo,+2348021001018,male,father,Journalist,The Punch Newspaper,"2 Abiodun Close, Badagry, Lagos",STU2024018,+2348021001018
+PAR019,Lateef,Rasaq,lateef.rasaq@parent.escholr.demo,+2348021001019,male,father,Electrical Engineer,Eko Electricity Distribution,"30 Igwe Road, Apapa, Lagos",STU2024019,+2348021001019
+PAR020,Chidinma,Amadi,chidinma.amadi@parent.escholr.demo,+2348021001020,female,mother,Nutritionist,Lagos State Nutrition Program,"15 Obi Street, Festac, Lagos",STU2024020,+2348021001020
+PAR021,Hassan,Ibrahim,hassan.ibrahim@parent.escholr.demo,+2348021001021,male,father,Customs Officer,Nigeria Customs Service,"28 Rasaq Lane, Ajegunle, Lagos",STU2024021,+2348021001021
+PAR022,Kunle,Adeola,kunle.adeola@parent.escholr.demo,+2348021001022,male,father,Surgeon,St. Nicholas Hospital,"10 Okonkwo Road, Ibeju-Lekki, Lagos",STU2024022,+2348021001022
+PAR023,Cosmas,Nnaji,cosmas.nnaji@parent.escholr.demo,+2348021001023,male,father,Petroleum Engineer,Chevron Nigeria,"20 Abdullahi Drive, Epe, Lagos",STU2024023,+2348021001023
+PAR024,Fatima,Sadiq,fatima.sadiq@parent.escholr.demo,+2348021001024,female,mother,Pharmacist,HealthPlus Pharmacy,"5 Okeke Street, Lekki, Lagos",STU2024024,+2348021001024
+PAR025,Obiora,Obiora,obiora.obiora@parent.escholr.demo,+2348021001025,male,father,Banker,Access Bank,"33 Adeola Close, Victoria Island, Lagos",STU2024025,+2348021001025
+PAR026,Yetunde,Balogun,yetunde.balogun@parent.escholr.demo,+2348021001026,female,mother,Public Relations,Halogen Security,"16 Amadi Road, Ikoyi, Lagos",STU2024026,+2348021001026
+PAR027,Karim,Karim,karim.karim@parent.escholr.demo,+2348021001027,male,father,Imam,Lagos Central Mosque,"8 Sadiq Avenue, Magodo, Lagos",STU2024027,+2348021001027
+PAR028,Adaeze,Okafor,adaeze.okafor@parent.escholr.demo,+2348021001028,female,mother,Caterer,AO Catering Services,"21 Ogundele Lane, Ojodu, Lagos",STU2024028,+2348021001028
+PAR029,Biodun,Ogundele,biodun.ogundele@parent.escholr.demo,+2348021001029,male,father,Pilot,Air Peace Airlines,"13 Balogun Street, Ojota, Lagos",STU2024029,+2348021001029
+PAR030,Ifeoma,Chukwu,ifeoma.chukwu@parent.escholr.demo,+2348021001030,female,mother,Social Worker,NAPTIP,"27 Nnaji Close, Ojokoro, Lagos",STU2024030,+2348021001030
+PAR031,Rotimi,Omotosho,rotimi.omotosho@parent.escholr.demo,+2348021001031,male,father,Senator,National Assembly,"4 Omotosho Drive, Kosofe, Lagos",STU2024031,+2348021001031
+PAR032,Adaeze,Nwofor,adaeze.nwofor@parent.escholr.demo,+2348021001032,female,mother,Auditor,KPMG Nigeria,"9 Nwofor Road, Eti-Osa, Lagos",STU2024032,+2348021001032
+PAR033,Abubakar,Abubakar,abubakar.abubakar@parent.escholr.demo,+2348021001033,male,father,Transport Operator,ABC Transport,"12 Abubakar Lane, Epe, Lagos",STU2024033,+2348021001033
+PAR034,Abiola,Taiwo,abiola.taiwo@parent.escholr.demo,+2348021001034,female,mother,Interior Designer,Decora Design Studio,"7 Taiwo Street, Ikorodu, Lagos",STU2024034,+2348021001034
+PAR035,Mark,Okorie,mark.okorie@parent.escholr.demo,+2348021001035,male,father,Pastor,RCCG Victory Parish,"3 Okorie Road, Alimosho, Lagos",STU2024035,+2348021001035

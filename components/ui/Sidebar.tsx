@@ -114,7 +114,7 @@ export function Sidebar() {
 
   const isActive = (path: string) => {
     // Check if current pathname starts with this path (handles nested routes)
-    if (path === '/(app)/(admin)' && pathname?.includes('(admin)') && !pathname?.includes('/students') && !pathname?.includes('/staff')) {
+    if (path === '/(app)/(admin)' && pathname?.includes('(admin)') && !pathname?.includes('/students') && !pathname?.includes('/staff/')) {
       return true;
     }
     if (path === '/(app)/(hrt)' && pathname?.includes('(hrt)') && !pathname?.includes('/class') && !pathname?.includes('/attendance')) {

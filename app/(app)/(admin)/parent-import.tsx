@@ -1,7 +1,13 @@
 /**
- * Admin — Bulk Staff CSV Import
+ * Admin — Bulk Parent CSV Import
  * 4-step wizard: template → upload → preview/validate → import
- * CSV columns: first_name, last_name, email, role
+ *
+ * Strategy:
+ *   - Email is the unique identifier for a parent (per school).
+ *   - Parents are linked to students by `student_email` (preferred) or
+ *     `student_id` (which maps to `students.student_number`).
+ *   - If a parent already exists (same school + email), update phone/relationship/name
+ *     and only add missing student_parent_links — no duplicates.
  */
 import React, { useState } from 'react';
 import {
@@ -20,118 +26,121 @@ import { ThemedText } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
-import type { UserRole } from '../../../types/database';
 
-const VALID_ROLES: UserRole[] = [
-  'admin', 'principal', 'coordinator', 'hod', 'hrt', 'st',
-  'finance', 'front_desk', 'hr',
+const VALID_RELATIONSHIPS = ['mother', 'father', 'guardian'] as const;
+type Relationship = typeof VALID_RELATIONSHIPS[number];
+
+const CSV_HEADERS = [
+  'parent_id', 'first_name', 'last_name', 'email', 'phone', 'gender',
+  'relationship', 'occupation', 'employer', 'address',
+  'student_email', 'student_id', 'emergency_contact',
 ];
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Administrator', principal: 'Principal', coordinator: 'Coordinator',
-  hod: 'Head of Department', hrt: 'Class Teacher (HRT)', st: 'Subject Teacher',
-  finance: 'Finance', front_desk: 'Front Desk', hr: 'HR',
-};
-
-const CSV_HEADERS = ['employee_id', 'first_name', 'last_name', 'email', 'phone', 'role', 'department', 'subject', 'join_date', 'status', 'gender', 'date_of_birth', 'national_id', 'address'];
 const TEMPLATE_ROWS = [
-  'STF001,Jane,Wanjiku,jane@school.edu,+1234567890,hrt,Primary,Math,2024-01-15,active,female,1990-05-15,NIN-123456,123 School Street',
-  'STF002,John,Omondi,john@school.edu,+1234567891,st,Secondary,English,2023-09-01,active,male,1985-08-20,NIN-123457,456 Education Ave',
-  'STF003,Alice,Mwangi,alice@school.edu,+1234567892,admin,Administration,,2022-03-10,active,female,1988-11-10,NIN-123458,789 Admin Road',
+  'PAR001,Jane,Doe,jane.doe@example.com,+2348021001001,female,mother,Teacher,XYZ School,12 Main Street,john.doe@student.example.com,STU001,+2348021001001',
+  'PAR002,Peter,Smith,peter.smith@example.com,+2348021001002,male,father,Engineer,ABC Ltd,34 Park Avenue,alice.smith@student.example.com,STU002,+2348021001002',
 ];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ParsedRow {
+  parent_id: string;
   first_name: string;
   last_name: string;
   full_name: string;
   email: string;
-  role: UserRole | '';
+  phone: string;
+  gender: string;
+  relationship: Relationship | '';
+  occupation: string;
+  employer: string;
+  address: string;
+  student_email: string;
+  student_identifier: string; // student_number from CSV
+  emergency_contact: string;
   errors: string[];
   valid: boolean;
-  // Optional fields from CSV
-  employee_id?: string;
-  phone?: string;
-  department?: string;
-  subject?: string;
-  join_date?: string;
-  status?: string;
-  gender?: string;
-  date_of_birth?: string;
-  national_id?: string;
-  address?: string;
 }
 
 interface ImportResult {
   full_name: string;
   email: string;
-  role: string;
-  temp_password?: string;
+  linked_students: number;
   error?: string;
 }
 
 // ── CSV parser ────────────────────────────────────────────────────────────────
 
+function parseCSVLine(line: string): string[] {
+  const cols: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') inQuotes = !inQuotes;
+    else if (ch === ',' && !inQuotes) { cols.push(current.trim()); current = ''; }
+    else current += ch;
+  }
+  cols.push(current.trim());
+  return cols;
+}
+
 function parseCSV(text: string): ParsedRow[] {
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
   const firstLower = lines[0]?.toLowerCase() ?? '';
-  const hasHeader = firstLower.includes('employee_id') || firstLower.includes('first_name') || firstLower.includes('email');
+  const hasHeader = firstLower.includes('first_name') || firstLower.includes('email') || firstLower.includes('parent_id');
+  const headers = hasHeader ? parseCSVLine(lines[0]).map(h => h.toLowerCase().trim()) : [];
   const start = hasHeader ? 1 : 0;
+  const idx = (name: string) => headers.indexOf(name);
+  const hasHeaders = headers.length > 0;
 
   return lines.slice(start).map((line) => {
-    // Handle CSV with potential commas inside quoted fields
-    const cols: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        cols.push(current.trim());
-        current = '';
-      } else {
-        current += char;
+    const cols = parseCSVLine(line);
+    const get = (name: string, pos: number): string => {
+      if (hasHeaders) {
+        const i = idx(name);
+        return i >= 0 ? (cols[i] ?? '').replace(/^"|"$/g, '') : '';
       }
-    }
-    cols.push(current.trim());
+      return (cols[pos] ?? '').replace(/^"|"$/g, '');
+    };
 
-    // Map columns: employee_id,first_name,last_name,email,phone,role,department,subject,join_date,status,gender,date_of_birth,national_id,address
-    const [
-      employee_id = '',
-      first_name = '',
-      last_name = '',
-      email = '',
-      phone = '',
-      role = '',
-      department = '',
-      subject = '',
-      join_date = '',
-      status = '',
-      gender = '',
-      date_of_birth = '',
-      national_id = '',
-      address = ''
-    ] = cols;
+    const parent_id         = get('parent_id', 0);
+    const first_name        = get('first_name', 1);
+    const last_name         = get('last_name', 2);
+    const email             = get('email', 3).toLowerCase();
+    const phone             = get('phone', 4);
+    const gender            = get('gender', 5).toLowerCase();
+    const relationship      = get('relationship', 6).toLowerCase();
+    const occupation        = get('occupation', 7);
+    const employer          = get('employer', 8);
+    const address           = get('address', 9);
+    const student_email     = get('student_email', 10).toLowerCase();
+    const student_identifier = get('student_id', 11);
+    const emergency_contact = get('emergency_contact', 12);
 
     const full_name = [first_name, last_name].filter(Boolean).join(' ').trim();
     const errors: string[] = [];
 
     if (!full_name) errors.push('First or last name required');
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Valid email required');
-    const normalizedRole = role.toLowerCase().trim();
-    if (!VALID_ROLES.includes(normalizedRole as UserRole)) {
-      errors.push(`Role "${role}" invalid — use: ${VALID_ROLES.join(', ')}`);
+    if (relationship && !VALID_RELATIONSHIPS.includes(relationship as Relationship)) {
+      errors.push(`relationship "${relationship}" must be one of: ${VALID_RELATIONSHIPS.join(', ')}`);
+    }
+    if (!student_email && !student_identifier) {
+      errors.push('Either student_email or student_id is required to link parent');
+    }
+    if (student_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(student_email)) {
+      errors.push('student_email is not a valid email');
     }
 
     return {
-      first_name, last_name, full_name, email: email.toLowerCase(),
-      role: VALID_ROLES.includes(normalizedRole as UserRole) ? (normalizedRole as UserRole) : '',
+      parent_id, first_name, last_name, full_name, email, phone, gender,
+      relationship: VALID_RELATIONSHIPS.includes(relationship as Relationship)
+        ? (relationship as Relationship)
+        : '',
+      occupation, employer, address,
+      student_email, student_identifier, emergency_contact,
       errors, valid: errors.length === 0,
-      // Store additional fields for database insertion
-      employee_id, phone, department, subject, join_date, status, gender, date_of_birth, national_id, address
-    } as ParsedRow;
+    };
   });
 }
 
@@ -176,7 +185,7 @@ const sbStyles = StyleSheet.create({
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
-export default function StaffImportScreen() {
+export default function ParentImportScreen() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const schoolId = user?.schoolId ?? '';
@@ -189,8 +198,6 @@ export default function StaffImportScreen() {
   const validCount   = rows.filter((r) => r.valid).length;
   const invalidCount = rows.filter((r) => !r.valid).length;
 
-  // ── Template download ──────────────────────────────────────────────────────
-
   const handleDownloadTemplate = async () => {
     const content = [CSV_HEADERS.join(','), ...TEMPLATE_ROWS].join('\n');
 
@@ -199,7 +206,7 @@ export default function StaffImportScreen() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'staff_import_template.csv';
+      a.download = 'parent_import_template.csv';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -207,16 +214,14 @@ export default function StaffImportScreen() {
       return;
     }
 
-    const path = FileSystem.cacheDirectory + 'staff_import_template.csv';
+    const path = FileSystem.cacheDirectory + 'parent_import_template.csv';
     await FileSystem.writeAsStringAsync(path, content, { encoding: FileSystem.EncodingType.UTF8 });
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: 'Save staff template' });
+      await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: 'Save parent template' });
     } else {
       Alert.alert('Template ready', `Saved to: ${path}`);
     }
   };
-
-  // ── CSV upload ─────────────────────────────────────────────────────────────
 
   const handleUpload = async () => {
     const result = await DocumentPicker.getDocumentAsync({ type: 'text/csv', copyToCacheDirectory: true });
@@ -244,68 +249,121 @@ export default function StaffImportScreen() {
     haptics.medium();
     setImporting(true);
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const db = supabase as any;
     const importResults: ImportResult[] = [];
 
+    // 1. Pre-resolve all student IDs in bulk
+    const studentEmails = Array.from(new Set(
+      valid.map((r) => r.student_email).filter(Boolean),
+    ));
+    const studentNumbers = Array.from(new Set(
+      valid.map((r) => r.student_identifier).filter(Boolean),
+    ));
+
+    // Note: students table does NOT have `email` column in current schema,
+    // so student_email cannot resolve directly. We look up via student_parent_links
+    // through a potential parents table email match, OR by student_number.
+    const studentByNumber: Record<string, string> = {};
+    if (studentNumbers.length) {
+      const { data } = await db
+        .from('students')
+        .select('id, student_number')
+        .eq('school_id', schoolId)
+        .in('student_number', studentNumbers);
+      ((data ?? []) as any[]).forEach((s: any) => {
+        studentByNumber[s.student_number] = s.id;
+      });
+    }
+
+    // 2. Pre-fetch any existing parents by email (to avoid duplicate inserts)
+    const parentEmails = Array.from(new Set(valid.map((r) => r.email)));
+    const { data: existingParents } = await db
+      .from('parents')
+      .select('id, email')
+      .eq('school_id', schoolId)
+      .in('email', parentEmails);
+    const parentByEmail: Record<string, string> = {};
+    ((existingParents ?? []) as any[]).forEach((p: any) => {
+      parentByEmail[p.email.toLowerCase()] = p.id;
+    });
+
+    // 3. Process each row
     for (const row of valid) {
       try {
-        // 1. Create staff record (no auth user yet)
-        const { data: newStaff, error: staffErr } = await (supabase as any)
-          .from('staff')
-          .insert({
-            school_id: schoolId,
-            full_name: row.full_name,
-            email: row.email,
-            phone: row.phone || null,
-            department: row.department || null,
-            // Use CSV's employee_id as staff_number if provided; else trigger auto-generates
-            ...(row.employee_id ? { staff_number: row.employee_id } : {}),
-            date_joined: row.join_date || new Date().toISOString().split('T')[0],
-            status: row.status || 'active',
-          })
-          .select('id')
-          .single();
+        let parentId = parentByEmail[row.email];
 
-        if (staffErr) {
-          importResults.push({ full_name: row.full_name, email: row.email, role: row.role, error: staffErr.message });
-          continue;
-        }
-
-        const staffId = (newStaff as any).id;
-
-        // 2. Assign role
-        await (supabase as any).from('staff_roles').insert({
-          school_id: schoolId,
-          staff_id: staffId,
-          role: row.role,
-        });
-
-        // 3. Create auth user + send invite (get temp password)
-        const res = await fetch(
-          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/invite-user`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session?.access_token}`,
-            },
-            body: JSON.stringify({
-              staff_id: staffId,
-              email: row.email,
+        if (parentId) {
+          // Update existing parent with any new info
+          await db
+            .from('parents')
+            .update({
               full_name: row.full_name,
-              school_id: schoolId,
-            }),
-          },
-        );
-        const json = await res.json();
-
-        if (!res.ok) {
-          importResults.push({ full_name: row.full_name, email: row.email, role: row.role, error: json.error ?? 'Invite failed' });
+              phone: row.phone || null,
+              relationship: row.relationship || null,
+            })
+            .eq('id', parentId)
+            .eq('school_id', schoolId);
         } else {
-          importResults.push({ full_name: row.full_name, email: row.email, role: row.role, temp_password: json.temp_password });
+          // Create new parent
+          const { data: newParent, error: createErr } = await db
+            .from('parents')
+            .insert({
+              school_id: schoolId,
+              full_name: row.full_name,
+              email: row.email,
+              phone: row.phone || null,
+              relationship: row.relationship || null,
+            })
+            .select('id')
+            .single();
+          if (createErr) {
+            importResults.push({ full_name: row.full_name, email: row.email, linked_students: 0, error: createErr.message });
+            continue;
+          }
+          parentId = (newParent as any).id;
+          parentByEmail[row.email] = parentId;
         }
+
+        // Resolve student by number (student_email not stored on students table)
+        const studentId = row.student_identifier
+          ? studentByNumber[row.student_identifier]
+          : undefined;
+
+        let linkedStudents = 0;
+        if (studentId) {
+          // Check existing link to avoid duplicate
+          const { data: existingLink } = await db
+            .from('student_parent_links')
+            .select('id')
+            .eq('school_id', schoolId)
+            .eq('student_id', studentId)
+            .eq('parent_id', parentId)
+            .maybeSingle();
+          if (!existingLink) {
+            const { error: linkErr } = await db
+              .from('student_parent_links')
+              .insert({ school_id: schoolId, student_id: studentId, parent_id: parentId });
+            if (!linkErr) linkedStudents = 1;
+          } else {
+            linkedStudents = 1;
+          }
+        }
+
+        importResults.push({
+          full_name: row.full_name,
+          email: row.email,
+          linked_students: linkedStudents,
+          error: !studentId && (row.student_identifier || row.student_email)
+            ? `Student "${row.student_identifier || row.student_email}" not found — parent created but not linked`
+            : undefined,
+        });
       } catch (e: any) {
-        importResults.push({ full_name: row.full_name, email: row.email, role: row.role, error: e.message ?? 'Unknown error' });
+        importResults.push({
+          full_name: row.full_name,
+          email: row.email,
+          linked_students: 0,
+          error: e.message ?? 'Unknown error',
+        });
       }
     }
 
@@ -323,7 +381,7 @@ export default function StaffImportScreen() {
         <TouchableOpacity onPress={() => step > 1 ? setStep((s) => (s - 1) as Step) : router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
-        <ThemedText variant="h4" style={{ flex: 1, textAlign: 'center' }}>Import Staff</ThemedText>
+        <ThemedText variant="h4" style={{ flex: 1, textAlign: 'center' }}>Import Parents</ThemedText>
         <View style={{ width: 24 }} />
       </View>
 
@@ -336,21 +394,21 @@ export default function StaffImportScreen() {
           <View style={{ gap: Spacing.base }}>
             <View style={[styles.infoBox, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
               <ThemedText variant="label" color="muted" style={{ fontSize: 10, marginBottom: 8 }}>REQUIRED COLUMNS</ThemedText>
-              {['first_name', 'last_name', 'email', 'role'].map((h) => (
+              {['first_name', 'last_name', 'email', 'student_id (or student_email)'].map((h) => (
                 <View key={h} style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 4 }}>
                   <View style={[styles.dot, { backgroundColor: colors.brand.primary }]} />
                   <ThemedText variant="bodySm" style={{ fontFamily: 'monospace' }}>{h}</ThemedText>
                 </View>
               ))}
               <ThemedText variant="label" color="muted" style={{ fontSize: 10, marginTop: 12, marginBottom: 8 }}>OPTIONAL COLUMNS</ThemedText>
-              {['employee_id', 'phone', 'department', 'join_date', 'status'].map((h) => (
+              {['parent_id', 'phone', 'gender', 'relationship', 'occupation', 'employer', 'address', 'emergency_contact'].map((h) => (
                 <View key={h} style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 4 }}>
                   <View style={[styles.dot, { backgroundColor: colors.textMuted }]} />
                   <ThemedText variant="bodySm" style={{ fontFamily: 'monospace', color: colors.textMuted }}>{h}</ThemedText>
                 </View>
               ))}
               <ThemedText variant="caption" color="muted" style={{ marginTop: 8 }}>
-                Valid roles: {VALID_ROLES.join(', ')}. Email is used as the unique identifier — extra CSV columns (subject, gender, address, etc.) are ignored for now. Passwords are auto-generated and shown on the Done screen so you can hand them to staff.
+                Email is the unique parent identifier — existing parents are updated, not duplicated. Link to a student by their <ThemedText variant="caption" style={{ fontFamily: 'monospace' }}>student_id</ThemedText> (student_number). Valid relationships: {VALID_RELATIONSHIPS.join(', ')}.
               </ThemedText>
             </View>
 
@@ -369,7 +427,7 @@ export default function StaffImportScreen() {
         {step === 2 && (
           <View style={{ gap: Spacing.base }}>
             <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
-              Fill in your CSV using the template format and upload it here. One staff member per row.
+              Fill in your CSV using the template format and upload it here. One parent per row.
             </ThemedText>
             <TouchableOpacity onPress={handleUpload} style={[styles.uploadZone, { backgroundColor: colors.surfaceSecondary, borderColor: colors.brand.primary + '60' }]}>
               <Ionicons name="cloud-upload-outline" size={36} color={colors.brand.primary} />
@@ -406,8 +464,13 @@ export default function StaffImportScreen() {
                 <View style={{ flex: 1 }}>
                   <ThemedText variant="bodySm" style={{ fontWeight: '600' }}>{row.full_name || '—'}</ThemedText>
                   <ThemedText variant="caption" color="muted">
-                    {row.email}{row.role ? ' · ' + (ROLE_LABELS[row.role] ?? row.role) : ''}
+                    {row.email}{row.relationship ? ' · ' + row.relationship : ''}
                   </ThemedText>
+                  {(row.student_identifier || row.student_email) && (
+                    <ThemedText variant="caption" color="muted">
+                      Student: {row.student_identifier || row.student_email}
+                    </ThemedText>
+                  )}
                   {row.errors.map((e, j) => (
                     <ThemedText key={j} variant="caption" style={{ color: Colors.semantic.error }}>✕ {e}</ThemedText>
                   ))}
@@ -436,7 +499,7 @@ export default function StaffImportScreen() {
             >
               <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
               <ThemedText variant="body" style={{ color: '#fff', fontWeight: '700', marginLeft: 8 }}>
-                {importing ? 'Importing…' : `Import ${validCount} Staff Member${validCount !== 1 ? 's' : ''}`}
+                {importing ? 'Importing…' : `Import ${validCount} Parent${validCount !== 1 ? 's' : ''}`}
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -451,7 +514,7 @@ export default function StaffImportScreen() {
               </View>
               <ThemedText variant="h3" style={{ color: Colors.semantic.success }}>Import Complete</ThemedText>
               <ThemedText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-                {results.filter((r) => !r.error).length} of {results.length} staff imported. Share credentials below.
+                {results.filter((r) => !r.error).length} of {results.length} parents imported. {results.reduce((acc, r) => acc + r.linked_students, 0)} student link{results.reduce((acc, r) => acc + r.linked_students, 0) !== 1 ? 's' : ''} created.
               </ThemedText>
             </View>
 
@@ -460,25 +523,25 @@ export default function StaffImportScreen() {
                 key={i}
                 style={[
                   styles.previewRow,
-                  { backgroundColor: r.error ? Colors.semantic.error + '08' : colors.surface, borderColor: r.error ? Colors.semantic.error + '40' : colors.border },
+                  { backgroundColor: r.error ? Colors.semantic.warning + '08' : colors.surface, borderColor: r.error ? Colors.semantic.warning + '40' : colors.border },
                 ]}
               >
                 <View style={{ flex: 1 }}>
                   <ThemedText variant="bodySm" style={{ fontWeight: '600' }}>{r.full_name}</ThemedText>
-                  <ThemedText variant="caption" color="muted">{r.email} · {ROLE_LABELS[r.role] ?? r.role}</ThemedText>
-                  {r.temp_password && (
-                    <ThemedText variant="caption" style={{ color: colors.brand.primary, fontFamily: 'monospace', marginTop: 2 }}>
-                      Temp password: {r.temp_password}
+                  <ThemedText variant="caption" color="muted">{r.email}</ThemedText>
+                  {r.linked_students > 0 && (
+                    <ThemedText variant="caption" style={{ color: Colors.semantic.success }}>
+                      Linked to {r.linked_students} student
                     </ThemedText>
                   )}
                   {r.error && (
-                    <ThemedText variant="caption" style={{ color: Colors.semantic.error }}>✕ {r.error}</ThemedText>
+                    <ThemedText variant="caption" style={{ color: Colors.semantic.warning }}>⚠ {r.error}</ThemedText>
                   )}
                 </View>
                 <Ionicons
-                  name={r.error ? 'close-circle' : 'checkmark-circle'}
+                  name={r.error ? 'warning' : 'checkmark-circle'}
                   size={18}
-                  color={r.error ? Colors.semantic.error : Colors.semantic.success}
+                  color={r.error ? Colors.semantic.warning : Colors.semantic.success}
                 />
               </View>
             ))}
@@ -487,7 +550,7 @@ export default function StaffImportScreen() {
               onPress={() => router.back()}
               style={[styles.actionBtn, { backgroundColor: colors.brand.primary, marginTop: Spacing.sm }]}
             >
-              <ThemedText variant="body" style={{ color: '#fff', fontWeight: '700' }}>View Staff List</ThemedText>
+              <ThemedText variant="body" style={{ color: '#fff', fontWeight: '700' }}>View Parent List</ThemedText>
             </TouchableOpacity>
           </View>
         )}
