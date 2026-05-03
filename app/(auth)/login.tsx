@@ -17,7 +17,7 @@ import { haptics } from '../../lib/haptics';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
-  const { school, setUser } = useAuthStore();
+  const { school, setUser, clearSchool } = useAuthStore();
   const navigation = useNavigation();
   const canGoBack = navigation.canGoBack();
   const displayName = school?.name ?? 'Your School';
@@ -168,8 +168,17 @@ export default function LoginScreen() {
 
               <Button label="Sign In" onPress={handleLogin} loading={loading} fullWidth size="lg" />
 
-              <TouchableOpacity style={styles.forgotBtn} onPress={() => router.push('/(auth)/forgot-password' as any)}>
+              <TouchableOpacity style={[styles.forgotBtn, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]} onPress={() => router.push('/(auth)/forgot-password' as any)}>
                 <ThemedText style={{ color: colors.brand.primary, fontWeight: '600', fontSize: 15 }}>Forgot password?</ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.forgotBtn, { marginTop: -Spacing.sm }, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]}
+                onPress={() => { clearSchool(); router.replace('/(auth)/school-code' as any); }}
+              >
+                <ThemedText style={{ color: colors.textMuted, fontSize: 13 }}>
+                  Not {displayName}? <ThemedText style={{ color: colors.brand.primary, fontWeight: '600' }}>Change school</ThemedText>
+                </ThemedText>
               </TouchableOpacity>
 
               {biometricAvailable && (

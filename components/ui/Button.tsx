@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ViewStyle,
   TextStyle,
+  Platform,
 } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { useTheme } from '../../lib/theme';
@@ -92,6 +93,7 @@ export function Button({
           opacity: isDisabled ? 0.5 : 1,
           transform: [{ scale: pressed && !isDisabled ? 0.97 : 1 }],
         },
+        Platform.OS === 'web' && !isDisabled ? ({ cursor: 'pointer' } as any) : undefined,
         style,
       ]}
     >

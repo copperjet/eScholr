@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, PressableProps, StyleProp, ViewStyle, GestureResponderEvent } from 'react-native';
+import { Pressable, PressableProps, StyleProp, ViewStyle, GestureResponderEvent, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -66,7 +66,7 @@ export function PressableScale({
       onPressOut={handlePressOut}
       onPress={onPress}
       disabled={disabled}
-      style={[animatedStyle, style as any]}
+      style={[animatedStyle, style as any, Platform.OS === 'web' && !disabled ? ({ cursor: 'pointer' } as any) : undefined]}
       {...rest}
     >
       {children}

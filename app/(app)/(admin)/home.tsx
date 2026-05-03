@@ -157,14 +157,20 @@ export default function AdminHome() {
             ) : (
               <StatCard
                 variant="hero"
-                label="Students enrolled"
-                value={data?.studentCount ?? 0}
-                icon="people"
-                caption={data?.semester ? `Active: ${data.semester.name}` : undefined}
-                trend={
+                label={attPct !== null ? "Today's Attendance" : "Active Semester"}
+                value={attPct !== null ? `${attPct}%` : (data?.semester?.name ?? '—')}
+                icon={attPct !== null ? 'checkmark-circle' : 'calendar'}
+                caption={
                   attPct !== null
-                    ? { direction: 'up', label: `${attPct}% present today` }
-                    : undefined
+                    ? (data?.semester ? `${data.semester.name} · ${data.studentCount ?? 0} students` : `${data?.studentCount ?? 0} students enrolled`)
+                    : 'No attendance data yet for today'
+                }
+                trend={
+                  attPct !== null && attPct >= 80
+                    ? { direction: 'up', label: 'Good attendance' }
+                    : attPct !== null && attPct < 80
+                      ? { direction: 'down', label: 'Below 80% target' }
+                      : undefined
                 }
                 style={{ marginHorizontal: Spacing.screen }}
               />
@@ -212,7 +218,7 @@ export default function AdminHome() {
               />
             </View>
           ) : (
-            // Regular admin: Staff, Reports Pending, Present Today
+            // Regular admin: Staff, Students, Reports Pending
             <View style={styles.statRow}>
               <StatCard
                 label="Staff"
@@ -223,19 +229,19 @@ export default function AdminHome() {
                 style={styles.statCell}
               />
               <StatCard
+                label="Students"
+                value={data?.studentCount ?? 0}
+                icon="school"
+                iconBg={Colors.semantic.successLight}
+                iconColor={Colors.semantic.success}
+                style={styles.statCell}
+              />
+              <StatCard
                 label="Reports Pending"
                 value={data?.pendingReports ?? 0}
                 icon="document-text"
                 iconBg={Colors.semantic.warningLight}
                 iconColor={Colors.semantic.warning}
-                style={styles.statCell}
-              />
-              <StatCard
-                label="Present Today"
-                value={attPct !== null ? `${attPct}%` : '—'}
-                icon="checkmark-circle"
-                iconBg={Colors.semantic.successLight}
-                iconColor={Colors.semantic.success}
                 style={styles.statCell}
               />
             </View>

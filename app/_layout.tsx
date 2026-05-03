@@ -7,13 +7,34 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { ThemeProvider } from '../lib/theme';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { queryClient, asyncStoragePersister, CACHE_BUSTER } from '../lib/queryClient';
 import { setupNetworkManager } from '../lib/networkManager';
 
 SplashScreen.preventAutoHideAsync();
 setupNetworkManager();
+
+// Web: inject global cursor:pointer for all pressables so buttons look clickable.
+// RN-Web renders Pressable/TouchableOpacity with role="button" (or link/tab/menuitem).
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const STYLE_ID = '__escholr_web_cursor__';
+  if (!document.getElementById(STYLE_ID)) {
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = `
+      [role="button"]:not([aria-disabled="true"]),
+      [role="link"]:not([aria-disabled="true"]),
+      [role="tab"]:not([aria-disabled="true"]),
+      [role="menuitem"]:not([aria-disabled="true"]),
+      [role="switch"]:not([aria-disabled="true"]),
+      [role="checkbox"]:not([aria-disabled="true"]),
+      [role="radio"]:not([aria-disabled="true"]) { cursor: pointer; }
+      [aria-disabled="true"] { cursor: not-allowed; }
+    `;
+    document.head.appendChild(style);
+  }
+}
 
 export default function RootLayout() {
   const { setUser, setSchool, setReady, loadPersistedSchool, school } = useAuthStore();
@@ -78,8 +99,10 @@ export default function RootLayout() {
       }
       if (!session) {
         setUser(null);
-        setSchool(null);
-        router.replace('/(auth)/school-code' as any);
+        // If school is persisted, go to login so user just re-enters credentials.
+        // Only send to school-code if no school is known.
+        const { school } = useAuthStore.getState();
+        router.replace(school ? '/(auth)/login' : '/(auth)/school-code' as any);
       }
     });
 

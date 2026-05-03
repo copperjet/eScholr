@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   View, StyleSheet, ScrollView, Alert, Linking, Share,
-  TouchableOpacity, StatusBar, Platform,
+  Pressable, StatusBar, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,10 +30,9 @@ const can = canAccess;
 
 function MenuRow({ item, colors, last }: { item: MenuItem; colors: any; last: boolean }) {
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={() => { haptics.light(); item.onPress(); }}
-      activeOpacity={0.75}
-      style={[styles.menuRow, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
+      style={({ pressed }) => [styles.menuRow, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, { opacity: pressed ? 0.75 : 1 }, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]}
     >
       <View style={[styles.menuIcon, { backgroundColor: item.danger ? '#FEE2E2' : colors.brand.primarySoft }]}>
         <Ionicons name={item.icon} size={19} color={item.danger ? '#EF4444' : colors.brand.primary} />
@@ -51,7 +50,7 @@ function MenuRow({ item, colors, last }: { item: MenuItem; colors: any; last: bo
       ) : (
         <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -157,13 +156,13 @@ export default function AdminMore() {
           onPress: () => {
             if (Platform.OS === 'web') {
               if (window.confirm('Are you sure you want to sign out?')) {
-                signOut().then(() => router.replace('/(auth)/school-code' as any));
+                signOut().then(() => router.replace('/(auth)/login' as any));
               }
               return;
             }
             Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Sign Out', style: 'destructive', onPress: async () => { await signOut(); router.replace('/(auth)/school-code' as any); } },
+              { text: 'Sign Out', style: 'destructive', onPress: async () => { await signOut(); router.replace('/(auth)/login' as any); } },
             ]);
           },
         },

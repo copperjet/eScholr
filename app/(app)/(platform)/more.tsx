@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Alert, StatusBar, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, StatusBar, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -21,10 +21,9 @@ interface MenuItem {
 
 function MenuRow({ item, colors, last }: { item: MenuItem; colors: any; last: boolean }) {
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={() => { haptics.light(); item.onPress(); }}
-      activeOpacity={0.75}
-      style={[styles.menuRow, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
+      style={({ pressed }) => [styles.menuRow, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, { opacity: pressed ? 0.75 : 1 }, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined]}
     >
       <View style={[styles.menuIcon, { backgroundColor: item.danger ? '#FEE2E2' : 'rgba(255,255,255,0.12)' }]}>
         <Ionicons name={item.icon} size={19} color={item.danger ? '#EF4444' : '#fff'} />
@@ -36,7 +35,7 @@ function MenuRow({ item, colors, last }: { item: MenuItem; colors: any; last: bo
         {item.sublabel ? <ThemedText variant="caption" color="muted" numberOfLines={1}>{item.sublabel}</ThemedText> : null}
       </View>
       <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
