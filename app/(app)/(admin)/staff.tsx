@@ -5,7 +5,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, StyleSheet, SafeAreaView,
-  TouchableOpacity, Alert, RefreshControl, ScrollView,
+  TouchableOpacity, RefreshControl, ScrollView, Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,7 @@ import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
+import { webConfirm, webAlert } from '../../../lib/alert';
 import {
   ThemedText, Avatar, Badge, SearchBar, FAB, BottomSheet,
   Skeleton, EmptyState, ErrorState, FormField, ScreenHeader, FastList,
@@ -57,7 +58,7 @@ function useStaff(schoolId: string) {
       const [staffRes, rolesRes] = await Promise.all([
         supabase
           .from('staff')
-          .select('id, full_name, email, phone, department, status, staff_number, date_joined, auth_user_id')
+          .select('id, full_name, email, phone, department, status, staff_number, date_joined, auth_user_id, login_status, temp_password')
           .eq('school_id', schoolId)
           .order('full_name'),
         supabase
@@ -85,7 +86,8 @@ export default function AdminStaffScreen() {
   const schoolId = user?.schoolId ?? '';
 
   const [search, setSearch] = useState('');
-  const [filterActive, setFilterActive] = useState<'active' | 'all' | 'inactive'>('active');
+  const [filterActive, setFilterActive] = useState<'active' | 'all' | 'inactive' | 'pending'>('active');
+  const [showTempPw, setShowTempPw] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<any | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
   const [addVisible, setAddVisible] = useState(false);
@@ -217,22 +219,12 @@ export default function AdminStaffScreen() {
     onSuccess: (json: any) => {
       haptics.success();
       queryClient.invalidateQueries({ queryKey: ['admin-staff'] });
-      // Show the temp password to the admin so they can hand it to the user.
-      // The user will be forced to set a new password on first login.
-      if (json?.temp_password) {
-        Alert.alert(
-          'Temporary Password',
-          `Account created.\n\nEmail: ${json.email}\nTemporary password: ${json.temp_password}\n\nShare these with the staff member. They will be required to change the password on first login.`,
-          [{ text: 'Got it' }],
-        );
-      } else {
-        Alert.alert('Invite Sent', 'An email has been sent with a login link.');
-      }
+      setDetailVisible(false);
     },
     onError: (err: any) => {
       haptics.error();
       console.error('invite-user error:', err);
-      Alert.alert('Login Creation Failed', err.message ?? 'Could not create login. Check the edge function is deployed and the staff member has a valid email.');
+      webAlert('Login Creation Failed', err.message ?? 'Could not create login. Check the edge function is deployed and the staff member has a valid email.');
     },
   });
 
@@ -265,17 +257,22 @@ export default function AdminStaffScreen() {
       queryClient.invalidateQueries({ queryKey: ['admin-staff'] });
       setDetailVisible(false);
       setSelectedStaff(null);
-      Alert.alert('User Deleted', 'The user has been permanently removed.');
+      webAlert('User Deleted', 'The user has been permanently removed.');
     },
     onError: (err: any) => {
       haptics.error();
-      Alert.alert('Delete Failed', err.message ?? 'Could not delete user.');
+      webAlert('Delete Failed', err.message ?? 'Could not delete user.');
     },
   });
 
-  // ── Filtered list ─────────────────────────────────────────
+  // ── Derived lists ─────────────────────────────────────────
+  const pendingLogins = (data ?? []).filter((s: any) => s.login_status === 'pending_login');
+
   const filtered = (data ?? [])
-    .filter((s: any) => filterActive === 'all' || s.status === filterActive)
+    .filter((s: any) => {
+      if (filterActive === 'pending') return s.login_status === 'pending_login';
+      return filterActive === 'all' || s.status === filterActive;
+    })
     .filter((s: any) =>
       !search ||
       s.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -286,6 +283,7 @@ export default function AdminStaffScreen() {
   const openDetail = useCallback((staff: any) => {
     setSelectedStaff(staff);
     setEditRolesMode(false);
+    setShowTempPw(false);
     setDetailVisible(true);
     haptics.light();
   }, []);
@@ -322,7 +320,7 @@ export default function AdminStaffScreen() {
       <View style={{ paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, gap: Spacing.sm }}>
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search by name, email, ID…" />
         <View style={styles.filterRow}>
-          {(['active', 'all', 'inactive'] as const).map(f => (
+          {(['active', 'all', 'inactive', 'pending'] as const).map(f => (
             <TouchableOpacity
               key={f}
               onPress={() => setFilterActive(f)}
@@ -336,12 +334,26 @@ export default function AdminStaffScreen() {
                 fontWeight: filterActive === f ? '700' : '500',
                 textTransform: 'capitalize',
               }}>
-                {f}
+                {f === 'pending' ? `Pending${pendingLogins.length > 0 ? ` (${pendingLogins.length})` : ''}` : f}
               </ThemedText>
             </TouchableOpacity>
           ))}
         </View>
       </View>
+
+      {/* Pending logins banner */}
+      {!isLoading && pendingLogins.length > 0 && filterActive !== 'pending' && (
+        <TouchableOpacity
+          onPress={() => setFilterActive('pending')}
+          style={[styles.pendingBanner, { backgroundColor: Colors.semantic.warning + '18', borderColor: Colors.semantic.warning + '50' }]}
+        >
+          <Ionicons name="time-outline" size={16} color={Colors.semantic.warning} />
+          <ThemedText variant="bodySm" style={{ flex: 1, color: Colors.semantic.warning, fontWeight: '600', marginLeft: Spacing.sm }}>
+            {pendingLogins.length} staff member{pendingLogins.length !== 1 ? 's' : ''} with pending login — tap to view
+          </ThemedText>
+          <Ionicons name="chevron-forward" size={14} color={Colors.semantic.warning} />
+        </TouchableOpacity>
+      )}
 
       {/* List */}
       {isLoading ? (
@@ -400,7 +412,12 @@ export default function AdminStaffScreen() {
               </View>
               <View style={{ alignItems: 'flex-end', gap: 4 }}>
                 <Badge label={staff.status} preset={staff.status === 'active' ? 'success' : 'neutral'} />
-                {!staff.auth_user_id && (
+                {staff.login_status === 'pending_login' && (
+                  <View style={[styles.noLoginBadge, { borderColor: Colors.semantic.warning, backgroundColor: Colors.semantic.warning + '15' }]}>
+                    <ThemedText variant="label" style={{ color: Colors.semantic.warning, fontSize: 9 }}>PENDING</ThemedText>
+                  </View>
+                )}
+                {staff.login_status === 'none' && (
                   <View style={[styles.noLoginBadge, { borderColor: Colors.semantic.warning }]}>
                     <ThemedText variant="label" style={{ color: Colors.semantic.warning, fontSize: 9 }}>NO LOGIN</ThemedText>
                   </View>
@@ -488,9 +505,9 @@ export default function AdminStaffScreen() {
       {/* ── Staff Detail Sheet ──────────────────────────────── */}
       <BottomSheet
         visible={detailVisible && !!selectedStaff}
-        onClose={() => { setDetailVisible(false); setEditRolesMode(false); setConfirmLogin(false); }}
+        onClose={() => { setDetailVisible(false); setEditRolesMode(false); setConfirmLogin(false); setShowTempPw(false); }}
         title={selectedStaff?.full_name ?? 'Staff'}
-        snapHeight={editRolesMode ? 560 : 500}
+        snapHeight={editRolesMode ? 560 : (selectedStaff?.login_status === 'pending_login' ? 560 : 500)}
       >
         {selectedStaff && !editRolesMode && (
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -529,67 +546,111 @@ export default function AdminStaffScreen() {
               </View>
 
               {/* Auth status + invite */}
-              <View style={[styles.authCard, { backgroundColor: selectedStaff.auth_user_id ? Colors.semantic.successLight : Colors.semantic.warningLight, borderColor: selectedStaff.auth_user_id ? Colors.semantic.success : Colors.semantic.warning }]}>
-                <Ionicons
-                  name={selectedStaff.auth_user_id ? 'shield-checkmark' : 'mail-unread-outline'}
-                  size={16}
-                  color={selectedStaff.auth_user_id ? Colors.semantic.success : Colors.semantic.warning}
-                />
-                <View style={{ flex: 1, marginLeft: Spacing.sm }}>
-                  <ThemedText variant="bodySm" style={{ fontWeight: '600', color: selectedStaff.auth_user_id ? Colors.semantic.success : Colors.semantic.warning }}>
-                    {selectedStaff.auth_user_id ? 'Login enabled' : 'No login account yet'}
-                  </ThemedText>
-                  <ThemedText variant="caption" color="muted">
-                    {selectedStaff.auth_user_id ? 'This staff member can sign in.' : 'Send an invite to create their login.'}
-                  </ThemedText>
+              {selectedStaff.login_status === 'pending_login' ? (
+                <View style={[styles.authCard, { backgroundColor: Colors.semantic.warning + '12', borderColor: Colors.semantic.warning }]}>
+                  <Ionicons name="time-outline" size={16} color={Colors.semantic.warning} />
+                  <View style={{ flex: 1, marginLeft: Spacing.sm }}>
+                    <ThemedText variant="bodySm" style={{ fontWeight: '700', color: Colors.semantic.warning }}>Login pending — awaiting first sign-in</ThemedText>
+                    <ThemedText variant="caption" color="muted">Share the temporary password below. It disappears once they log in and reset it.</ThemedText>
+                  </View>
                 </View>
-                {!selectedStaff.auth_user_id && (
-                  confirmLogin ? (
-                    <View style={{ flexDirection: 'row', gap: 6 }}>
+              ) : (
+                <View style={[styles.authCard, { backgroundColor: selectedStaff.auth_user_id ? Colors.semantic.successLight : Colors.semantic.warningLight, borderColor: selectedStaff.auth_user_id ? Colors.semantic.success : Colors.semantic.warning }]}>
+                  <Ionicons
+                    name={selectedStaff.auth_user_id ? 'shield-checkmark' : 'mail-unread-outline'}
+                    size={16}
+                    color={selectedStaff.auth_user_id ? Colors.semantic.success : Colors.semantic.warning}
+                  />
+                  <View style={{ flex: 1, marginLeft: Spacing.sm }}>
+                    <ThemedText variant="bodySm" style={{ fontWeight: '600', color: selectedStaff.auth_user_id ? Colors.semantic.success : Colors.semantic.warning }}>
+                      {selectedStaff.auth_user_id ? 'Login active' : 'No login account yet'}
+                    </ThemedText>
+                    <ThemedText variant="caption" color="muted">
+                      {selectedStaff.auth_user_id ? 'Staff member has signed in and set their password.' : 'Send an invite to create their login.'}
+                    </ThemedText>
+                  </View>
+                  {!selectedStaff.auth_user_id && (
+                    confirmLogin ? (
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        <TouchableOpacity
+                          onPress={() => { setConfirmLogin(false); sendInvite.mutate(selectedStaff); }}
+                          disabled={sendInvite.isPending}
+                          style={[styles.inviteBtn, { backgroundColor: Colors.semantic.warning }]}
+                        >
+                          <ThemedText variant="label" style={{ color: '#fff', fontWeight: '700' }}>
+                            {sendInvite.isPending ? '…' : 'Yes, create'}
+                          </ThemedText>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => setConfirmLogin(false)}
+                          style={[styles.inviteBtn, { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.border }]}
+                        >
+                          <ThemedText variant="label" style={{ color: colors.textPrimary, fontWeight: '600' }}>Cancel</ThemedText>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
                       <TouchableOpacity
-                        onPress={() => { setConfirmLogin(false); sendInvite.mutate(selectedStaff); }}
+                        onPress={() => setConfirmLogin(true)}
                         disabled={sendInvite.isPending}
                         style={[styles.inviteBtn, { backgroundColor: Colors.semantic.warning }]}
                       >
-                        <ThemedText variant="label" style={{ color: '#fff', fontWeight: '700' }}>
-                          {sendInvite.isPending ? '…' : 'Yes, create'}
-                        </ThemedText>
+                        <ThemedText variant="label" style={{ color: '#fff', fontWeight: '700' }}>Create Login</ThemedText>
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => setConfirmLogin(false)}
-                        style={[styles.inviteBtn, { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.border }]}
-                      >
-                        <ThemedText variant="label" style={{ color: colors.textPrimary, fontWeight: '600' }}>Cancel</ThemedText>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
+                    )
+                  )}
+                </View>
+              )}
+
+              {/* Temporary password card — visible while login_status is pending */}
+              {selectedStaff.login_status === 'pending_login' && selectedStaff.temp_password && (
+                <View style={[styles.tempPwCard, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm }}>
+                    <Ionicons name="key-outline" size={15} color={colors.brand.primary} />
+                    <ThemedText variant="label" color="muted" style={{ marginLeft: 6, flex: 1 }}>TEMPORARY PASSWORD</ThemedText>
                     <TouchableOpacity
-                      onPress={() => setConfirmLogin(true)}
-                      disabled={sendInvite.isPending}
-                      style={[styles.inviteBtn, { backgroundColor: Colors.semantic.warning }]}
+                      onPress={() => setShowTempPw(v => !v)}
+                      hitSlop={8}
                     >
-                      <ThemedText variant="label" style={{ color: '#fff', fontWeight: '700' }}>
-                        Create Login
-                      </ThemedText>
+                      <Ionicons name={showTempPw ? 'eye-off-outline' : 'eye-outline'} size={16} color={colors.textMuted} />
                     </TouchableOpacity>
-                  )
-                )}
-              </View>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                    <ThemedText style={{ flex: 1, fontFamily: 'monospace', fontSize: 16, fontWeight: '700', letterSpacing: 2, color: colors.textPrimary }}>
+                      {showTempPw ? selectedStaff.temp_password : '••••••••••••'}
+                    </ThemedText>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (Platform.OS === 'web') {
+                          navigator.clipboard?.writeText(selectedStaff.temp_password);
+                          haptics.success();
+                          webAlert('Copied', 'Temporary password copied to clipboard.');
+                        } else {
+                          webAlert('Temporary Password', selectedStaff.temp_password);
+                        }
+                      }}
+                      hitSlop={8}
+                      style={[styles.inviteBtn, { backgroundColor: colors.brand.primary }]}
+                    >
+                      <ThemedText variant="label" style={{ color: '#fff', fontWeight: '700' }}>Copy</ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                  <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.sm }}>
+                    Share this with {selectedStaff.full_name.split(' ')[0]}. They will be prompted to set a new password on first login.
+                  </ThemedText>
+                </View>
+              )}
 
               {/* Toggle status */}
               <TouchableOpacity
                 onPress={() => {
-                  Alert.alert(
-                    selectedStaff.status === 'active' ? 'Deactivate Staff' : 'Activate Staff',
-                    `${selectedStaff.status === 'active' ? 'Deactivate' : 'Activate'} ${selectedStaff.full_name}?`,
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      {
-                        text: selectedStaff.status === 'active' ? 'Deactivate' : 'Activate',
-                        style: selectedStaff.status === 'active' ? 'destructive' : 'default',
-                        onPress: () => toggleStatus.mutate({ staffId: selectedStaff.id, currentStatus: selectedStaff.status }),
-                      },
-                    ]
+                  const isActive = selectedStaff.status === 'active';
+                  webConfirm(
+                    isActive ? 'Deactivate Staff' : 'Activate Staff',
+                    `${isActive ? 'Deactivate' : 'Activate'} ${selectedStaff.full_name}?`,
+                    () => toggleStatus.mutate({ staffId: selectedStaff.id, currentStatus: selectedStaff.status }),
+                    isActive ? 'Deactivate' : 'Activate',
+                    'Cancel',
+                    isActive,
                   );
                 }}
                 disabled={toggleStatus.isPending}
@@ -608,13 +669,13 @@ export default function AdminStaffScreen() {
               {/* Hard Delete */}
               <TouchableOpacity
                 onPress={() => {
-                  Alert.alert(
+                  webConfirm(
                     'Delete User Permanently',
                     `This will permanently delete ${selectedStaff.full_name} and all their data. This action cannot be undone.\n\nAre you sure?`,
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Delete', style: 'destructive', onPress: () => hardDeleteUser.mutate(selectedStaff) },
-                    ]
+                    () => hardDeleteUser.mutate(selectedStaff),
+                    'Delete',
+                    'Cancel',
+                    true,
                   );
                 }}
                 disabled={hardDeleteUser.isPending}
@@ -708,6 +769,14 @@ const styles = StyleSheet.create({
   roleChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 },
   roleChip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   noLoginBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
+  pendingBanner: {
+    flexDirection: 'row', alignItems: 'center',
+    marginHorizontal: Spacing.base, marginBottom: Spacing.sm,
+    padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1,
+  },
+  tempPwCard: {
+    padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1,
+  },
   skeletonRow: { flexDirection: 'row', alignItems: 'center' },
   detailRow: { flexDirection: 'row', alignItems: 'center' },
   toggleBtn: {

@@ -2,12 +2,13 @@
  * School Structure Hub — Full CRUD
  * School-scoped governance (school_super_admin / super_admin).
  * Tree of sections → grades → streams plus subject list.
- * Add / rename / delete every level via FAB and long-press.
+ * Add via FAB, edit/delete via inline icon buttons. Supports bulk add (comma-separated names).
  */
 import React, { useMemo, useState } from 'react';
 import {
-  View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Pressable, Platform,
+  View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Pressable,
 } from 'react-native';
+import { webConfirm, webAlert } from '../../../lib/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '../../../lib/theme';
@@ -156,21 +157,10 @@ export default function SchoolStructureScreen() {
     else                         setEditor({ kind, mode: 'edit', row });
   };
 
-  const handleLongPress = (row: any, kind: EntityKind) => {
-    haptics.medium();
-    Alert.alert(
-      row.name,
-      `Choose an action for this ${kind}.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Rename / Edit', onPress: () => openEdit(row, kind) },
-        { text: 'Delete', style: 'destructive', onPress: () => confirmDelete(row, kind) },
-      ]
-    );
-  };
-
   const confirmDelete = async (row: any, kind: EntityKind) => {
     if (!data) return;
+    haptics.medium();
+
     // Block if has children in cached tree
     let blockedReason = '';
     if (kind === 'section' && data.grades.some(g => g.section_id === row.id)) {
@@ -179,7 +169,7 @@ export default function SchoolStructureScreen() {
       blockedReason = 'This grade has streams. Delete those first.';
     }
     if (blockedReason) {
-      Alert.alert('Cannot delete', blockedReason);
+      webAlert('Cannot delete', blockedReason);
       return;
     }
 
@@ -191,7 +181,7 @@ export default function SchoolStructureScreen() {
           .from('students').select('id', { count: 'exact', head: true })
           .eq('school_id', schoolId).eq('stream_id', row.id).eq('status', 'active');
         if ((count ?? 0) > 0) {
-          Alert.alert('Cannot delete', `This stream has ${count} active student(s). Move or deactivate them first.`);
+          webAlert('Cannot delete', `This stream has ${count} active student(s). Move or deactivate them first.`);
           return;
         }
       } else if (kind === 'subject') {
@@ -201,7 +191,7 @@ export default function SchoolStructureScreen() {
         ]);
         const e = enr.count ?? 0; const a = asn.count ?? 0;
         if (e > 0 || a > 0) {
-          Alert.alert('Cannot delete', `Subject still has ${e} enrolment(s) and ${a} teacher assignment(s). Remove those first.`);
+          webAlert('Cannot delete', `Subject still has ${e} enrolment(s) and ${a} teacher assignment(s). Remove those first.`);
           return;
         }
       } else if (kind === 'grade') {
@@ -210,34 +200,30 @@ export default function SchoolStructureScreen() {
           .from('students').select('id', { count: 'exact', head: true })
           .eq('school_id', schoolId).eq('grade_id', row.id).eq('status', 'active');
         if ((count ?? 0) > 0) {
-          Alert.alert('Cannot delete', `This grade has ${count} active student(s) tied to it. Move them first.`);
+          webAlert('Cannot delete', `This grade has ${count} active student(s) tied to it. Move them first.`);
           return;
         }
       }
     } catch (e: any) {
-      Alert.alert('Error', `Could not verify dependents: ${e?.message ?? 'unknown error'}`);
+      webAlert('Error', `Could not verify dependents: ${e?.message ?? 'unknown error'}`);
       return;
     }
 
-    Alert.alert(
+    webConfirm(
       'Confirm delete',
       `Delete ${kind} "${row.name}"? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteEntity.mutateAsync({ kind, id: row.id });
-              haptics.success();
-            } catch (e: any) {
-              haptics.error();
-              Alert.alert('Error', e?.message ?? 'Could not delete.');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          await deleteEntity.mutateAsync({ kind, id: row.id });
+          haptics.success();
+        } catch (e: any) {
+          haptics.error();
+          webAlert('Error', e?.message ?? 'Could not delete.');
+        }
+      },
+      'Delete',
+      'Cancel',
+      true,
     );
   };
 

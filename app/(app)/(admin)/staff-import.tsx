@@ -451,7 +451,10 @@ export default function StaffImportScreen() {
               </View>
               <ThemedText variant="h3" style={{ color: Colors.semantic.success }}>Import Complete</ThemedText>
               <ThemedText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-                {results.filter((r) => !r.error).length} of {results.length} staff imported. Share credentials below.
+                {results.filter((r) => !r.error).length} of {results.length} staff imported successfully.
+              </ThemedText>
+              <ThemedText variant="caption" color="muted" style={{ textAlign: 'center', marginTop: -Spacing.sm }}>
+                Temporary passwords are saved. Go to Staff → Pending to view and share them any time.
               </ThemedText>
             </View>
 

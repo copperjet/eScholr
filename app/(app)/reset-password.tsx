@@ -39,6 +39,18 @@ export default function ResetPasswordScreen() {
       });
       if (updErr) throw updErr;
 
+      // Clear the stored temp password from the staff record.
+      const { data: { user: me } } = await supabase.auth.getUser();
+      if (me) {
+        const staffId = (me.app_metadata as any)?.staff_id;
+        if (staffId) {
+          await (supabase as any)
+            .from('staff')
+            .update({ temp_password: null, login_status: 'active' })
+            .eq('id', staffId);
+        }
+      }
+
       // Refresh the session so user_metadata is current locally.
       await supabase.auth.refreshSession();
 

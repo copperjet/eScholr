@@ -100,7 +100,11 @@ Deno.serve(async (req) => {
 
     // ── Link auth_user_id to staff / parent / student record ────────────
     if (staff_id) {
-      await admin.from("staff").update({ auth_user_id: authUserId }).eq("id", staff_id);
+      await admin.from("staff").update({
+        auth_user_id: authUserId,
+        login_status: "pending_login",
+        temp_password: tempPassword,
+      }).eq("id", staff_id);
     } else if (parent_id) {
       await admin.from("parents").update({ auth_user_id: authUserId }).eq("id", parent_id);
     } else if (student_id) {
