@@ -116,8 +116,12 @@ export default function LoginScreen() {
               style={styles.schoolLogo}
               resizeMode="contain"
             />
-          ) : displayName ? (
-            <ThemedText style={styles.schoolNameText}>{displayName}</ThemedText>
+          ) : null}
+          {displayName ? (
+            <View style={styles.schoolPill}>
+              <View style={styles.schoolDot} />
+              <ThemedText style={{ color: colors.brand.primary, fontWeight: '700', fontSize: 13 }}>{displayName}</ThemedText>
+            </View>
           ) : null}
           <ThemedText style={styles.heroTitle}>Welcome back</ThemedText>
           <ThemedText style={styles.heroSub}>Sign in to your eScholr account</ThemedText>

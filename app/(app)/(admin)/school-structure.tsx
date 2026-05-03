@@ -245,54 +245,74 @@ export default function SchoolStructureScreen() {
     if (!editor) return;
     if (!name.trim()) { setEditorError('Name is required.'); return; }
 
-    let payload: Record<string, any> = { name: name.trim() };
-    if (editor.kind === 'section') {
-      payload.code = name.trim().toUpperCase().slice(0, 3);
-    }
+    // In add mode, split by comma to support bulk creation
+    const isMulti = editor.mode === 'add';
+    const names: string[] = isMulti
+      ? name.split(',').map(n => n.trim()).filter(Boolean)
+      : [name.trim()];
+    if (names.length === 0) { setEditorError('Name is required.'); return; }
+
+    // Build shared extra fields
+    let extra: Record<string, any> = {};
     if (editor.kind === 'subject') {
-      payload.code = code.trim() || null;
-      payload.department = dept.trim() || null;
+      extra.code = code.trim() || null;
+      extra.department = dept.trim() || null;
       if (!sectionId) { setEditorError('Select a section.'); return; }
-      payload.section_id = sectionId;
+      extra.section_id = sectionId;
     }
     if (editor.kind === 'grade') {
-      const sectionId = editor.mode === 'add' ? (editor.parentSectionId ?? parent) : (editor.row as Grade)?.section_id;
-      if (!sectionId) { setEditorError('Select a section.'); return; }
-      payload.section_id = sectionId;
+      const resolvedSectionId = editor.mode === 'add' ? (editor.parentSectionId ?? parent) : (editor.row as Grade)?.section_id;
+      if (!resolvedSectionId) { setEditorError('Select a section.'); return; }
+      extra.section_id = resolvedSectionId;
     }
     if (editor.kind === 'stream') {
-      const gradeId = editor.mode === 'add' ? (editor.parentGradeId ?? parent) : (editor.row as Stream)?.grade_id;
-      if (!gradeId) { setEditorError('Select a grade.'); return; }
-      payload.grade_id = gradeId;
+      const resolvedGradeId = editor.mode === 'add' ? (editor.parentGradeId ?? parent) : (editor.row as Stream)?.grade_id;
+      if (!resolvedGradeId) { setEditorError('Select a grade.'); return; }
+      extra.grade_id = resolvedGradeId;
     }
 
     setEditorError('');
     haptics.medium();
     try {
       const db = supabase as any;
-      if (editor.kind === 'subject' && editor.mode === 'add') {
-        // Insert subject
-        const { data: newSub, error: subErr } = await db
-          .from('subjects')
-          .insert({ ...payload, school_id: schoolId })
-          .select('id')
-          .single();
+
+      if (editor.mode === 'edit') {
+        // Single edit — same as before
+        let payload: Record<string, any> = { name: names[0], ...extra };
+        if (editor.kind === 'section') payload.code = names[0].toUpperCase().slice(0, 3);
+        await saveEntity.mutateAsync({ kind: editor.kind, id: editor.row?.id, payload });
+
+      } else if (editor.kind === 'subject') {
+        // Bulk insert subjects then auto-assign to grades in section
+        const rows = names.map(n => ({ name: n, code: extra.code, department: extra.department, section_id: extra.section_id, school_id: schoolId }));
+        const { data: newSubs, error: subErr } = await db.from('subjects').insert(rows).select('id');
         if (subErr) throw subErr;
-        // Auto-assign to all grades in the selected section
-        const gradesInSection = (data?.grades ?? []).filter((g: Grade) => g.section_id === sectionId);
-        if (gradesInSection.length > 0) {
-          await db.from('grade_subject_assignments').insert(
-            gradesInSection.map((g: Grade) => ({ school_id: schoolId, grade_id: g.id, subject_id: newSub.id, is_mandatory: true }))
-          );
+        const gradesInSection = (data?.grades ?? []).filter((g: Grade) => g.section_id === extra.section_id);
+        if (gradesInSection.length > 0 && (newSubs ?? []).length > 0) {
+          const assignments: any[] = [];
+          for (const sub of newSubs) {
+            for (const g of gradesInSection) {
+              assignments.push({ school_id: schoolId, grade_id: g.id, subject_id: sub.id, is_mandatory: true });
+            }
+          }
+          await db.from('grade_subject_assignments').insert(assignments);
         }
         qc.invalidateQueries({ queryKey: ['school-structure', schoolId] });
+
       } else {
-        await saveEntity.mutateAsync({
-          kind: editor.kind,
-          id: editor.mode === 'edit' ? editor.row?.id : undefined,
-          payload,
-        });
+        // Bulk insert sections / grades / streams
+        const table = TABLE_BY_KIND[editor.kind];
+        const rows = names.map(n => ({
+          name: n,
+          ...(editor.kind === 'section' ? { code: n.toUpperCase().slice(0, 3) } : {}),
+          ...extra,
+          school_id: schoolId,
+        }));
+        const { error } = await db.from(table).insert(rows);
+        if (error) throw error;
+        qc.invalidateQueries({ queryKey: ['school-structure', schoolId] });
       }
+
       haptics.success();
       setEditor(null);
     } catch (e: any) {
@@ -314,7 +334,7 @@ export default function SchoolStructureScreen() {
           <ThemedText variant="label" color="muted" style={{ textTransform: 'uppercase', letterSpacing: 0.6 }}>
             Sections · Grades · Streams
           </ThemedText>
-          <ThemedText variant="caption" color="muted">Long-press any row to rename or delete.</ThemedText>
+          <ThemedText variant="caption" color="muted">Tap the pencil to edit or the bin icon to delete.</ThemedText>
 
           {isLoading ? (
             <Skeleton width="100%" height={140} radius={Radius.lg} />
@@ -323,17 +343,19 @@ export default function SchoolStructureScreen() {
           ) : (
             tree.map((section) => (
               <View key={section.id} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Pressable
-                  onLongPress={() => handleLongPress(section, 'section')}
-                  delayLongPress={350}
-                  style={styles.row}
-                >
+                <View style={styles.row}>
                   <Ionicons name="business-outline" size={18} color={colors.brand.primary} />
                   <ThemedText style={{ fontWeight: '700', fontSize: 15, marginLeft: Spacing.sm, flex: 1 }}>{section.name}</ThemedText>
-                  <TouchableOpacity onPress={() => openAdd('grade', section.id)} hitSlop={8}>
+                  <TouchableOpacity onPress={() => openEdit(section, 'section')} hitSlop={8} style={{ marginLeft: Spacing.sm }}>
+                    <Ionicons name="pencil-outline" size={18} color={colors.brand.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => confirmDelete(section, 'section')} hitSlop={8} style={{ marginLeft: Spacing.sm }}>
+                    <Ionicons name="trash-outline" size={18} color="#DC2626" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => openAdd('grade', section.id)} hitSlop={8} style={{ marginLeft: Spacing.sm }}>
                     <Ionicons name="add-circle-outline" size={20} color={colors.brand.primary} />
                   </TouchableOpacity>
-                </Pressable>
+                </View>
 
                 {section.grades.length === 0 ? (
                   <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.sm, paddingLeft: Spacing.lg }}>
@@ -342,29 +364,35 @@ export default function SchoolStructureScreen() {
                 ) : (
                   section.grades.map((g) => (
                     <View key={g.id} style={{ marginTop: Spacing.sm, paddingLeft: Spacing.lg }}>
-                      <Pressable
-                        onLongPress={() => handleLongPress(g, 'grade')}
-                        delayLongPress={350}
-                        style={styles.row}
-                      >
+                      <View style={styles.row}>
                         <Ionicons name="layers-outline" size={14} color={colors.textMuted} />
                         <ThemedText style={{ fontWeight: '600', marginLeft: Spacing.sm, flex: 1 }}>{g.name}</ThemedText>
                         <ThemedText variant="caption" color="muted">{g.streams.length}</ThemedText>
+                        <TouchableOpacity onPress={() => openEdit(g, 'grade')} hitSlop={8} style={{ marginLeft: Spacing.sm }}>
+                          <Ionicons name="pencil-outline" size={16} color={colors.brand.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => confirmDelete(g, 'grade')} hitSlop={8} style={{ marginLeft: Spacing.sm }}>
+                          <Ionicons name="trash-outline" size={16} color="#DC2626" />
+                        </TouchableOpacity>
                         <TouchableOpacity onPress={() => openAdd('stream', g.id)} hitSlop={8} style={{ marginLeft: Spacing.sm }}>
                           <Ionicons name="add-circle-outline" size={18} color={colors.brand.primary} />
                         </TouchableOpacity>
-                      </Pressable>
+                      </View>
                       {g.streams.length > 0 && (
                         <View style={styles.streamRow}>
                           {g.streams.map((st) => (
-                            <Pressable
+                            <View
                               key={st.id}
-                              onLongPress={() => handleLongPress(st, 'stream')}
-                              delayLongPress={350}
-                              style={[styles.streamChip, { backgroundColor: colors.brand.primary + '14' }]}
+                              style={[styles.streamChip, { backgroundColor: colors.brand.primary + '14', flexDirection: 'row', alignItems: 'center', gap: 4 }]}
                             >
                               <ThemedText variant="label" style={{ color: colors.brand.primary, fontSize: 11 }}>{st.name}</ThemedText>
-                            </Pressable>
+                              <TouchableOpacity onPress={() => openEdit(st, 'stream')} hitSlop={4}>
+                                <Ionicons name="pencil-outline" size={12} color={colors.brand.primary} />
+                              </TouchableOpacity>
+                              <TouchableOpacity onPress={() => confirmDelete(st, 'stream')} hitSlop={4}>
+                                <Ionicons name="trash-outline" size={12} color="#DC2626" />
+                              </TouchableOpacity>
+                            </View>
                           ))}
                         </View>
                       )}
@@ -381,7 +409,7 @@ export default function SchoolStructureScreen() {
           <ThemedText variant="label" color="muted" style={{ textTransform: 'uppercase', letterSpacing: 0.6 }}>
             Subjects ({data?.subjects.length ?? 0})
           </ThemedText>
-          <ThemedText variant="caption" color="muted">Tap to edit. Long-press to delete.</ThemedText>
+          <ThemedText variant="caption" color="muted">Tap the pencil to edit or the bin icon to delete.</ThemedText>
 
           {isLoading ? (
             <Skeleton width="100%" height={120} radius={Radius.lg} />
@@ -409,11 +437,8 @@ export default function SchoolStructureScreen() {
                     <View style={{ flex: 1, height: 1, backgroundColor: colors.border, marginLeft: 4 }} />
                   </View>
                   {group.items.map((sub) => (
-                    <Pressable
+                    <View
                       key={sub.id}
-                      onPress={() => openEdit(sub, 'subject')}
-                      onLongPress={() => handleLongPress(sub, 'subject')}
-                      delayLongPress={350}
                       style={[styles.subjectRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
                     >
                       <View style={{ flex: 1 }}>
@@ -423,8 +448,13 @@ export default function SchoolStructureScreen() {
                           {sub.department ? ` · ${sub.department}` : ''}
                         </ThemedText>
                       </View>
-                      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-                    </Pressable>
+                      <TouchableOpacity onPress={() => openEdit(sub, 'subject')} hitSlop={8} style={{ marginLeft: Spacing.sm }}>
+                        <Ionicons name="pencil-outline" size={18} color={colors.brand.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => confirmDelete(sub, 'subject')} hitSlop={8} style={{ marginLeft: Spacing.sm }}>
+                        <Ionicons name="trash-outline" size={18} color="#DC2626" />
+                      </TouchableOpacity>
+                    </View>
                   ))}
                 </View>
               ));
@@ -512,7 +542,18 @@ export default function SchoolStructureScreen() {
               </View>
             )}
 
-            <FormField label="Name *" value={name} onChangeText={(t) => { setName(t); setEditorError(''); }} iconLeft="create-outline" />
+            <FormField
+              label={editor.mode === 'add' ? 'Name(s) *' : 'Name *'}
+              placeholder={editor.mode === 'add' ? 'e.g. Form 1, Form 2, Form 3' : ''}
+              value={name}
+              onChangeText={(t) => { setName(t); setEditorError(''); }}
+              iconLeft="create-outline"
+            />
+            {editor.mode === 'add' && (
+              <ThemedText variant="caption" color="muted" style={{ marginTop: -Spacing.sm }}>
+                Separate multiple names with commas to add them all at once.
+              </ThemedText>
+            )}
 
             {editor.kind === 'subject' && (
               <>
