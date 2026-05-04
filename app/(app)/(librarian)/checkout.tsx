@@ -36,7 +36,9 @@ export default function CheckoutScreen() {
   const parsedCustom = customDueDate ? parseISO(customDueDate) : null;
   const isCustomValid = parsedCustom && isValid(parsedCustom);
   const effectiveDueDate = isCustomValid ? customDueDate : dueDate;
-  const bookUnavailable = book ? book.available_copies < 1 : false;
+  const availableCount = book?.copies?.filter((c) => c.status === 'available').length ?? 0;
+  const totalCount = book?.copies?.length ?? 0;
+  const bookUnavailable = availableCount < 1;
 
   const { data: patrons } = usePatronSearch(schoolId, patronQuery, patronType);
 
@@ -73,7 +75,7 @@ export default function CheckoutScreen() {
             <ThemedText variant="h3">{book.title}</ThemedText>
             {book.author && <ThemedText variant="bodySm" color="muted">{book.author}</ThemedText>}
             <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.xs }}>
-              Accession: {book.accession_number} · Available: {book.available_copies}/{book.total_copies}
+              Available: {availableCount}/{totalCount} copies
             </ThemedText>
           </Card>
         )}

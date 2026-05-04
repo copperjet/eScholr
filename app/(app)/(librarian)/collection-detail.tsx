@@ -43,16 +43,22 @@ export default function CollectionDetailScreen() {
         ) : (books ?? []).length === 0 ? (
           <EmptyState title="No books in this collection" description="Add books and assign them to this collection." />
         ) : (
-          (books ?? []).map((book) => (
-            <ListItem
-              key={book.id}
-              title={book.title}
-              subtitle={[book.author, book.accession_number].filter(Boolean).join(' · ')}
-              badge={{ label: book.status.replace('_', ' '), preset: book.status === 'available' ? 'success' : book.status === 'checked_out' ? 'warning' : 'error' }}
-              showChevron
-              onPress={() => router.push({ pathname: '/(app)/(librarian)/book-detail' as any, params: { bookId: book.id } })}
-            />
-          ))
+          (books ?? []).map((book) => {
+            const copies = book.copies ?? [];
+            const avail = copies.filter((c) => c.status === 'available').length;
+            const total = copies.length;
+            const status = avail > 0 ? 'available' : total > 0 ? 'checked_out' : 'lost';
+            return (
+              <ListItem
+                key={book.id}
+                title={book.title}
+                subtitle={book.author ?? undefined}
+                badge={{ label: `${avail}/${total} avail`, preset: status === 'available' ? 'success' : status === 'checked_out' ? 'warning' : 'error' }}
+                showChevron
+                onPress={() => router.push({ pathname: '/(app)/(librarian)/book-detail' as any, params: { bookId: book.id } })}
+              />
+            );
+          })
         )}
         <View style={{ height: 48 }} />
       </ScrollView>

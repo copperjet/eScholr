@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { useBookByBarcode } from '../../../hooks/useLibrary';
@@ -15,21 +15,31 @@ export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const barcodeMut = useBookByBarcode(schoolId);
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
 
   const handleBarCodeScanned = async ({ data }: { type: string; data: string }) => {
     if (scanned) return;
     setScanned(true);
 
+    // Return mode: pass raw barcode back to caller (e.g. book-form ISBN scan)
+    if (returnTo === 'book-form') {
+      router.replace({
+        pathname: '/(app)/(librarian)/book-form' as any,
+        params: { scannedIsbn: data },
+      });
+      return;
+    }
+
     try {
-      const book = await barcodeMut.mutateAsync(data);
-      if (!book) {
+      const foundBookId = await barcodeMut.mutateAsync(data);
+      if (!foundBookId) {
         Alert.alert('Not Found', `No book found with barcode "${data}"`, [
           { text: 'Scan Again', onPress: () => setScanned(false) },
         ]);
         return;
       }
       // Navigate to book detail
-      router.replace({ pathname: '/(app)/(librarian)/book-detail' as any, params: { bookId: book.id } });
+      router.replace({ pathname: '/(app)/(librarian)/book-detail' as any, params: { bookId: foundBookId } });
     } catch (e: any) {
       Alert.alert('Error', e.message ?? 'Lookup failed', [
         { text: 'Scan Again', onPress: () => setScanned(false) },

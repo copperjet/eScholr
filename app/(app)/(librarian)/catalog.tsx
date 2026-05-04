@@ -11,10 +11,8 @@ import {
 } from '../../../components/ui';
 import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
-import type { LibraryBookStatus } from '../../../types/database';
 
-const STATUS_OPTIONS: Array<{ key: LibraryBookStatus | 'all'; label: string; color: string }> = [
-  { key: 'all',         label: 'All',         color: '#6B7280' },
+const STATUS_OPTIONS: Array<{ key: string; label: string; color: string }> = [
   { key: 'available',   label: 'Available',   color: Colors.semantic.success },
   { key: 'checked_out', label: 'Checked Out', color: Colors.semantic.warning },
   { key: 'lost',        label: 'Lost',        color: Colors.semantic.error },
@@ -27,24 +25,25 @@ export default function CatalogScreen() {
   const schoolId = user?.schoolId ?? '';
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<LibraryBookStatus | 'all'>('all');
   const [collectionFilter, setCollectionFilter] = useState<string | undefined>(undefined);
 
   const filters: BookFilters = {
     search: search.length >= 2 ? search : undefined,
-    status: statusFilter,
     collectionId: collectionFilter,
   };
 
   const { data: books, isLoading, isError, refetch, isFetching } = useLibraryBooks(schoolId, filters);
   const { data: collections } = useLibraryCollections(schoolId);
 
-  const statusLabels = STATUS_OPTIONS.map((s) => s.label);
   const collectionLabels = ['All Collections', ...(collections ?? []).map((c) => c.name)];
 
-  const statusBadge = useCallback((status: string) => {
+  const statusBadge = useCallback((book: any) => {
+    const copies = book.copies ?? [];
+    const avail = copies.filter((c: any) => c.status === 'available').length;
+    const total = copies.length;
+    const status = avail > 0 ? 'available' : total > 0 ? 'checked_out' : 'lost';
     const meta = STATUS_OPTIONS.find((s) => s.key === status);
-    return meta ? { label: meta.label, preset: status === 'available' ? 'success' : status === 'checked_out' ? 'warning' : 'error' } : undefined;
+    return meta ? { label: `${avail}/${total} avail`, preset: status === 'available' ? 'success' : status === 'checked_out' ? 'warning' : 'error' } : undefined;
   }, []);
 
   if (isError) {
@@ -73,16 +72,6 @@ export default function CatalogScreen() {
           placeholder="Search title, author, ISBN, accession..."
         />
       </View>
-
-      {/* Status filter */}
-      <FilterChipRow
-        options={statusLabels}
-        selected={STATUS_OPTIONS.find((s) => s.key === statusFilter)?.label ?? 'All'}
-        onSelect={(label) => {
-          const match = STATUS_OPTIONS.find((s) => s.label === label);
-          setStatusFilter(match?.key ?? 'all');
-        }}
-      />
 
       {/* Collection filter */}
       {(collections ?? []).length > 0 && (
@@ -123,9 +112,9 @@ export default function CatalogScreen() {
               <ListItem
                 key={book.id}
                 title={book.title}
-                subtitle={[book.author, book.accession_number].filter(Boolean).join(' · ')}
+                subtitle={book.author ?? undefined}
                 caption={book.collection_name ?? undefined}
-                badge={statusBadge(book.status)}
+                badge={statusBadge(book)}
                 showChevron
                 onPress={() => router.push({ pathname: '/(app)/(librarian)/book-detail' as any, params: { bookId: book.id } })}
               />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, ScrollView, StyleSheet, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -16,9 +16,10 @@ import { Colors } from '../../../constants/Colors';
 export default function BookFormScreen() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
-  const { bookId } = useLocalSearchParams<{ bookId?: string }>();
+  const { bookId, scannedIsbn } = useLocalSearchParams<{ bookId?: string; scannedIsbn?: string }>();
   const schoolId = user?.schoolId ?? '';
   const isEdit = !!bookId;
+  const processedScan = useRef<string | null>(null);
 
   const { data: existing } = useLibraryBook(bookId ?? null);
   const { data: collections } = useLibraryCollections(schoolId);
@@ -30,8 +31,6 @@ export default function BookFormScreen() {
   const [isbn, setIsbn] = useState('');
   const [publisher, setPublisher] = useState('');
   const [publishYear, setPublishYear] = useState('');
-  const [accessionNumber, setAccessionNumber] = useState('');
-  const [barcode, setBarcode] = useState('');
   const [collectionId, setCollectionId] = useState<string>('');
   const [totalCopies, setTotalCopies] = useState('1');
   const [notes, setNotes] = useState('');
@@ -44,21 +43,29 @@ export default function BookFormScreen() {
       setIsbn(existing.isbn ?? '');
       setPublisher(existing.publisher ?? '');
       setPublishYear(existing.publish_year ? String(existing.publish_year) : '');
-      setAccessionNumber(existing.accession_number);
-      setBarcode(existing.barcode ?? '');
       setCollectionId(existing.collection_id ?? '');
-      setTotalCopies(String(existing.total_copies));
+      setTotalCopies(String(existing.copies?.length ?? 1));
       setNotes(existing.notes ?? '');
     }
   }, [existing, isEdit]);
 
-  const lookupISBN = async () => {
-    if (!isbn.trim()) return;
+  useEffect(() => {
+    if (scannedIsbn && processedScan.current !== scannedIsbn && !isEdit) {
+      processedScan.current = scannedIsbn;
+      const s = String(scannedIsbn).trim();
+      setIsbn(s);
+      lookupISBN(s);
+    }
+  }, [scannedIsbn, isEdit]);
+
+  const lookupISBN = async (isbnToLookup?: string) => {
+    const target = (isbnToLookup ?? isbn).trim();
+    if (!target) return;
     setIsbnLoading(true);
     try {
-      const res = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn.trim()}&format=json&jscmd=data`);
+      const res = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${target}&format=json&jscmd=data`);
       const json = await res.json();
-      const entry = json[`ISBN:${isbn.trim()}`];
+      const entry = json[`ISBN:${target}`];
       if (!entry) {
         Alert.alert('Not Found', 'No book found for this ISBN.');
         return;
@@ -77,16 +84,18 @@ export default function BookFormScreen() {
     }
   };
 
+  const handleScanIsbn = () => {
+    router.push({
+      pathname: '/(app)/(librarian)/scan' as any,
+      params: { returnTo: 'book-form' },
+    });
+  };
+
   const handleSave = async () => {
     if (!title.trim()) {
       Alert.alert('Required', 'Title is required.');
       return;
     }
-    if (!accessionNumber.trim()) {
-      Alert.alert('Required', 'Accession number is required.');
-      return;
-    }
-
     try {
       if (isEdit) {
         await updateMut.mutateAsync({
@@ -96,10 +105,7 @@ export default function BookFormScreen() {
           isbn: isbn.trim() || undefined,
           publisher: publisher.trim() || undefined,
           publishYear: publishYear ? parseInt(publishYear, 10) : undefined,
-          accessionNumber: accessionNumber.trim(),
-          barcode: barcode.trim() || accessionNumber.trim(),
           collectionId: collectionId || null,
-          totalCopies: parseInt(totalCopies, 10) || 1,
           notes: notes.trim() || undefined,
         });
       } else {
@@ -109,8 +115,6 @@ export default function BookFormScreen() {
           isbn: isbn.trim() || undefined,
           publisher: publisher.trim() || undefined,
           publishYear: publishYear ? parseInt(publishYear, 10) : undefined,
-          accessionNumber: accessionNumber.trim(),
-          barcode: barcode.trim() || accessionNumber.trim(),
           collectionId: collectionId || undefined,
           totalCopies: parseInt(totalCopies, 10) || 1,
           notes: notes.trim() || undefined,
@@ -131,16 +135,24 @@ export default function BookFormScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Card style={styles.card}>
-          {/* ISBN + Lookup */}
+          {/* ISBN + Scan + Lookup */}
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.sm }}>
             <View style={{ flex: 1 }}>
               <FormField label="ISBN" value={isbn} onChangeText={setIsbn} placeholder="e.g. 978-0-13-468599-1" />
             </View>
             <Button
+              label=""
+              variant="secondary"
+              size="sm"
+              onPress={handleScanIsbn}
+              iconLeft={<Ionicons name="scan-outline" size={18} color={colors.brand.primary} />}
+              style={{ marginBottom: Spacing.sm, width: 44 }}
+            />
+            <Button
               label={isbnLoading ? '...' : 'Lookup'}
               variant="tonal"
               size="sm"
-              onPress={lookupISBN}
+              onPress={() => lookupISBN()}
               disabled={isbnLoading || !isbn.trim()}
               style={{ marginBottom: Spacing.sm }}
             />
@@ -150,9 +162,9 @@ export default function BookFormScreen() {
           <FormField label="Author" value={author} onChangeText={setAuthor} placeholder="Author name" />
           <FormField label="Publisher" value={publisher} onChangeText={setPublisher} placeholder="Publisher" />
           <FormField label="Publish Year" value={publishYear} onChangeText={setPublishYear} placeholder="e.g. 2023" keyboardType="numeric" />
-          <FormField label="Accession Number *" value={accessionNumber} onChangeText={setAccessionNumber} placeholder="Unique accession #" />
-          <FormField label="Barcode" value={barcode} onChangeText={setBarcode} placeholder="Leave blank to use accession #" />
-          <FormField label="Total Copies" value={totalCopies} onChangeText={setTotalCopies} placeholder="1" keyboardType="numeric" />
+          {!isEdit && (
+            <FormField label="Total Copies" value={totalCopies} onChangeText={setTotalCopies} placeholder="1" keyboardType="numeric" />
+          )}
 
           {/* Collection picker */}
           {(collections ?? []).length > 0 && (

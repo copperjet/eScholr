@@ -12,7 +12,6 @@ import {
 } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
-import Barcode from '../../../components/modules/Barcode';
 
 const STATUS_COLORS: Record<string, string> = {
   available: Colors.semantic.success,
@@ -57,7 +56,6 @@ export default function BookDetailScreen() {
     try {
       await checkInMut.mutateAsync({
         transactionId: txId,
-        bookId: bookId!,
         staffId: user?.staffId ?? '',
       });
     } catch (e: any) {
@@ -106,18 +104,15 @@ export default function BookDetailScreen() {
                   {book.author && <ThemedText variant="body" color="muted">{book.author}</ThemedText>}
                 </View>
                 <Badge
-                  label={book.status.replace('_', ' ')}
-                  preset={book.status === 'available' ? 'success' : book.status === 'checked_out' ? 'warning' : 'error'}
+                  label={book.copies && book.copies.some((c) => c.status === 'available') ? 'available' : 'checked out'}
+                  preset={book.copies && book.copies.some((c) => c.status === 'available') ? 'success' : 'warning'}
                 />
               </View>
 
               <View style={styles.metaGrid}>
                 {book.isbn && <MetaItem label="ISBN" value={book.isbn} />}
-                <MetaItem label="Accession #" value={book.accession_number} />
                 {book.publisher && <MetaItem label="Publisher" value={book.publisher} />}
                 {book.publish_year && <MetaItem label="Year" value={String(book.publish_year)} />}
-                <MetaItem label="Total Copies" value={String(book.total_copies)} />
-                <MetaItem label="Available" value={String(book.available_copies)} />
                 {book.collection_name && <MetaItem label="Collection" value={book.collection_name} />}
               </View>
 
@@ -128,20 +123,27 @@ export default function BookDetailScreen() {
               )}
             </Card>
 
-            {/* ── Barcode ── */}
-            {book.barcode && (
-              <Card style={styles.card}>
-                <ThemedText variant="h4" style={{ marginBottom: Spacing.sm }}>Barcode</ThemedText>
-                <View style={{ alignItems: 'center' }}>
-                  <Barcode value={book.barcode} height={60} />
-                  <ThemedText variant="mono" style={{ marginTop: Spacing.xs }}>{book.barcode}</ThemedText>
-                </View>
-              </Card>
+            {/* ── Copies ── */}
+            <SectionHeader title={`Copies (${book.copies?.length ?? 0})`} />
+            {(book.copies ?? []).length === 0 ? (
+              <EmptyState title="No copies" description="No copies registered for this title." />
+            ) : (
+              (book.copies ?? []).map((copy) => (
+                <ListItem
+                  key={copy.id}
+                  title={copy.accession_number}
+                  subtitle={copy.barcode ? `Barcode: ${copy.barcode}` : undefined}
+                  badge={{
+                    label: copy.status.replace('_', ' '),
+                    preset: copy.status === 'available' ? 'success' : copy.status === 'checked_out' ? 'warning' : 'error',
+                  }}
+                />
+              ))
             )}
 
             {/* ── Actions ── */}
             <View style={styles.actions}>
-              {book.status === 'available' && (
+              {book.copies && book.copies.some((c) => c.status === 'available') && (
                 <Button
                   label="Check Out"
                   onPress={() => router.push({ pathname: '/(app)/(librarian)/checkout' as any, params: { bookId: book.id } })}

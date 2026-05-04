@@ -64,7 +64,7 @@ export default function PatronDetailScreen() {
                     <ListItem
                       key={tx.id}
                       title={tx.book_title ?? '—'}
-                      subtitle={`Due: ${format(new Date(tx.due_date), 'dd MMM yyyy')}${overdue ? ' · OVERDUE' : ''}`}
+                      subtitle={`${tx.accession_number} · Due: ${format(new Date(tx.due_date), 'dd MMM yyyy')}${overdue ? ' · OVERDUE' : ''}`}
                       leading={<Ionicons name={overdue ? 'alert-circle' : 'book'} size={20} color={overdue ? Colors.semantic.error : Colors.semantic.warning} />}
                       showChevron
                       onPress={() => router.push({ pathname: '/(app)/(librarian)/book-detail' as any, params: { bookId: tx.book_id } })}
@@ -81,7 +81,7 @@ export default function PatronDetailScreen() {
                   <ListItem
                     key={tx.id}
                     title={tx.book_title ?? '—'}
-                    subtitle={`Out: ${format(new Date(tx.checked_out_at), 'dd MMM')} → ${tx.checked_in_at ? format(new Date(tx.checked_in_at), 'dd MMM yyyy') : '—'}`}
+                    subtitle={`${tx.accession_number} · Out: ${format(new Date(tx.checked_out_at), 'dd MMM')} → ${tx.checked_in_at ? format(new Date(tx.checked_in_at), 'dd MMM yyyy') : '—'}`}
                     leading={<Ionicons name="checkmark-circle" size={20} color={Colors.semantic.success} />}
                     onPress={() => router.push({ pathname: '/(app)/(librarian)/book-detail' as any, params: { bookId: tx.book_id } })}
                   />

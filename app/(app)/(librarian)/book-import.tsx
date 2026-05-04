@@ -19,8 +19,6 @@ interface ParsedRow {
   isbn: string;
   publisher: string;
   publishYear: string;
-  accessionNumber: string;
-  barcode: string;
 }
 
 function parseCSV(raw: string): ParsedRow[] {
@@ -41,10 +39,8 @@ function parseCSV(raw: string): ParsedRow[] {
   const isbnIdx      = colIdx(['isbn']);
   const publisherIdx = colIdx(['publisher']);
   const yearIdx      = colIdx(['year', 'publish_year', 'publishyear', 'publish year']);
-  const accIdx       = colIdx(['accession', 'accession_number', 'accessionnumber', 'accession number', 'accession #']);
-  const barcodeIdx   = colIdx(['barcode']);
 
-  if (titleIdx < 0 || accIdx < 0) return [];
+  if (titleIdx < 0) return [];
 
   return lines.slice(1).map((line) => {
     const cols = line.split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
@@ -54,10 +50,8 @@ function parseCSV(raw: string): ParsedRow[] {
       isbn:            isbnIdx >= 0 ? cols[isbnIdx] ?? '' : '',
       publisher:       publisherIdx >= 0 ? cols[publisherIdx] ?? '' : '',
       publishYear:     yearIdx >= 0 ? cols[yearIdx] ?? '' : '',
-      accessionNumber: cols[accIdx] ?? '',
-      barcode:         barcodeIdx >= 0 ? cols[barcodeIdx] ?? '' : '',
     };
-  }).filter((r) => r.title && r.accessionNumber);
+  }).filter((r) => r.title);
 }
 
 export default function BookImportScreen() {
@@ -79,7 +73,7 @@ export default function BookImportScreen() {
       const content = await FileSystem.readAsStringAsync(asset.uri);
       const parsed = parseCSV(content);
       if (parsed.length === 0) {
-        Alert.alert('Invalid CSV', 'CSV must have at least "title" and "accession" or "accession_number" columns.');
+        Alert.alert('Invalid CSV', 'CSV must have at least a "title" column.');
         return;
       }
       setRows(parsed);
@@ -98,15 +92,13 @@ export default function BookImportScreen() {
         isbn: r.isbn || undefined,
         publisher: r.publisher || undefined,
         publishYear: r.publishYear ? parseInt(r.publishYear, 10) : undefined,
-        accessionNumber: r.accessionNumber,
-        barcode: r.barcode || undefined,
         staffId: user?.staffId ?? '',
       }));
       const res = await importMut.mutateAsync(payload);
       setResult({ success: res.count, errors: 0 });
       setRows([]);
     } catch (e: any) {
-      Alert.alert('Import Error', e.message ?? 'Import failed. Check for duplicate accession numbers.');
+      Alert.alert('Import Error', e.message ?? 'Import failed.');
     }
   };
 
@@ -119,11 +111,10 @@ export default function BookImportScreen() {
         <Card style={styles.card}>
           <ThemedText variant="h4" style={{ marginBottom: Spacing.sm }}>CSV Format</ThemedText>
           <ThemedText variant="bodySm" color="muted">
-            Your CSV must include columns: <ThemedText variant="mono">title</ThemedText> and{' '}
-            <ThemedText variant="mono">accession_number</ThemedText>.
+            Your CSV must include a <ThemedText variant="mono">title</ThemedText> column.
           </ThemedText>
           <ThemedText variant="bodySm" color="muted" style={{ marginTop: Spacing.xs }}>
-            Optional columns: author, isbn, publisher, year, barcode.
+            Optional columns: author, isbn, publisher, year. Accession numbers and barcodes are auto-generated.
           </ThemedText>
         </Card>
 
@@ -149,7 +140,7 @@ export default function BookImportScreen() {
               {rows.slice(0, 5).map((r, i) => (
                 <View key={i} style={styles.previewRow}>
                   <ThemedText variant="bodySm" numberOfLines={1} style={{ flex: 1 }}>{r.title}</ThemedText>
-                  <ThemedText variant="caption" color="muted">{r.accessionNumber}</ThemedText>
+                  {r.author ? <ThemedText variant="caption" color="muted">{r.author}</ThemedText> : null}
                 </View>
               ))}
               {rows.length > 5 && (

@@ -215,6 +215,7 @@ export interface Inquiry {
 
 export type LibraryBookStatus = 'available' | 'checked_out' | 'lost' | 'damaged' | 'reserved';
 export type LibraryTransactionStatus = 'active' | 'returned' | 'overdue' | 'lost';
+export type LibraryCopyStatus = 'available' | 'checked_out' | 'lost' | 'damaged';
 
 export interface LibraryCollection {
   id: string;
@@ -236,24 +237,33 @@ export interface LibraryBook {
   publisher: string | null;
   publish_year: number | null;
   cover_url: string | null;
-  accession_number: string;
-  barcode: string | null;
-  status: LibraryBookStatus;
   collection_id: string | null;
-  total_copies: number;
-  available_copies: number;
   added_by: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
   // joined fields
   collection_name?: string;
+  copies?: LibraryBookCopy[];
+}
+
+export interface LibraryBookCopy {
+  id: string;
+  school_id: string;
+  book_id: string;
+  accession_number: string;
+  barcode: string | null;
+  status: LibraryCopyStatus;
+  condition_notes: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface LibraryTransaction {
   id: string;
   school_id: string;
   book_id: string;
+  copy_id: string | null;
   borrower_type: 'staff' | 'student';
   borrower_staff_id: string | null;
   borrower_student_id: string | null;
@@ -301,6 +311,7 @@ export interface Database {
       inquiries:           { Row: Inquiry;            Insert: Partial<Inquiry>;           Update: Partial<Inquiry> };
       library_collections: { Row: LibraryCollection;  Insert: Partial<LibraryCollection>; Update: Partial<LibraryCollection> };
       library_books:       { Row: LibraryBook;        Insert: Partial<LibraryBook>;       Update: Partial<LibraryBook> };
+      library_book_copies: { Row: LibraryBookCopy;     Insert: Partial<LibraryBookCopy>;    Update: Partial<LibraryBookCopy> };
       library_transactions:{ Row: LibraryTransaction; Insert: Partial<LibraryTransaction>;Update: Partial<LibraryTransaction> };
       library_settings:    { Row: LibrarySettings;    Insert: Partial<LibrarySettings>;   Update: Partial<LibrarySettings> };
     };
@@ -315,9 +326,14 @@ export interface Database {
       get_class_average:      { Args: { p_subject_id: string; p_stream_id: string; p_semester_id: string; p_assessment_type: string }; Returns: number };
       get_library_dashboard_stats: { Args: { p_school_id: string }; Returns: unknown };
       get_overdue_books:           { Args: { p_school_id: string }; Returns: unknown[] };
-      library_check_out:           { Args: { p_school_id: string; p_book_id: string; p_borrower_type: string; p_borrower_id: string; p_due_date: string; p_staff_id: string; p_notes?: string }; Returns: string };
-      library_check_in:            { Args: { p_school_id: string; p_transaction_id: string; p_book_id: string; p_staff_id: string; p_notes?: string }; Returns: void };
-      library_mark_overdue:        { Args: Record<string, never>; Returns: number };
+      library_check_out_copy:    { Args: { p_school_id: string; p_book_id: string; p_borrower_type: string; p_borrower_id: string; p_due_date: string; p_staff_id: string; p_notes?: string }; Returns: string };
+      library_check_in_copy:     { Args: { p_school_id: string; p_transaction_id: string; p_staff_id: string; p_notes?: string }; Returns: void };
+      library_mark_overdue:      { Args: Record<string, never>; Returns: number };
+      library_create_book:       { Args: { p_school_id: string; p_title: string; p_author?: string; p_isbn?: string; p_publisher?: string; p_publish_year?: number; p_cover_url?: string; p_collection_id?: string; p_notes?: string; p_total_copies?: number; p_staff_id: string; p_barcode_prefix?: string }; Returns: string };
+      library_update_book:       { Args: { p_book_id: string; p_school_id: string; p_title?: string; p_author?: string; p_isbn?: string; p_publisher?: string; p_publish_year?: number; p_cover_url?: string; p_collection_id?: string; p_notes?: string }; Returns: void };
+      library_delete_book:       { Args: { p_book_id: string; p_school_id: string }; Returns: void };
+      library_find_by_barcode:   { Args: { p_school_id: string; p_barcode: string }; Returns: string };
+      library_get_book_copies:   { Args: { p_book_id: string }; Returns: unknown[] };
     };
     Enums: {};
   };

@@ -34,12 +34,11 @@ export default function LoansScreen() {
   const checkInMut = useCheckInBook(schoolId);
   const [returningId, setReturningId] = useState<string | null>(null);
 
-  const handleCheckIn = useCallback(async (txId: string, bookId: string) => {
+  const handleCheckIn = useCallback(async (txId: string) => {
     setReturningId(txId);
     try {
       await checkInMut.mutateAsync({
         transactionId: txId,
-        bookId,
         staffId: user?.staffId ?? '',
       });
     } catch (e: any) {
@@ -95,7 +94,7 @@ export default function LoansScreen() {
             return (
               <ListItem
                 title={tx.book_title ?? '—'}
-                subtitle={`${tx.borrower_name} · Due: ${format(new Date(tx.due_date), 'dd MMM yyyy')}`}
+                subtitle={`${tx.borrower_name} · ${tx.accession_number} · Due: ${format(new Date(tx.due_date), 'dd MMM yyyy')}`}
                 caption={
                   tx.checked_in_at
                     ? `Returned ${format(new Date(tx.checked_in_at), 'dd MMM yyyy')}`
@@ -116,7 +115,7 @@ export default function LoansScreen() {
                       label="Return"
                       variant="tonal"
                       size="sm"
-                      onPress={() => handleCheckIn(tx.id, tx.book_id)}
+                      onPress={() => handleCheckIn(tx.id)}
                       loading={returningId === tx.id}
                       disabled={returningId !== null}
                     />
