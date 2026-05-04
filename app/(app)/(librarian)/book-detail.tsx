@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, Pressable, Alert, RefreshControl } from 'react-native';
+import { View, ScrollView, StyleSheet, SafeAreaView, Pressable, Alert, RefreshControl, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { format } from 'date-fns';
@@ -32,20 +32,30 @@ export default function BookDetailScreen() {
   const deleteMut = useDeleteBook(schoolId);
   const checkInMut = useCheckInBook(schoolId);
 
+  const doDelete = async () => {
+    try {
+      await deleteMut.mutateAsync(bookId!);
+      router.back();
+    } catch (e: any) {
+      if (Platform.OS === 'web') {
+        window.alert(e.message ?? 'Could not delete book');
+      } else {
+        Alert.alert('Error', e.message ?? 'Could not delete book');
+      }
+    }
+  };
+
   const handleDelete = () => {
-    Alert.alert('Delete Book', `Are you sure you want to delete "${book?.title}"?`, [
+    const msg = `Are you sure you want to delete "${book?.title}"?`;
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(msg)) {
+        doDelete();
+      }
+      return;
+    }
+    Alert.alert('Delete Book', msg, [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteMut.mutateAsync(bookId!);
-            router.back();
-          } catch (e: any) {
-            Alert.alert('Error', e.message ?? 'Could not delete book');
-          }
-        },
-      },
+      { text: 'Delete', style: 'destructive', onPress: doDelete },
     ]);
   };
 
