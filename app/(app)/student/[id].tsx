@@ -27,8 +27,8 @@ import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typo
 import { Colors, resolveAttBg, resolveAttColor } from '../../../constants/Colors';
 import type { AttendanceStatus } from '../../../types/database';
 
-const TABS = ['Overview', 'Marks', 'Attendance', 'Reports', 'Day Book', 'Fees'] as const;
-type Tab = typeof TABS[number];
+const ALL_TABS = ['Overview', 'Marks', 'Attendance', 'Reports', 'Day Book', 'Fees'] as const;
+type Tab = typeof ALL_TABS[number];
 
 function useStudentProfile(studentId: string, schoolId: string) {
   return useQuery({
@@ -153,6 +153,10 @@ export default function StudentProfileScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
 
   const schoolId = user?.schoolId ?? '';
+
+  // Hide Fees tab from teacher roles (hrt, st)
+  const isTeacher = user?.activeRole === 'hrt' || user?.activeRole === 'st';
+  const TABS = isTeacher ? ALL_TABS.filter(t => t !== 'Fees') : ALL_TABS;
 
   const profileQuery = useStudentProfile(studentId ?? '', schoolId);
   const marksQuery = useStudentMarks(studentId ?? '', schoolId);

@@ -67,11 +67,6 @@ export default function STHome() {
     if (h < 12) return 'Good morning'; if (h < 17) return 'Good afternoon'; return 'Good evening';
   }, []);
 
-  // Overall completion across all subjects
-  const totalExpected = (data ?? []).reduce((s: number, a: any) => s + a.expected, 0);
-  const totalMarked   = (data ?? []).reduce((s: number, a: any) => s + a.markedCount, 0);
-  const overallPct    = totalExpected > 0 ? Math.round((totalMarked / totalExpected) * 100) : 0;
-
   if (isError) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
@@ -112,24 +107,6 @@ export default function STHome() {
             <Avatar name={user?.fullName ?? 'T'} photoUrl={school?.logo_url} size={44} />
           </Pressable>
         </View>
-
-        {/* ── Hero progress card ── */}
-        {!isLoading && (data ?? []).length > 0 && (
-          <View style={[styles.heroCard, { backgroundColor: colors.brand.primary }, Shadow.lg]}>
-            <ThemedText style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '700', letterSpacing: 0.7, textTransform: 'uppercase' }}>
-              Marks Progress — This Semester
-            </ThemedText>
-            <ThemedText style={{ color: '#fff', fontSize: 38, fontWeight: '700', letterSpacing: -0.5, marginTop: 4 }}>
-              {overallPct}%
-            </ThemedText>
-            <View style={{ marginTop: Spacing.sm }}>
-              <ProgressBar value={totalMarked} max={totalExpected || 1} color="rgba(255,255,255,0.9)" />
-            </View>
-            <ThemedText style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: Spacing.sm }}>
-              {totalMarked} of {totalExpected} marks entered across {data?.length} subject{data?.length !== 1 ? 's' : ''}
-            </ThemedText>
-          </View>
-        )}
 
         {/* ── Subjects list ── */}
         <SectionHeader title="My Subjects" />
@@ -198,12 +175,6 @@ export default function STHome() {
 const styles = StyleSheet.create({
   safe:    { flex: 1 },
   topBar:  { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: Spacing.screen, paddingTop: Spacing.xl, paddingBottom: Spacing.base, gap: Spacing.md },
-  heroCard: {
-    marginHorizontal: Spacing.screen,
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
-    marginBottom: Spacing.sm,
-  },
   assignCard: { borderRadius: Radius.lg, padding: Spacing.base },
   cardTop:    { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.sm },
 });

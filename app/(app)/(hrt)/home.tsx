@@ -8,7 +8,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, Card, Avatar, Badge, ProgressBar,
+  ThemedText, Card, Avatar, Badge,
   ListItemSkeleton, ErrorState, SectionHeader, StatCard, IconChip,
 } from '../../../components/ui';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
@@ -206,29 +206,6 @@ export default function HRTHome() {
           ))}
         </View>
 
-        {/* ── Marks progress ── */}
-        <SectionHeader title="Marks Progress" />
-        <Card variant="elevated" style={styles.card}>
-          {isLoading ? (
-            <ListItemSkeleton />
-          ) : (
-            <View style={{ gap: Spacing.sm }}>
-              <View style={styles.marksRow}>
-                <ThemedText variant="h4">FA1 · {data?.firstSubjectName ?? '—'}</ThemedText>
-                <ThemedText variant="bodySm" color="muted">
-                  {data?.marksEntered ?? 0} / {data?.totalStudents ?? 0}
-                </ThemedText>
-              </View>
-              <ProgressBar value={data?.marksEntered ?? 0} max={data?.totalStudents || 1} color={colors.brand.primary} />
-              <ThemedText variant="caption" color="muted">
-                {data?.semesterEndDate
-                  ? `Marks window closes ${format(new Date(data.semesterEndDate), 'dd/MM/yy')}`
-                  : 'Marks window open'}
-              </ThemedText>
-            </View>
-          )}
-        </Card>
-
         {/* ── Day Book ── */}
         <SectionHeader title="Day Book" action="See all" onAction={() => router.push('/(app)/(hrt)/daybook' as any)} />
 
@@ -327,5 +304,4 @@ const styles = StyleSheet.create({
   qaRow:         { flexDirection: 'row', paddingHorizontal: Spacing.screen, gap: Spacing.sm },
   qaBtn:         { flex: 1, alignItems: 'center', paddingVertical: Spacing.md, borderRadius: Radius.lg },
   card:          { marginHorizontal: Spacing.screen, marginBottom: Spacing.sm },
-  marksRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 });

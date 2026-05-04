@@ -37,6 +37,8 @@ const ALL_ROLES: { value: UserRole; label: string }[] = [
   { value: 'st',                 label: 'Subject Teacher' },
   { value: 'finance',            label: 'Finance' },
   { value: 'front_desk',         label: 'Front Desk' },
+  { value: 'hr',                 label: 'Human Resources' },
+  { value: 'librarian',          label: 'Librarian' },
 ];
 
 const ROLE_LABELS: Record<string, string> = {

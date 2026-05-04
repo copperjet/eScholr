@@ -38,7 +38,7 @@ const ROLE_NAV_ITEMS: Record<string, NavItem[]> = {
     { path: '/(app)/(admin)/more', label: 'More', icon: 'menu-outline' },
   ],
   hrt: [
-    { path: '/(app)/(hrt)', label: 'Dashboard', icon: 'grid-outline' },
+    { path: '/(app)/(hrt)/home', label: 'Dashboard', icon: 'grid-outline' },
     { path: '/(app)/(hrt)/students', label: 'My Class', icon: 'people-outline' },
     { path: '/(app)/(hrt)/attendance', label: 'Attendance', icon: 'calendar-outline' },
     { path: '/(app)/(hrt)/marks', label: 'Marks', icon: 'create-outline' },
@@ -47,7 +47,7 @@ const ROLE_NAV_ITEMS: Record<string, NavItem[]> = {
     { path: '/(app)/(hrt)/more', label: 'More', icon: 'menu-outline' },
   ],
   st: [
-    { path: '/(app)/(st)', label: 'Dashboard', icon: 'grid-outline' },
+    { path: '/(app)/(st)/home', label: 'Dashboard', icon: 'grid-outline' },
     { path: '/(app)/(st)/students', label: 'Students', icon: 'people-outline' },
     { path: '/(app)/(st)/marks', label: 'Marks', icon: 'create-outline' },
     { path: '/(app)/(st)/homework', label: 'Homework', icon: 'book-outline' },
@@ -117,7 +117,10 @@ export function Sidebar() {
     if (path === '/(app)/(admin)' && pathname?.includes('(admin)') && !pathname?.includes('/students') && !pathname?.includes('/staff/')) {
       return true;
     }
-    if (path === '/(app)/(hrt)' && pathname?.includes('(hrt)') && !pathname?.includes('/class') && !pathname?.includes('/attendance')) {
+    if (path === '/(app)/(hrt)/home' && pathname?.includes('(hrt)/home')) {
+      return true;
+    }
+    if (path === '/(app)/(st)/home' && pathname?.includes('(st)/home')) {
       return true;
     }
     return pathname?.startsWith(path) ?? false;

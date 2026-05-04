@@ -584,7 +584,9 @@ const styles = StyleSheet.create({
   pill: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
-    borderRadius: Radius.full,
+    borderRadius: Radius.lg,
+    height: 32,
+    justifyContent: 'center' as const,
   },
   skeleton: { marginHorizontal: Spacing.base, marginBottom: Spacing.md },
   list: { padding: Spacing.base, gap: Spacing.md, paddingBottom: TAB_BAR_HEIGHT },

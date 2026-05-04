@@ -346,9 +346,18 @@ export default function AttendanceScreen() {
       register_locked: true,
     }));
 
+    // Delete existing records for today first, then insert fresh —
+    // avoids PostgREST "columns" query-param 400 on older instances.
+    await (supabase as any)
+      .from('attendance_records')
+      .delete()
+      .eq('school_id', user?.schoolId)
+      .eq('stream_id', data.streamId)
+      .eq('date', getToday());
+
     const { data: upserted, error } = await (supabase as any)
       .from('attendance_records')
-      .upsert(records as any, { onConflict: 'student_id,date' })
+      .insert(records as any)
       .select('id, student_id, status');
 
     if (error) {

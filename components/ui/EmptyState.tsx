@@ -1,11 +1,13 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from './ThemedText';
 import { Button } from './Button';
+import { useTheme } from '../../lib/theme';
 import { Spacing } from '../../constants/Typography';
 
 interface EmptyStateProps {
-  icon?: React.ReactNode;
+  icon?: React.ReactNode | string;
   title: string;
   description?: string;
   actionLabel?: string;
@@ -13,9 +15,15 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ icon, title, description, actionLabel, onAction }: EmptyStateProps) {
+  const { colors } = useTheme();
+
+  const renderedIcon = typeof icon === 'string'
+    ? <Ionicons name={icon as any} size={48} color={colors.textMuted} />
+    : icon;
+
   return (
     <View style={styles.container}>
-      {icon && <View style={styles.icon}>{icon}</View>}
+      {renderedIcon && <View style={styles.icon}>{renderedIcon}</View>}
       <ThemedText variant="h4" style={styles.title}>{title}</ThemedText>
       {description && (
         <ThemedText variant="body" color="muted" style={styles.description}>

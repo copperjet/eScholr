@@ -570,7 +570,9 @@ const styles = StyleSheet.create({
   pill: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
-    borderRadius: Radius.full,
+    borderRadius: Radius.lg,
+    height: 32,
+    justifyContent: 'center' as const,
   },
   pickerSkeleton: {
     marginHorizontal: Spacing.base,
