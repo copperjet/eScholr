@@ -31,6 +31,7 @@ const ROLE_META: Record<UserRole, { label: string; icon: string; description: st
   parent:             { label: 'Parent',              icon: 'heart',           description: "Your children's progress and reports" },
   student:            { label: 'Student',             icon: 'school',          description: 'View your marks, attendance, and reports' },
   hr:                 { label: 'Human Resources',     icon: 'briefcase',       description: 'Staff leave management and directory' },
+  librarian:          { label: 'Librarian',           icon: 'library',         description: 'Catalog, loans, barcodes and collections' },
 };
 
 export default function SwitchRoleScreen() {

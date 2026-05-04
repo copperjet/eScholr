@@ -83,22 +83,22 @@ export default function FrontDeskHome() {
         {/* ── Quick actions: Parents, Students, Applications ── */}
         <SectionHeader title="Quick Actions" />
         <View style={styles.statRow}>
-          <Pressable onPress={() => router.push('/(app)/(admin)/parents' as any)} style={{ flex: 1 }}>
+          <Pressable onPress={() => router.push('/(app)/(frontdesk)/visitors' as any)} style={{ flex: 1 }}>
             <StatCard
-              label="Parents"
-              value="View"
-              icon="people-circle-outline"
-              iconBg={Colors.semantic.info + '18'}
-              iconColor={Colors.semantic.info}
-            />
-          </Pressable>
-          <Pressable onPress={() => router.push('/(app)/(admin)/students' as any)} style={{ flex: 1 }}>
-            <StatCard
-              label="Students"
-              value="View"
-              icon="school-outline"
+              label="Visitors In"
+              value={isLoading ? '—' : String(data?.activeVisitors ?? 0)}
+              icon="people-outline"
               iconBg={Colors.semantic.success + '18'}
               iconColor={Colors.semantic.success}
+            />
+          </Pressable>
+          <Pressable onPress={() => router.push('/(app)/(frontdesk)/inquiries' as any)} style={{ flex: 1 }}>
+            <StatCard
+              label="Inquiries"
+              value="View"
+              icon="chatbubble-ellipses-outline"
+              iconBg={Colors.semantic.info + '18'}
+              iconColor={Colors.semantic.info}
             />
           </Pressable>
           <Pressable onPress={() => router.push('/(app)/(frontdesk)/applications' as any)} style={{ flex: 1 }}>

@@ -37,3 +37,39 @@ export async function triggerAbsenceNotification(params: {
     // Fire-and-forget — don't block UI on notification failure
   }
 }
+
+// ── Homework notification triggers ─────────────────────────
+
+export async function triggerHomeworkAssignedNotification(params: {
+  school_id: string;
+  homework_id: string;
+  subject_name: string;
+  title: string;
+  due_date: string;
+  stream_id: string;
+}): Promise<void> {
+  try {
+    await supabase.functions.invoke('send-homework-notification', { 
+      body: { ...params, event_type: 'assigned' }
+    });
+  } catch {
+    // Fire-and-forget — don't block UI on notification failure
+  }
+}
+
+export async function triggerHomeworkGradedNotification(params: {
+  school_id: string;
+  homework_id: string;
+  student_id: string;
+  score: number;
+  max_score: number;
+  title: string;
+}): Promise<void> {
+  try {
+    await supabase.functions.invoke('send-homework-notification', { 
+      body: { ...params, event_type: 'graded' }
+    });
+  } catch {
+    // Fire-and-forget — don't block UI on notification failure
+  }
+}

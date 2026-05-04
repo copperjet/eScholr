@@ -381,7 +381,7 @@ export default function AttendanceScreen() {
     const absentStudents = Object.entries(effectiveStatuses)
       .filter(([, s]) => s === 'absent')
       .map(([id]) => id);
-    if (absentStudents.length > 0 && user?.staffId) {
+    if (absentStudents.length > 0 && user?.staffId && user?.schoolId) {
       const nameParts = (user.fullName ?? '').split(' ');
       const markedByName =
         nameParts.length > 1
@@ -904,7 +904,10 @@ const StudentAttendanceRow = React.memo(function StudentAttendanceRow({
             </ThemedText>
           </>
         ) : (
-          <ThemedText variant="label" style={{ color: colors.textMuted, fontSize: 11 }}>SET</ThemedText>
+          <View style={styles.dropdownContainer}>
+            <Ionicons name="chevron-down" size={10} color={colors.textMuted} />
+            <ThemedText variant="label" style={{ color: colors.textMuted, fontSize: 11, marginLeft: 2 }}>SELECT</ThemedText>
+          </View>
         )}
       </View>
       {inCorrectionMode && (
@@ -1041,11 +1044,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: Radius.full,
     borderWidth: 1,
     minWidth: 60,
     justifyContent: 'center',
+  },
+  dropdownContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
   },
   errorBanner: {
     flexDirection: 'row',

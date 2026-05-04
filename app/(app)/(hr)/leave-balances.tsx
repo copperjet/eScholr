@@ -9,7 +9,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Card, Avatar, Badge, Button, StatCard, SectionHeader,
-  EmptyState, ErrorState, ListItemSkeleton, SearchBar,
+  EmptyState, ErrorState, ListItemSkeleton, SearchBar, ScreenHeader,
 } from '../../../components/ui';
 import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -108,13 +108,7 @@ export default function HRLeaveBalances() {
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}
         refreshControl={<RefreshControl refreshing={staffLoading} onRefresh={refetchStaff} tintColor={colors.brand.primary} />}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <ThemedText variant="caption" color="muted">{currentYear} Leave Year</ThemedText>
-            <ThemedText variant="h2">Leave Balances</ThemedText>
-          </View>
-        </View>
+        <ScreenHeader title="Leave Balances" subtitle={`${currentYear} Leave Year`} showBack />
 
         {/* Search */}
         <View style={{ paddingHorizontal: Spacing.screen, marginBottom: Spacing.md }}>
@@ -245,10 +239,6 @@ function StatCompact({ label, value, color }: { label: string; value: number; co
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.screen, paddingTop: Spacing.xl, paddingBottom: Spacing.base,
-  },
   chipRow: {
     paddingHorizontal: Spacing.screen, gap: Spacing.sm, paddingBottom: Spacing.md,
   },

@@ -7,17 +7,15 @@ import {
   View,
   StyleSheet,
   SafeAreaView,
-  FlatList,
-  TouchableOpacity,
+  Pressable,
   Alert,
 } from 'react-native';
-import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  ThemedText, Avatar, Badge, Skeleton, EmptyState, ErrorState, ScreenHeader,
+  ThemedText, Avatar, Skeleton, EmptyState, ErrorState, ScreenHeader, FastList,
 } from '../../../components/ui';
 import { useFinancePendingReports, useClearFinanceReport } from '../../../hooks/useFinance';
 import { Spacing, Radius } from '../../../constants/Typography';
@@ -98,7 +96,7 @@ export default function FinanceReportsScreen() {
           icon="checkmark-circle-outline"
         />
       ) : (
-        <FlatList
+        <FastList
           data={reports}
           keyExtractor={(r: any) => r.id}
           contentContainerStyle={styles.list}
@@ -123,16 +121,16 @@ export default function FinanceReportsScreen() {
                   Held since {format(parseISO(report.updated_at), 'dd/MM/yy')}
                 </ThemedText>
               </View>
-              <TouchableOpacity
+              <Pressable
                 onPress={() => handleClear(report)}
                 disabled={clearMutation.isPending}
-                style={[styles.clearBtn, { backgroundColor: Colors.semantic.success }]}
+                style={({ pressed }) => [styles.clearBtn, { backgroundColor: Colors.semantic.success, opacity: pressed ? 0.8 : 1 }]}
               >
                 <Ionicons name="checkmark" size={14} color="#fff" />
                 <ThemedText variant="caption" style={{ color: '#fff', fontWeight: '700', marginLeft: 3 }}>
                   Clear
                 </ThemedText>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           )}
         />
@@ -143,14 +141,6 @@ export default function FinanceReportsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: Spacing.sm,
-  },
   banner: {
     flexDirection: 'row',
     alignItems: 'center',

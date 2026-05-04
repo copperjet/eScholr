@@ -1,13 +1,14 @@
-import React from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, Pressable, RefreshControl } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
-import { ThemedText, Avatar, Card, EmptyState, ErrorState, SectionHeader } from '../../../components/ui';
+import {
+  SearchBar, ListItem, Skeleton, EmptyState, ErrorState, FastList,
+} from '../../../components/ui';
 import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
-import { haptics } from '../../../lib/haptics';
 
 function useSTStudents(staffId: string | null, schoolId: string) {
   return useQuery({
@@ -15,13 +16,12 @@ function useSTStudents(staffId: string | null, schoolId: string) {
     enabled: !!staffId && !!schoolId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      // Get ST assignments to find which streams they teach
       const { data: assignments } = await (supabase as any)
         .from('subject_teacher_assignments')
         .select('stream_id')
         .eq('staff_id', staffId!)
         .eq('school_id', schoolId);
-      
+
       const streamIds = (assignments ?? []).map((a: any) => a.stream_id);
       if (streamIds.length === 0) return [];
 
@@ -41,10 +41,17 @@ function useSTStudents(staffId: string | null, schoolId: string) {
 export default function STStudents() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
-  const staffId = user?.staffId ?? null;
+  const staffId  = user?.staffId ?? null;
   const schoolId = user?.schoolId ?? '';
 
-  const { data: students, isLoading, isError, refetch, isRefetching } = useSTStudents(staffId, schoolId);
+  const [search, setSearch] = useState('');
+
+  const { data: students, isLoading, isError, refetch, isFetching } = useSTStudents(staffId, schoolId);
+
+  const filtered = (students ?? []).filter((s: any) =>
+    s.full_name.toLowerCase().includes(search.toLowerCase()) ||
+    (s.student_number ?? '').toLowerCase().includes(search.toLowerCase())
+  );
 
   if (isError) {
     return (
@@ -56,57 +63,60 @@ export default function STStudents() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand.primary} />}
-      >
-        <View style={styles.header}>
-          <ThemedText variant="h4">My Students</ThemedText>
-        </View>
+      <View style={styles.topBar}>
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Search by name or ID…" />
+      </View>
 
-        {isLoading ? (
-          <Card style={{ margin: Spacing.screen, padding: Spacing.lg }}>
-            <View style={{ gap: 8 }}>
-              <View style={{ height: 16, width: '60%', backgroundColor: colors.surfaceSecondary, borderRadius: 4 }} />
-              <View style={{ height: 12, width: '40%', backgroundColor: colors.surfaceSecondary, borderRadius: 4 }} />
+      {isLoading ? (
+        <View style={{ padding: Spacing.base, gap: Spacing.sm }}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <View key={i} style={styles.skRow}>
+              <Skeleton width={46} height={46} radius={23} />
+              <View style={{ flex: 1, gap: 6, marginLeft: Spacing.md }}>
+                <Skeleton width="52%" height={14} />
+                <Skeleton width="30%" height={11} />
+              </View>
             </View>
-          </Card>
-        ) : students?.length === 0 ? (
-          <EmptyState title="No students found" description="Students appear once assigned to your classes." icon="people-outline" />
-        ) : (
-          students?.map((s: any) => (
-            <Pressable
-              key={s.id}
-              onPress={() => {
-                haptics.selection();
-                router.push({ pathname: '/(app)/student/[id]', params: { id: s.id } } as any);
-              }}
-            >
-              <Card style={{ marginHorizontal: Spacing.screen, marginBottom: Spacing.sm, padding: Spacing.md }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Avatar name={s.full_name} photoUrl={s.photo_url} size={48} />
-                  <View style={{ marginLeft: Spacing.md, flex: 1 }}>
-                    <ThemedText style={{ fontWeight: '600' }}>{s.full_name}</ThemedText>
-                    <ThemedText variant="caption" color="muted">{s.student_number}</ThemedText>
-                    <ThemedText variant="caption" color="muted">
-                      {s.streams?.grades?.name} {s.streams?.name}
-                    </ThemedText>
-                  </View>
-                </View>
-              </Card>
-            </Pressable>
-          ))
-        )}
-      </ScrollView>
+          ))}
+        </View>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          title={search ? 'No results' : 'No students yet'}
+          description={search ? `No students match "${search}"` : 'Students in your assigned classes will appear here.'}
+        />
+      ) : (
+        <FastList
+          data={filtered}
+          keyExtractor={(item: any) => item.id}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} tintColor={colors.brand.primary} />}
+          renderItem={({ item }: { item: any }) => {
+            const gradeName  = item.streams?.grades?.name ?? '';
+            const streamName = item.streams?.name ?? '';
+            const subtitle   = [item.student_number, gradeName ? `${gradeName}${streamName ? ' ' + streamName : ''}` : streamName]
+              .filter(Boolean).join('  ·  ');
+            return (
+              <ListItem
+                title={item.full_name}
+                subtitle={subtitle}
+                avatarName={item.full_name}
+                avatarUrl={item.photo_url}
+                showChevron
+                separator
+                onPress={() => router.push({ pathname: '/(app)/student/[id]' as any, params: { id: item.id } })}
+              />
+            );
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: Spacing.base, paddingVertical: Spacing.md,
-  },
+  safe:   { flex: 1 },
+  topBar: { paddingHorizontal: Spacing.base, paddingVertical: Spacing.md },
+  skRow:  { flexDirection: 'row', alignItems: 'center' },
+  list:   { paddingBottom: TAB_BAR_HEIGHT },
 });

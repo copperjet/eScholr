@@ -50,7 +50,7 @@ function useSTStudents(staffId: string | null, schoolId: string) {
       if (!sem) return [];
 
       const { data: assignments } = await db
-        .from('subject_assignments')
+        .from('subject_teacher_assignments')
         .select('stream_id')
         .eq('staff_id', staffId)
         .eq('school_id', schoolId)

@@ -1,11 +1,13 @@
-import React from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
-import { ThemedText, Card, Avatar, EmptyState, ErrorState, SectionHeader } from '../../../components/ui';
-import { Spacing } from '../../../constants/Typography';
+import {
+  SearchBar, ListItem, Skeleton, EmptyState, ErrorState, ScreenHeader, FastList,
+} from '../../../components/ui';
+import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 
 function useStaffList(schoolId: string) {
   return useQuery({
@@ -15,7 +17,7 @@ function useStaffList(schoolId: string) {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('staff')
-        .select('id, full_name, staff_number, email, phone, department, status, staff_roles(role)')
+        .select('id, full_name, staff_number, email, department, photo_url, staff_roles(role)')
         .eq('school_id', schoolId)
         .eq('status', 'active')
         .order('full_name');
@@ -29,8 +31,15 @@ export default function HRStaff() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const schoolId = user?.schoolId ?? '';
+  const [search, setSearch] = useState('');
 
   const { data: staff, isLoading, isError, refetch, isRefetching } = useStaffList(schoolId);
+
+  const filtered = (staff ?? []).filter((s: any) =>
+    s.full_name.toLowerCase().includes(search.toLowerCase()) ||
+    (s.staff_number ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    (s.department ?? '').toLowerCase().includes(search.toLowerCase())
+  );
 
   if (isError) {
     return (
@@ -42,46 +51,57 @@ export default function HRStaff() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand.primary} />}
-      >
-        <View style={styles.header}>
-          <ThemedText variant="h4">Staff Directory</ThemedText>
-        </View>
+      <ScreenHeader title="Staff Directory" />
+      <View style={styles.searchBar}>
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Search by name, number, department…" />
+      </View>
 
-        {isLoading ? (
-          <Card style={{ margin: Spacing.screen, padding: Spacing.lg }}>
-            <View style={{ gap: 8 }}>
-              <View style={{ height: 16, width: '60%', backgroundColor: colors.surfaceSecondary, borderRadius: 4 }} />
-              <View style={{ height: 12, width: '40%', backgroundColor: colors.surfaceSecondary, borderRadius: 4 }} />
-            </View>
-          </Card>
-        ) : staff?.length === 0 ? (
-          <EmptyState title="No staff found" description="Staff records appear once added by admin." icon="people-outline" />
-        ) : (
-          staff?.map((s: any) => (
-            <Card key={s.id} style={{ marginHorizontal: Spacing.screen, marginBottom: Spacing.sm, padding: Spacing.md }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Avatar name={s.full_name} size={48} />
-                <View style={{ marginLeft: Spacing.md, flex: 1 }}>
-                  <ThemedText style={{ fontWeight: '600' }}>{s.full_name}</ThemedText>
-                  <ThemedText variant="caption" color="muted">{s.staff_number} · {s.department ?? '—'}</ThemedText>
-                  <ThemedText variant="caption" color="muted">{s.email}</ThemedText>
-                </View>
+      {isLoading ? (
+        <View style={{ padding: Spacing.base, gap: Spacing.sm }}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <View key={i} style={styles.skRow}>
+              <Skeleton width={46} height={46} radius={23} />
+              <View style={{ flex: 1, gap: 6, marginLeft: Spacing.md }}>
+                <Skeleton width="52%" height={14} />
+                <Skeleton width="35%" height={11} />
               </View>
-            </Card>
-          ))
-        )}
-      </ScrollView>
+            </View>
+          ))}
+        </View>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          title={search ? 'No results' : 'No staff found'}
+          description={search ? `No staff match "${search}"` : 'Staff records appear once added by admin.'}
+          icon="people-outline"
+        />
+      ) : (
+        <FastList
+          data={filtered}
+          keyExtractor={(item: any) => item.id}
+          contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand.primary} />}
+          renderItem={({ item: s }: { item: any }) => {
+            const subtitle = [s.staff_number, s.department].filter(Boolean).join(' · ');
+            return (
+              <ListItem
+                title={s.full_name}
+                subtitle={subtitle || s.email}
+                caption={subtitle ? s.email : undefined}
+                avatarName={s.full_name}
+                avatarUrl={s.photo_url}
+                separator
+              />
+            );
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: Spacing.base, paddingVertical: Spacing.md,
-  },
+  safe:      { flex: 1 },
+  searchBar: { paddingHorizontal: Spacing.base, paddingVertical: Spacing.md },
+  skRow:     { flexDirection: 'row', alignItems: 'center' },
 });

@@ -101,8 +101,8 @@ export default function AdminMore() {
         ...(can(role, 'announcements') ? [{ icon: 'megaphone-outline' as IoniconsName,     label: 'Announcements',        sublabel: 'Compose & send to school/groups',  onPress: () => router.push('/(app)/(admin)/announcements' as any) }] : []),
         ...(can(role, 'timetable')     ? [{ icon: 'grid-outline' as IoniconsName,          label: 'Timetable Upload',     sublabel: 'Class & teacher timetables',       onPress: () => router.push('/(app)/(admin)/timetable-upload' as any) }] : []),
         ...(can(role, 'reports')       ? [{ icon: 'document-text-outline' as IoniconsName, label: 'Reports Approval',     sublabel: 'Pending & released reports',       onPress: () => router.push('/(app)/(admin)/reports' as any) }] : []),
-        ...(can(role, 'marks_matrix')  ? [{ icon: 'apps-outline' as IoniconsName,          label: 'Marks Matrix',         sublabel: 'Completion overview by class',     onPress: () => router.push('/(app)/(admin)/marks-matrix' as any) }] : []),
-        ...(can(role, 'marks_matrix')  ? [{ icon: 'bar-chart-outline' as IoniconsName,     label: 'Result Analysis',      sublabel: 'Performance analysis by role scope', onPress: () => router.push('/(app)/(admin)/analysis' as any) }] : []),
+        ...(can(role, 'marking')        ? [{ icon: 'apps-outline' as IoniconsName,          label: 'Marking',              sublabel: 'Completion overview by class',     onPress: () => router.push('/(app)/(admin)/marks-matrix' as any) }] : []),
+        ...(can(role, 'marking')        ? [{ icon: 'bar-chart-outline' as IoniconsName,     label: 'Result Analysis',      sublabel: 'Performance analysis by role scope', onPress: () => router.push('/(app)/(admin)/analysis' as any) }] : []),
       ],
     },
 

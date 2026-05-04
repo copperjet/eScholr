@@ -39,6 +39,20 @@ import { haptics } from '../../../lib/haptics';
 
 const DEVIATION_THRESHOLD = 30;
 
+// ── Grade color helper ───────────────────────────────────────
+const getGradeColor = (grade: string, colors: any): string => {
+  switch (grade) {
+    case 'A*': return '#4CAF50'; // Green
+    case 'A': return '#4CAF50';  // Green
+    case 'B': return '#8BC34A';  // Light Green
+    case 'C': return '#FFC107';  // Amber
+    case 'D': return '#FF9800';  // Orange
+    case 'E': return '#FF5722';  // Deep Orange
+    case 'U': return '#F44336';  // Red
+    default: return colors.textMuted;
+  }
+};
+
 // ── Save state per cell ───────────────────────────────────────
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -412,6 +426,12 @@ export default function MarksEntryScreen() {
                               : val && isWindowOpen
                               ? colors.brand.primary + '80'
                               : colors.border,
+                          borderWidth: val && isWindowOpen ? 2 : 1,
+                          shadowColor: val && isWindowOpen ? colors.brand.primary : 'transparent',
+                          shadowOffset: { width: 0, height: 0 },
+                          shadowOpacity: val && isWindowOpen ? 0.2 : 0,
+                          shadowRadius: val && isWindowOpen ? 4 : 0,
+                          elevation: val && isWindowOpen ? 3 : 0,
                         },
                       ]}
                     />
@@ -447,7 +467,18 @@ export default function MarksEntryScreen() {
                   activeOpacity={0.9}
                   onLongPress={() => handleExcuse(student.id, isExcused)}
                   delayLongPress={500}
-                  style={[styles.studentRow, { backgroundColor: colors.surface, borderColor: isExcused ? colors.brand.primary + '40' : colors.border }]}
+                  style={[
+                        styles.studentRow, 
+                        { 
+                          backgroundColor: colors.surface, 
+                          borderColor: isExcused ? colors.brand.primary + '40' : colors.border,
+                          shadowColor: colors.textSecondary,
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.05,
+                          shadowRadius: 2,
+                          elevation: 1,
+                        }
+                      ]}
                 >
                   {/* Avatar + name */}
                   <View style={styles.nameCol}>
@@ -466,20 +497,46 @@ export default function MarksEntryScreen() {
                   {renderInput('summative', sumVal)}
 
                   {/* Total */}
-                  <View style={styles.totalCol}>
-                    <ThemedText variant="bodySm" style={{ fontWeight: '700', color: totalNum !== null ? colors.textPrimary : colors.textMuted }}>
+                  <View style={[
+                    styles.totalCol,
+                    {
+                      backgroundColor: totalNum !== null ? colors.surfaceSecondary : 'transparent',
+                      borderRadius: Radius.md,
+                      paddingHorizontal: Spacing.sm,
+                      paddingVertical: 4,
+                    }
+                  ]}>
+                    <ThemedText 
+                      variant="bodySm" 
+                      style={{ 
+                        fontWeight: '700', 
+                        color: totalNum !== null ? colors.textPrimary : colors.textMuted,
+                        fontSize: 13,
+                      }}
+                    >
                       {totalNum !== null ? String(totalNum) : '—'}
                     </ThemedText>
                   </View>
 
                   {/* Grade */}
-                  <View style={[styles.gradeCol, { backgroundColor: grade === '—' ? 'transparent' : colors.brand.primary + '18' }]}>
+                  <View style={[
+                    styles.gradeCol, 
+                    { 
+                      backgroundColor: grade === '—' ? 'transparent' : 
+                                    grade === 'N/A' ? colors.brand.primary + '18' :
+                                    getGradeColor(grade, colors),
+                      borderRadius: Radius.full,
+                      borderWidth: grade !== '—' && grade !== 'N/A' ? 1 : 0,
+                      borderColor: grade !== '—' && grade !== 'N/A' ? getGradeColor(grade, colors) : 'transparent',
+                    }
+                  ]}>
                     <ThemedText
                       variant="label"
                       style={{
                         fontWeight: '800',
                         fontSize: 12,
-                        color: grade === 'N/A' ? colors.brand.primary : grade !== '—' ? colors.brand.primary : colors.textMuted,
+                        color: grade === 'N/A' ? colors.brand.primary : 
+                               grade !== '—' ? '#fff' : colors.textMuted,
                       }}
                     >
                       {grade}

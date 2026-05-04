@@ -3,6 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import { triggerHomeworkAssignedNotification, triggerHomeworkGradedNotification } from '../lib/notifications';
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -239,9 +240,19 @@ export function useCreateHomework(schoolId: string) {
       if (error) throw error;
       return data as HomeworkAssignment;
     },
-    onSuccess: (_, vars) => {
+    onSuccess: (data, vars) => {
       qc.invalidateQueries({ queryKey: ['teacher-homework', schoolId] });
       qc.invalidateQueries({ queryKey: ['stream-homework', schoolId, vars.streamId] });
+      
+      // Trigger homework assignment notifications
+      triggerHomeworkAssignedNotification({
+        school_id: schoolId,
+        homework_id: data.id,
+        subject_name: '', // Will be fetched by the edge function
+        title: vars.title,
+        due_date: vars.dueDate,
+        stream_id: vars.streamId,
+      });
     },
   });
 }
@@ -336,6 +347,40 @@ export function useGradeSubmission(schoolId: string) {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['homework-submissions', schoolId, vars.homeworkId] });
+      
+      // Get homework details for notification
+      (async () => {
+        try {
+          const db = supabase as any;
+          const { data: homework } = await db
+            .from('homework_assignments')
+            .select('title, max_score')
+            .eq('id', vars.homeworkId)
+            .single();
+          
+          if (homework) {
+            // Get student ID from submission
+            const { data: submission } = await db
+              .from('homework_submissions')
+              .select('student_id')
+              .eq('id', vars.submissionId)
+              .single();
+            
+            if (submission) {
+              triggerHomeworkGradedNotification({
+                school_id: schoolId,
+                homework_id: vars.homeworkId,
+                student_id: submission.student_id,
+                score: vars.score,
+                max_score: homework.max_score,
+                title: homework.title,
+              });
+            }
+          }
+        } catch (error) {
+          // Fire-and-forget — don't block UI on notification failure
+        }
+      })();
     },
   });
 }

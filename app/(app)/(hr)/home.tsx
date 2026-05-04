@@ -8,10 +8,10 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
-  ThemedText, Avatar, Card, Badge, StatCard,
-  EmptyState, ErrorState, SectionHeader,
+  ThemedText, Avatar, Badge, StatCard, Card,
+  EmptyState, ErrorState, SectionHeader, QuickActionCard, Skeleton,
 } from '../../../components/ui';
-import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
+import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 
 // TODAY computed inside component to avoid stale dates
@@ -102,20 +102,20 @@ export default function HRHome() {
         {/* Quick Actions */}
         <SectionHeader title="Quick Actions" />
         <View style={styles.quickRow}>
-          <Pressable
+          <QuickActionCard
+            title="Leave"
+            subtitle="Review requests"
+            icon="calendar-outline"
             onPress={() => router.push('/(app)/(hr)/leave' as any)}
-            style={[styles.quickCard, { backgroundColor: colors.surface }, Shadow.sm]}
-          >
-            <Ionicons name="calendar" size={24} color={colors.brand.primary} />
-            <ThemedText variant="caption" style={{ marginTop: Spacing.xs }}>Leave</ThemedText>
-          </Pressable>
-          <Pressable
+            style={styles.qaCard}
+          />
+          <QuickActionCard
+            title="Staff"
+            subtitle="Directory"
+            icon="people-outline"
             onPress={() => router.push('/(app)/(hr)/staff' as any)}
-            style={[styles.quickCard, { backgroundColor: colors.surface }, Shadow.sm]}
-          >
-            <Ionicons name="people" size={24} color={colors.brand.primary} />
-            <ThemedText variant="caption" style={{ marginTop: Spacing.xs }}>Staff</ThemedText>
-          </Pressable>
+            style={styles.qaCard}
+          />
         </View>
 
         {/* Recent Leave Requests */}
@@ -123,10 +123,13 @@ export default function HRHome() {
         {isLoading ? (
           <View style={{ paddingHorizontal: Spacing.screen, gap: Spacing.sm }}>
             {[0, 1, 2].map(i => (
-              <Card key={i} style={{ padding: Spacing.md }}>
-                <View style={{ height: 16, width: '60%', backgroundColor: colors.surfaceSecondary, borderRadius: 4, marginBottom: 8 }} />
-                <View style={{ height: 12, width: '40%', backgroundColor: colors.surfaceSecondary, borderRadius: 4 }} />
-              </Card>
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm }}>
+                <Skeleton width={42} height={42} radius={21} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <Skeleton width="55%" height={14} />
+                  <Skeleton width="35%" height={11} />
+                </View>
+              </View>
             ))}
           </View>
         ) : data?.recentLeaves.length === 0 ? (
@@ -167,11 +170,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', paddingHorizontal: Spacing.screen, gap: Spacing.sm, marginBottom: Spacing.lg,
   },
   statCell: { flex: 1 },
-  quickRow: {
-    flexDirection: 'row', paddingHorizontal: Spacing.screen, gap: Spacing.md, marginBottom: Spacing.lg,
-  },
-  quickCard: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    paddingVertical: Spacing.lg, borderRadius: Radius.lg,
-  },
+  quickRow: { flexDirection: 'row', paddingHorizontal: Spacing.screen, gap: Spacing.md, marginBottom: Spacing.lg },
+  qaCard:   { flex: 1 },
 });

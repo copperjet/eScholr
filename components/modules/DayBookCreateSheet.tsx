@@ -53,6 +53,7 @@ export function DayBookCreateSheet({
   const isEdit = !!editEntry;
 
   const [studentId, setStudentId] = useState<string>(initialStudentId ?? '');
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [category, setCategory] = useState<DayBookCategory>('other');
   const [note, setNote] = useState('');
   const [sendToParent, setSendToParent] = useState(false);
@@ -62,26 +63,39 @@ export function DayBookCreateSheet({
     if (visible) {
       if (isEdit && editEntry) {
         setStudentId(editEntry.studentId);
+        setSelectedStudentIds([editEntry.studentId]);
         setCategory(editEntry.category);
         setNote(editEntry.note);
         setSendToParent(editEntry.sendToParent);
       } else {
         setStudentId(initialStudentId ?? '');
+        setSelectedStudentIds(initialStudentId ? [initialStudentId] : []);
         setCategory('other');
         setNote('');
         setSendToParent(false);
       }
     }
-  }, [visible]);
+  }, [visible, initialStudentId, editEntry]);
 
-  const canSubmit = studentId && note.trim().length >= 5;
+  const canSubmit = selectedStudentIds.length > 0 && note.trim().length >= 5;
+
+  const handleStudentToggle = (studentId: string) => {
+    setSelectedStudentIds(prev => 
+      prev.includes(studentId) 
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
 
   const handleSubmit = () => {
     if (!canSubmit) return;
     if (isEdit && editEntry && onEditSubmit) {
       onEditSubmit({ entryId: editEntry.id, note: note.trim(), sendToParent });
     } else {
-      onSubmit({ studentId, category, note: note.trim(), sendToParent });
+      // For multiple students, create separate entries for each
+      selectedStudentIds.forEach(id => {
+        onSubmit({ studentId: id, category, note: note.trim(), sendToParent });
+      });
     }
   };
 
@@ -97,30 +111,53 @@ export function DayBookCreateSheet({
           {/* Student picker (hidden when editing or single student) */}
           {!isEdit && students.length > 1 && (
             <View style={{ marginBottom: Spacing.base }}>
-              <ThemedText variant="label" color="muted" style={styles.fieldLabel}>STUDENT</ThemedText>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                <ThemedText variant="label" color="muted" style={styles.fieldLabel}>STUDENTS INVOLVED</ThemedText>
+                <ThemedText variant="caption" color="muted">
+                  {selectedStudentIds.length} {selectedStudentIds.length === 1 ? 'student' : 'students'} selected
+                </ThemedText>
+              </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -Spacing.base }}>
                 <View style={{ flexDirection: 'row', paddingHorizontal: Spacing.base, gap: Spacing.sm }}>
-                  {students.map((s) => (
-                    <TouchableOpacity
-                      key={s.id}
-                      onPress={() => setStudentId(s.id)}
-                      style={[
-                        styles.studentChip,
-                        {
-                          backgroundColor: studentId === s.id ? colors.brand.primary + '15' : colors.surfaceSecondary,
-                          borderColor: studentId === s.id ? colors.brand.primary : colors.border,
-                        },
-                      ]}
-                    >
-                      <Avatar name={s.full_name} photoUrl={s.photo_url} size={28} />
-                      <ThemedText
-                        variant="caption"
-                        style={{ marginLeft: 6, fontWeight: studentId === s.id ? '700' : '400', color: studentId === s.id ? colors.brand.primary : colors.textPrimary }}
+                  {students.map((s) => {
+                    const isSelected = selectedStudentIds.includes(s.id);
+                    return (
+                      <TouchableOpacity
+                        key={s.id}
+                        onPress={() => handleStudentToggle(s.id)}
+                        style={[
+                          styles.studentChip,
+                          {
+                            backgroundColor: isSelected ? colors.brand.primary + '15' : colors.surfaceSecondary,
+                            borderColor: isSelected ? colors.brand.primary : colors.border,
+                            borderWidth: isSelected ? 2 : 1,
+                          },
+                        ]}
                       >
-                        {s.full_name.split(' ')[0]}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
+                        <View style={{ position: 'relative' }}>
+                          <Avatar name={s.full_name} photoUrl={s.photo_url} size={28} />
+                          {isSelected && (
+                            <View style={[
+                              styles.selectedBadge,
+                              { backgroundColor: colors.brand.primary, borderColor: colors.surface }
+                            ]}>
+                              <Ionicons name="checkmark" size={8} color="#fff" />
+                            </View>
+                          )}
+                        </View>
+                        <ThemedText
+                          variant="caption"
+                          style={{ 
+                            marginLeft: 6, 
+                            fontWeight: isSelected ? '700' : '400', 
+                            color: isSelected ? colors.brand.primary : colors.textPrimary 
+                          }}
+                        >
+                          {s.full_name.split(' ')[0]}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </ScrollView>
             </View>
@@ -216,6 +253,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: Radius.full,
     borderWidth: 1,
+  },
+  selectedBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
   catChip: {

@@ -4,7 +4,7 @@
  */
 import React, { useState, useCallback } from 'react';
 import {
-  View, StyleSheet, SafeAreaView, FlatList, RefreshControl,
+  View, StyleSheet, SafeAreaView, RefreshControl,
   KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +16,7 @@ import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, SearchBar, Badge, BottomSheet, FAB,
   ListItemSkeleton, EmptyState, ErrorState, TabBar,
-  Card, Button, FormField, ScreenHeader,
+  Card, Button, FormField, ScreenHeader, FastList,
 } from '../../../components/ui';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -255,9 +255,9 @@ export default function VisitorLogScreen() {
       </View>
 
       {/* List */}
-      <FlatList
+      <FastList
         data={filtered}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item: any) => item.id}
         renderItem={renderVisitor}
         contentContainerStyle={{ paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT }}
         refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} tintColor={colors.brand.primary} />}

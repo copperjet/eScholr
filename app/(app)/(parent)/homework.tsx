@@ -1,21 +1,19 @@
 import React, { useState } from 'react';
 import {
-  View,
-  StyleSheet,
-  SafeAreaView,
-  FlatList,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
+  View, StyleSheet, SafeAreaView, ScrollView, Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { format, parseISO } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import { useStudentHomework } from '../../../hooks/useHomework';
-import { ThemedText, Card, Skeleton, EmptyState, Button, CardSkeleton } from '../../../components/ui';
-import { Spacing, Radius, Typography, TAB_BAR_HEIGHT } from '../../../constants/Typography';
+import {
+  ThemedText, Avatar, Card, EmptyState, CardSkeleton,
+  ScreenHeader, FastList, BottomSheet, Badge,
+} from '../../../components/ui';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
@@ -56,7 +54,7 @@ export default function ParentHomework() {
   const { data: children, isLoading: childrenLoading } = useChildren(parentId, schoolId);
   const activeChild = children?.[selectedChildIdx];
 
-  const { data: homeworkList, isLoading, refetch } = useStudentHomework(
+  const { data: homeworkList, isLoading, isRefetching, refetch } = useStudentHomework(
     schoolId,
     activeChild?.id ?? null,
     null
@@ -65,12 +63,10 @@ export default function ParentHomework() {
   if (childrenLoading) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
-          <ThemedText variant="h4">Homework</ThemedText>
+        <ScreenHeader title="Homework" />
+        <View style={{ padding: Spacing.base, gap: Spacing.md }}>
+          <CardSkeleton lines={3} /><CardSkeleton lines={3} /><CardSkeleton lines={3} />
         </View>
-        <CardSkeleton lines={3} />
-        <CardSkeleton lines={3} />
-        <CardSkeleton lines={3} />
       </SafeAreaView>
     );
   }
@@ -78,9 +74,7 @@ export default function ParentHomework() {
   if (!children?.length) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
-          <ThemedText variant="h4">Homework</ThemedText>
-        </View>
+        <ScreenHeader title="Homework" />
         <EmptyState
           title="No children linked"
           description="Contact the school to link your account to your children."
@@ -91,226 +85,175 @@ export default function ParentHomework() {
   }
 
   const now = new Date();
-  const pending = homeworkList?.filter(
-    (h) => !h.submission && new Date(h.assignment.due_date) >= now
-  ) ?? [];
-  const late = homeworkList?.filter(
-    (h) => !h.submission && new Date(h.assignment.due_date) < now
-  ) ?? [];
-  const submitted = homeworkList?.filter((h) => h.submission) ?? [];
+  const pending   = (homeworkList ?? []).filter((h) => !h.submission && new Date(h.assignment.due_date) >= now);
+  const late      = (homeworkList ?? []).filter((h) => !h.submission && new Date(h.assignment.due_date) < now);
+  const submitted = (homeworkList ?? []).filter((h) => h.submission);
+
+  type ListRow = { type: 'header'; label: string } | { type: 'item'; item: any; section: string };
+  const listData: ListRow[] = [];
+  if (pending.length)   { listData.push({ type: 'header', label: 'DUE' });       pending.forEach((i: any)   => listData.push({ type: 'item', item: i, section: 'pending' })); }
+  if (late.length)      { listData.push({ type: 'header', label: 'LATE' });      late.forEach((i: any)      => listData.push({ type: 'item', item: i, section: 'late' })); }
+  if (submitted.length) { listData.push({ type: 'header', label: 'SUBMITTED' }); submitted.forEach((i: any) => listData.push({ type: 'item', item: i, section: 'submitted' })); }
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <ThemedText variant="h4">Homework</ThemedText>
-      </View>
+      <ScreenHeader
+        title="Homework"
+        subtitle={activeChild?.full_name}
+      />
 
-      {/* Child Selector */}
+      {/* ── Child Selector ── */}
       {children.length > 1 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.picker}
-        >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.picker}>
           {children.map((child, idx) => (
-            <TouchableOpacity
+            <Pressable
               key={child.id}
-              style={[
-                styles.pill,
-                {
-                  backgroundColor:
-                    idx === selectedChildIdx ? colors.brand.primary : colors.surfaceSecondary,
-                },
-              ]}
-              onPress={() => {
-                haptics.light();
-                setSelectedChildIdx(idx);
-              }}
+              onPress={() => { haptics.light(); setSelectedChildIdx(idx); }}
+              style={[styles.childPill, { backgroundColor: idx === selectedChildIdx ? colors.brand.primary : colors.surfaceSecondary }]}
             >
-              <ThemedText
-                variant="caption"
-                style={{ color: idx === selectedChildIdx ? '#fff' : colors.textPrimary }}
-              >
-                {child.full_name}
+              <Avatar name={child.full_name} photoUrl={child.photo_url} size={26} />
+              <ThemedText variant="caption" style={{ color: idx === selectedChildIdx ? '#fff' : colors.textPrimary, fontWeight: '600' }}>
+                {child.full_name.split(' ')[0]}
               </ThemedText>
-            </TouchableOpacity>
+            </Pressable>
           ))}
         </ScrollView>
       )}
 
-      <FlatList
-        data={[...pending, ...submitted, ...late]}
-        contentContainerStyle={styles.list}
-        keyExtractor={(item) => item.assignment.id}
-        onRefresh={refetch}
-        refreshing={isLoading}
-        renderItem={({ item }) => {
-          const isLate = new Date(item.assignment.due_date) < now && !item.submission;
-          const isGraded = item.submission?.status === 'graded';
-
-          return (
-            <Card style={styles.card}>
-              <TouchableOpacity onPress={() => setViewing(item)}>
-                <View style={styles.cardHeader}>
-                  <ThemedText variant="body" style={{ flex: 1, fontWeight: '600' }}>
-                    {item.assignment.title}
-                  </ThemedText>
-                  {isLate && (
-                    <ThemedText variant="caption" style={{ color: Colors.semantic.error }}>
-                      LATE
-                    </ThemedText>
-                  )}
-                  {isGraded && (
-                    <ThemedText variant="caption" style={{ color: Colors.semantic.success }}>
-                      GRADED
-                    </ThemedText>
-                  )}
-                  {!isLate && !isGraded && item.submission && (
-                    <ThemedText variant="caption" style={{ color: Colors.semantic.warning }}>
-                      SUBMITTED
-                    </ThemedText>
-                  )}
-                </View>
-                <ThemedText variant="bodySm" color="secondary" numberOfLines={2} style={styles.desc}>
-                  {item.assignment.description || 'No description'}
-                </ThemedText>
-                <View style={styles.footer}>
-                  <View style={styles.meta}>
-                    <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
-                    <ThemedText variant="caption" color="secondary">
-                      Due: {item.assignment.due_date}
-                    </ThemedText>
-                  </View>
-                  <ThemedText variant="caption" color="secondary">
-                    {item.assignment.subjects?.name}
-                  </ThemedText>
-                </View>
-                {item.submission?.score !== null && item.submission?.score !== undefined && (
-                  <View style={styles.scoreBox}>
-                    <ThemedText variant="caption" style={{ color: Colors.semantic.success }}>
-                      Score: {item.submission.score}/{item.assignment.max_score}
-                    </ThemedText>
-                  </View>
-                )}
-              </TouchableOpacity>
-            </Card>
-          );
-        }}
-        ListEmptyComponent={
-          <EmptyState
-            title="No homework"
-            description={`${activeChild?.full_name} has no assigned homework.`}
-            icon="book-outline"
-          />
-        }
-      />
-
-      {/* View Modal */}
-      <Modal visible={!!viewing} animationType="slide" transparent>
-        <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-          <View style={[styles.modal, { backgroundColor: colors.background }]}>
-            <View style={styles.modalHeader}>
-              <ThemedText variant="h4" numberOfLines={1} style={{ flex: 1 }}>
-                {viewing?.assignment?.title}
-              </ThemedText>
-              <TouchableOpacity onPress={() => setViewing(null)}>
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalBody}>
-              <ThemedText variant="body">{viewing?.assignment?.description || 'No description'}</ThemedText>
-              <View style={styles.metaRow}>
-                <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
-                <ThemedText variant="caption" color="secondary">
-                  Due: {viewing?.assignment?.due_date}
-                </ThemedText>
-              </View>
-              <View style={styles.metaRow}>
-                <Ionicons name="school-outline" size={14} color={colors.textSecondary} />
-                <ThemedText variant="caption" color="secondary">
-                  Subject: {viewing?.assignment?.subjects?.name}
-                </ThemedText>
-              </View>
-              <View style={styles.metaRow}>
-                <Ionicons name="person-outline" size={14} color={colors.textSecondary} />
-                <ThemedText variant="caption" color="secondary">
-                  Teacher: {viewing?.assignment?.staff?.full_name || 'Unknown'}
-                </ThemedText>
-              </View>
-              {viewing?.submission?.feedback && (
-                <View style={styles.feedbackBox}>
-                  <ThemedText variant="label" style={{ marginBottom: Spacing.xs }}>
-                    Teacher Feedback
-                  </ThemedText>
-                  <ThemedText variant="bodySm">{viewing.submission.feedback}</ThemedText>
-                  {viewing.submission.score !== null && (
-                    <ThemedText variant="bodySm" style={{ marginTop: Spacing.sm, color: Colors.semantic.success }}>
-                      Score: {viewing.submission.score}/{viewing.assignment.max_score}
-                    </ThemedText>
-                  )}
-                </View>
-              )}
-            </ScrollView>
-          </View>
+      {isLoading ? (
+        <View style={{ padding: Spacing.base, gap: Spacing.md }}>
+          <CardSkeleton lines={3} /><CardSkeleton lines={3} />
         </View>
-      </Modal>
+      ) : (
+        <FastList
+          data={listData}
+          keyExtractor={(row: any) => row.type === 'header' ? `hdr-${row.label}` : row.item.assignment.id}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          onRefresh={refetch}
+          refreshing={isRefetching}
+          ListEmptyComponent={
+            <EmptyState title="No homework" description={`${activeChild?.full_name ?? 'Your child'} has no assigned homework.`} icon="book-outline" />
+          }
+          renderItem={({ item: row }: { item: ListRow }) => {
+            if (row.type === 'header') {
+              return (
+                <View style={styles.sectionHeader}>
+                  <ThemedText variant="label" color="muted">{row.label}</ThemedText>
+                </View>
+              );
+            }
+            const { item, section } = row;
+            const isLate   = section === 'late';
+            const isGraded = item.submission?.status === 'graded';
+            const hasSub   = !!item.submission;
+            const dueDate  = item.assignment.due_date;
+            const score    = item.submission?.score;
+
+            return (
+              <Pressable
+                onPress={() => { haptics.light(); setViewing(item); }}
+                style={({ pressed }) => [{ opacity: pressed ? 0.88 : 1 }]}
+              >
+                <Card
+                  variant="elevated"
+                  noPadding
+                  accentColor={isLate ? Colors.semantic.error : isGraded ? Colors.semantic.success : colors.brand.primary}
+                  accentSide="left"
+                  style={styles.card}
+                >
+                  <View style={{ padding: Spacing.md }}>
+                    <View style={styles.cardTop}>
+                      <ThemedText style={{ flex: 1, fontWeight: '600', fontSize: 15 }} numberOfLines={1}>
+                        {item.assignment.title}
+                      </ThemedText>
+                      {isLate  && <Badge label="Late"      preset="error"   variant="tonal" />}
+                      {isGraded && <Badge label="Graded"    preset="success" variant="tonal" />}
+                      {hasSub && !isGraded && <Badge label="Submitted" preset="info" variant="tonal" />}
+                    </View>
+
+                    <ThemedText variant="bodySm" color="secondary" numberOfLines={2} style={{ marginTop: 2 }}>
+                      {item.assignment.description || 'No description'}
+                    </ThemedText>
+
+                    <View style={styles.cardMeta}>
+                      <View style={styles.metaChip}>
+                        <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
+                        <ThemedText variant="caption" color="muted">
+                          {dueDate ? format(parseISO(dueDate), 'dd MMM yy') : '—'}
+                        </ThemedText>
+                      </View>
+                      {item.assignment.subjects?.name && (
+                        <ThemedText variant="caption" color="muted">{item.assignment.subjects.name}</ThemedText>
+                      )}
+                    </View>
+
+                    {score != null && (
+                      <View style={[styles.scoreBox, { backgroundColor: Colors.semantic.successLight }]}>
+                        <ThemedText variant="caption" style={{ color: Colors.semantic.success, fontWeight: '700' }}>
+                          Score: {score}/{item.assignment.max_score}
+                        </ThemedText>
+                      </View>
+                    )}
+                  </View>
+                </Card>
+              </Pressable>
+            );
+          }}
+        />
+      )}
+
+      {/* ── View detail bottom sheet ── */}
+      <BottomSheet
+        visible={!!viewing}
+        onClose={() => setViewing(null)}
+        title={viewing?.assignment?.title ?? ''}
+        snapHeight={500}
+      >
+        <ThemedText variant="body" style={{ marginBottom: Spacing.md }}>
+          {viewing?.assignment?.description || 'No description provided.'}
+        </ThemedText>
+        <View style={styles.metaChip}>
+          <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+          <ThemedText variant="caption" color="muted">
+            Due: {viewing?.assignment?.due_date ? format(parseISO(viewing.assignment.due_date), 'EEEE, d MMM yyyy') : '—'}
+          </ThemedText>
+        </View>
+        {viewing?.assignment?.subjects?.name && (
+          <View style={[styles.metaChip, { marginTop: Spacing.sm }]}>
+            <Ionicons name="school-outline" size={14} color={colors.textMuted} />
+            <ThemedText variant="caption" color="muted">{viewing.assignment.subjects.name}</ThemedText>
+          </View>
+        )}
+        {viewing?.submission?.score != null && (
+          <View style={[styles.feedbackBox, { backgroundColor: Colors.semantic.successLight, marginTop: Spacing.md }]}>
+            <ThemedText variant="label" style={{ marginBottom: 4 }}>Score</ThemedText>
+            <ThemedText style={{ fontWeight: '700', color: Colors.semantic.success, fontSize: 18 }}>
+              {viewing.submission.score}/{viewing.assignment.max_score}
+            </ThemedText>
+          </View>
+        )}
+        {viewing?.submission?.feedback && (
+          <View style={[styles.feedbackBox, { backgroundColor: colors.brand.primarySoft, marginTop: Spacing.md }]}>
+            <ThemedText variant="label" style={{ marginBottom: 4, color: colors.brand.primary }}>Teacher Feedback</ThemedText>
+            <ThemedText variant="bodySm">{viewing.submission.feedback}</ThemedText>
+          </View>
+        )}
+      </BottomSheet>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-  },
-  picker: {
-    paddingHorizontal: Spacing.base,
-    paddingBottom: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  pill: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.full,
-  },
-  list: { padding: Spacing.base, gap: Spacing.md, paddingBottom: TAB_BAR_HEIGHT },
-  card: { marginBottom: Spacing.md },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  desc: { marginTop: Spacing.xs },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.sm },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  scoreBox: {
-    backgroundColor: Colors.semantic.successLight,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.sm,
-    marginTop: Spacing.sm,
-    alignSelf: 'flex-start',
-  },
-  overlay: { flex: 1, justifyContent: 'center', padding: Spacing.base },
-  modal: { borderRadius: Radius.lg, maxHeight: '80%', overflow: 'hidden' },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.base,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  modalBody: { padding: Spacing.base },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginTop: Spacing.md,
-  },
-  feedbackBox: {
-    backgroundColor: Colors.semantic.infoLight,
-    padding: Spacing.md,
-    borderRadius: Radius.md,
-    marginTop: Spacing.md,
-  },
+  safe:          { flex: 1 },
+  picker:        { paddingHorizontal: Spacing.base, paddingBottom: Spacing.sm, gap: Spacing.sm },
+  childPill:     { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.full },
+  list:          { padding: Spacing.screen, gap: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT + Spacing.lg },
+  sectionHeader: { paddingVertical: Spacing.sm },
+  card:          { marginBottom: 2 },
+  cardTop:       { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  cardMeta:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.sm },
+  metaChip:      { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  scoreBox:      { alignSelf: 'flex-start', paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.sm, marginTop: Spacing.sm },
+  feedbackBox:   { padding: Spacing.md, borderRadius: Radius.md },
 });

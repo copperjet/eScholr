@@ -1,12 +1,24 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, Pressable, RefreshControl } from 'react-native';
+import { View, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
-import { ThemedText, Card, Badge, Button, EmptyState, ErrorState, SectionHeader } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
+import {
+  Badge, Button, ListItem, Skeleton, EmptyState, ErrorState,
+  SectionHeader, ScreenHeader, FastList,
+} from '../../../components/ui';
+import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { useLeaveRequests } from '../../../hooks/useLeave';
+
+function fmtDate(d: string | null) {
+  if (!d) return '—';
+  try { return format(parseISO(d), 'd MMM yyyy'); } catch { return d; }
+}
+
+type ListRow =
+  | { type: 'header'; label: string }
+  | { type: 'item'; req: any; section: 'pending' | 'history' };
 
 export default function HRLeave() {
   const { colors } = useTheme();
@@ -18,6 +30,14 @@ export default function HRLeave() {
   const pending = (requests ?? []).filter((r: any) => r.status === 'pending');
   const history = (requests ?? []).filter((r: any) => r.status !== 'pending');
 
+  const rows: ListRow[] = [];
+  rows.push({ type: 'header', label: `Pending (${pending.length})` });
+  if (pending.length === 0) rows.push({ type: 'header', label: '__empty_pending' });
+  pending.forEach((r: any) => rows.push({ type: 'item', req: r, section: 'pending' }));
+  rows.push({ type: 'header', label: 'History' });
+  if (history.length === 0) rows.push({ type: 'header', label: '__empty_history' });
+  history.forEach((r: any) => rows.push({ type: 'item', req: r, section: 'history' }));
+
   if (isError) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
@@ -28,90 +48,75 @@ export default function HRLeave() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand.primary} />}
-      >
-        <View style={styles.header}>
-          <ThemedText variant="h4">Leave Requests</ThemedText>
+      <ScreenHeader
+        title="Leave Requests"
+        right={
           <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-            <Button
-              label="Balances"
-              variant="ghost"
-              onPress={() => router.push('/(app)/(hr)/leave-balances' as any)}
-              size="sm"
-            />
-            <Button
-              label="Request Leave"
-              onPress={() => router.push('/(app)/(hr)/leave-request' as any)}
-              size="sm"
-            />
+            <Button label="Balances" variant="ghost" size="sm"
+              onPress={() => router.push('/(app)/(hr)/leave-balances' as any)} />
+            <Button label="Request" size="sm"
+              onPress={() => router.push('/(app)/(hr)/leave-request' as any)} />
           </View>
-        </View>
+        }
+      />
 
-        {/* Pending */}
-        <SectionHeader title={`Pending (${pending.length})`} />
-        {isLoading ? (
-          <Card style={{ margin: Spacing.screen, padding: Spacing.lg }}>
-            <View style={{ gap: 8 }}>
-              <View style={{ height: 16, width: '60%', backgroundColor: colors.surfaceSecondary, borderRadius: 4 }} />
-              <View style={{ height: 12, width: '40%', backgroundColor: colors.surfaceSecondary, borderRadius: 4 }} />
-            </View>
-          </Card>
-        ) : pending.length === 0 ? (
-          <EmptyState title="No pending requests" description="All caught up!" icon="checkmark-circle-outline" />
-        ) : (
-          pending.map((req: any) => (
-            <Pressable
-              key={req.id}
-              onPress={() => router.push({ pathname: '/(app)/(hr)/leave-approve' as any, params: { id: req.id } })}
-            >
-              <Card style={{ marginHorizontal: Spacing.screen, marginBottom: Spacing.sm, padding: Spacing.md }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <View>
-                    <ThemedText style={{ fontWeight: '600' }}>{req.staff?.full_name ?? 'Staff'}</ThemedText>
-                    <ThemedText variant="caption" color="muted">
-                      {req.leave_type} · {req.start_date} to {req.end_date}
-                    </ThemedText>
-                  </View>
-                  <Badge label="Pending" preset="warning" />
-                </View>
-              </Card>
-            </Pressable>
-          ))
-        )}
-
-        {/* History */}
-        <SectionHeader title="History" />
-        {history.length === 0 ? (
-          <EmptyState title="No history" description="Approved/rejected requests appear here." />
-        ) : (
-          history.map((req: any) => (
-            <Card key={req.id} style={{ marginHorizontal: Spacing.screen, marginBottom: Spacing.sm, padding: Spacing.md, opacity: 0.8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View>
-                  <ThemedText style={{ fontWeight: '600' }}>{req.staff?.full_name ?? 'Staff'}</ThemedText>
-                  <ThemedText variant="caption" color="muted">
-                    {req.leave_type} · {req.start_date} to {req.end_date}
-                  </ThemedText>
-                </View>
-                <Badge
-                  label={req.status}
-                  preset={req.status === 'approved' ? 'success' : 'neutral'}
-                />
+      {isLoading ? (
+        <View style={{ padding: Spacing.base, gap: Spacing.sm }}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <View key={i} style={styles.skRow}>
+              <Skeleton width={42} height={42} radius={21} />
+              <View style={{ flex: 1, gap: 6, marginLeft: Spacing.md }}>
+                <Skeleton width="55%" height={14} />
+                <Skeleton width="35%" height={11} />
               </View>
-            </Card>
-          ))
-        )}
-      </ScrollView>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <FastList
+          data={rows}
+          keyExtractor={(row: any) => row.type === 'header' ? `hdr-${row.label}` : row.req.id}
+          contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand.primary} />}
+          renderItem={({ item: row }: { item: ListRow }) => {
+            if (row.type === 'header') {
+              if (row.label === '__empty_pending') {
+                return <EmptyState title="No pending requests" description="All caught up!" icon="checkmark-circle-outline" />;
+              }
+              if (row.label === '__empty_history') {
+                return <EmptyState title="No history" description="Approved/rejected requests appear here." />;
+              }
+              return <SectionHeader title={row.label} />;
+            }
+            const { req, section } = row;
+            const isPending = section === 'pending';
+            const subtitle = `${req.leave_type ?? '—'} · ${fmtDate(req.start_date)} – ${fmtDate(req.end_date)}`;
+            return (
+              <ListItem
+                title={req.staff?.full_name ?? 'Staff'}
+                subtitle={subtitle}
+                avatarName={req.staff?.full_name ?? 'S'}
+                separator
+                trailing={
+                  <Badge
+                    label={isPending ? 'Pending' : req.status}
+                    preset={req.status === 'approved' ? 'success' : req.status === 'pending' ? 'warning' : 'neutral'}
+                  />
+                }
+                onPress={isPending
+                  ? () => router.push({ pathname: '/(app)/(hr)/leave-approve' as any, params: { id: req.id } })
+                  : undefined}
+              />
+            );
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.base, paddingVertical: Spacing.md,
-  },
+  safe:  { flex: 1 },
+  skRow: { flexDirection: 'row', alignItems: 'center' },
 });

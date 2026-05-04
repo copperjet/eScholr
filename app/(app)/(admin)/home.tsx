@@ -93,7 +93,7 @@ export default function AdminHome() {
   const canParents = useCanAccess('parents');
   const canReports = useCanAccess('reports');
   const canAttendance = useCanAccess('attendance');
-  const canMarksMatrix = useCanAccess('marks_matrix');
+  const canMarksMatrix = useCanAccess('marking');
   const canDaybook = useCanAccess('daybook');
   const canSchoolStructure = useCanAccess('school_structure');
   const canCalendar = useCanAccess('calendar_events');
@@ -147,37 +147,7 @@ export default function AdminHome() {
           </FadeIn>
         )}
 
-        {/* ── Hero stat card (non-super only) ── */}
-        {!isSuper && (
-          <FadeIn delay={40} style={styles.heroPad}>
-            {isLoading ? (
-              <View style={[styles.heroPlaceholder, { backgroundColor: colors.brand.primary }]}>
-                <StatCardSkeleton />
-              </View>
-            ) : (
-              <StatCard
-                variant="hero"
-                label={attPct !== null ? "Today's Attendance" : "Active Semester"}
-                value={attPct !== null ? `${attPct}%` : (data?.semester?.name ?? '—')}
-                icon={attPct !== null ? 'checkmark-circle' : 'calendar'}
-                caption={
-                  attPct !== null
-                    ? (data?.semester ? `${data.semester.name} · ${data.studentCount ?? 0} students` : `${data?.studentCount ?? 0} students enrolled`)
-                    : 'No attendance data yet for today'
-                }
-                trend={
-                  attPct !== null && attPct >= 80
-                    ? { direction: 'up', label: 'Good attendance' }
-                    : attPct !== null && attPct < 80
-                      ? { direction: 'down', label: 'Below 80% target' }
-                      : undefined
-                }
-                style={{ marginHorizontal: Spacing.screen }}
-              />
-            )}
-          </FadeIn>
-        )}
-
+        
         {/* ── Stat grid ── */}
         <FadeIn delay={120}>
           <SectionHeader title="Overview" noTopMargin />
@@ -274,8 +244,18 @@ export default function AdminHome() {
         <SectionHeader title="Quick Actions" />
         <View style={styles.qaGrid}>
           {isSuper ? (
-            // Super admin: Staff, Students, Parents
+            // Super admin: Enhanced quick actions
             <>
+              {canStudents && (
+                <QuickActionCard
+                  title="Students"
+                  subtitle="Manage enrolment"
+                  icon="school-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/students' as any)}
+                  style={styles.qaCard}
+                />
+              )}
               {canStaff && (
                 <QuickActionCard
                   title="Staff"
@@ -286,13 +266,33 @@ export default function AdminHome() {
                   style={styles.qaCard}
                 />
               )}
-              {canStudents && (
+              {canReports && (
                 <QuickActionCard
-                  title="Students"
-                  subtitle="Manage enrolment"
-                  icon="school-outline"
+                  title="Reports"
+                  subtitle="View reports"
+                  icon="document-text-outline"
                   variant="surface"
-                  onPress={() => router.push('/(app)/(admin)/students' as any)}
+                  onPress={() => router.push('/(app)/(admin)/reports' as any)}
+                  style={styles.qaCard}
+                />
+              )}
+              {canAttendance && (
+                <QuickActionCard
+                  title="Attendance"
+                  subtitle="View overview"
+                  icon="calendar-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/attendance-overview' as any)}
+                  style={styles.qaCard}
+                />
+              )}
+              {canMarksMatrix && (
+                <QuickActionCard
+                  title="Marking"
+                  subtitle="View marks matrix"
+                  icon="grid-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/marks-matrix' as any)}
                   style={styles.qaCard}
                 />
               )}
@@ -328,7 +328,7 @@ export default function AdminHome() {
               )}
             </>
           ) : (
-            // Regular admin: Students, Staff, Attendance only
+            // Regular admin: Enhanced quick actions for principals/coordinators/HODs
             <>
               {canStudents && (
                 <QuickActionCard
@@ -350,6 +350,16 @@ export default function AdminHome() {
                   style={styles.qaCard}
                 />
               )}
+              {canReports && (
+                <QuickActionCard
+                  title="Reports"
+                  subtitle="View reports"
+                  icon="document-text-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/reports' as any)}
+                  style={styles.qaCard}
+                />
+              )}
               {canAttendance && (
                 <QuickActionCard
                   title="Attendance"
@@ -357,6 +367,26 @@ export default function AdminHome() {
                   icon="calendar-outline"
                   variant="surface"
                   onPress={() => router.push('/(app)/(admin)/attendance-overview' as any)}
+                  style={styles.qaCard}
+                />
+              )}
+              {canMarksMatrix && (
+                <QuickActionCard
+                  title="Marking"
+                  subtitle="View marks matrix"
+                  icon="grid-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/marks-matrix' as any)}
+                  style={styles.qaCard}
+                />
+              )}
+              {canDaybook && (
+                <QuickActionCard
+                  title="Daybook"
+                  subtitle="View entries"
+                  icon="book-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/daybook' as any)}
                   style={styles.qaCard}
                 />
               )}

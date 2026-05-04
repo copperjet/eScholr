@@ -194,10 +194,12 @@ export default function ParentHome() {
 
         {/* ── Quick links ── */}
         <SectionHeader title="Quick Links" />
-        <View style={styles.quickLinks}>
+        <View style={styles.quickLinksGrid}>
           {[
             { icon: 'megaphone-outline',     label: 'Announcements', route: '/(app)/announcements' },
+            { icon: 'book-outline',          label: 'Homework',      route: '/(app)/(parent)/homework' },
             { icon: 'calendar-outline',      label: 'Timetable',     route: '/(app)/timetable' },
+            { icon: 'cash-outline',          label: 'Fees',          route: '/(parent)/fees' },
             { icon: 'notifications-outline', label: 'Notifications', route: '/(app)/notifications' },
           ].map(({ icon, label, route }) => (
             <Pressable
@@ -348,6 +350,7 @@ const styles = StyleSheet.create({
   childChip:  { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: Radius.lg, borderWidth: 1 },
   childHero:  { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginHorizontal: Spacing.screen, borderRadius: Radius.xl, padding: Spacing.lg, marginBottom: Spacing.base },
   cardPad:    { marginHorizontal: Spacing.screen, marginBottom: Spacing.sm },
-  quickLinks: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.screen },
-  quickLink:  { flex: 1, alignItems: 'center', paddingVertical: Spacing.md, borderRadius: Radius.lg },
+  quickLinks:     { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.screen },
+  quickLinksGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, paddingHorizontal: Spacing.screen },
+  quickLink:      { width: '47%', alignItems: 'center', paddingVertical: Spacing.md, borderRadius: Radius.lg },
 });

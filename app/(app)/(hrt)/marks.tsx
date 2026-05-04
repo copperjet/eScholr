@@ -13,7 +13,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
-import { ThemedText, Card, Skeleton, EmptyState, ErrorState, ProgressBar, FastList } from '../../../components/ui';
+import { ThemedText, Card, Skeleton, EmptyState, ErrorState, ProgressBar, FastList, ScreenHeader } from '../../../components/ui';
 import { Spacing, Radius, Typography } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
@@ -267,11 +267,10 @@ export default function MarksScreen() {
   // ── Main render ────────────────────────────────────────────
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <ThemedText variant="h4">Marks Entry</ThemedText>
-        <ThemedText variant="caption" color="muted">{gradeName} · {streamName} · {subjectName}</ThemedText>
-      </View>
+      <ScreenHeader
+        title="Marks Entry"
+        subtitle={[gradeName, streamName, subjectName].filter(Boolean).join(' · ')}
+      />
 
       {/* Window status banner */}
       {data && data.windowStatus !== 'open' && (
@@ -489,7 +488,6 @@ function ClassAvgBanner({ students, getStoredMark, colors }: { students: any[]; 
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: { paddingHorizontal: Spacing.base, paddingVertical: Spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, gap: 2 },
   windowBanner: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.base, paddingVertical: Spacing.sm },
   subjectTabs: { paddingVertical: Spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth },
   subjectTab: { paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1 },

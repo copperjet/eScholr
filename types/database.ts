@@ -3,7 +3,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json } | 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'ap' | 'sick';
 export type UserRole =
   | 'super_admin' | 'school_super_admin' | 'admin' | 'front_desk' | 'finance' | 'hr'
-  | 'principal' | 'coordinator' | 'hod' | 'hrt' | 'st' | 'parent' | 'student';
+  | 'principal' | 'coordinator' | 'hod' | 'hrt' | 'st' | 'parent' | 'student' | 'librarian';
 export type ReportStatus =
   | 'draft' | 'pending_approval' | 'approved' | 'finance_pending' | 'under_review' | 'released';
 export type SubscriptionPlan = 'starter' | 'growth' | 'scale' | 'enterprise';
@@ -213,6 +213,75 @@ export interface Inquiry {
   updated_at: string;
 }
 
+export type LibraryBookStatus = 'available' | 'checked_out' | 'lost' | 'damaged' | 'reserved';
+export type LibraryTransactionStatus = 'active' | 'returned' | 'overdue' | 'lost';
+
+export interface LibraryCollection {
+  id: string;
+  school_id: string;
+  name: string;
+  description: string | null;
+  color: string;
+  icon: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LibraryBook {
+  id: string;
+  school_id: string;
+  title: string;
+  author: string | null;
+  isbn: string | null;
+  publisher: string | null;
+  publish_year: number | null;
+  cover_url: string | null;
+  accession_number: string;
+  barcode: string | null;
+  status: LibraryBookStatus;
+  collection_id: string | null;
+  total_copies: number;
+  available_copies: number;
+  added_by: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  // joined fields
+  collection_name?: string;
+}
+
+export interface LibraryTransaction {
+  id: string;
+  school_id: string;
+  book_id: string;
+  borrower_type: 'staff' | 'student';
+  borrower_staff_id: string | null;
+  borrower_student_id: string | null;
+  checked_out_at: string;
+  due_date: string;
+  checked_in_at: string | null;
+  checked_out_by: string | null;
+  checked_in_by: string | null;
+  status: LibraryTransactionStatus;
+  notes: string | null;
+  created_at: string;
+  // joined fields
+  book_title?: string;
+  borrower_name?: string;
+  accession_number?: string;
+}
+
+export interface LibrarySettings {
+  id: string;
+  school_id: string;
+  default_loan_days: number;
+  max_books_per_student: number;
+  max_books_per_staff: number;
+  overdue_notification_days: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -230,6 +299,10 @@ export interface Database {
       payment_transactions:{ Row: PaymentTransaction; Insert: Partial<PaymentTransaction>; Update: Partial<PaymentTransaction> };
       audit_logs:          { Row: AuditLog;           Insert: Partial<AuditLog>;          Update: Partial<AuditLog> };
       inquiries:           { Row: Inquiry;            Insert: Partial<Inquiry>;           Update: Partial<Inquiry> };
+      library_collections: { Row: LibraryCollection;  Insert: Partial<LibraryCollection>; Update: Partial<LibraryCollection> };
+      library_books:       { Row: LibraryBook;        Insert: Partial<LibraryBook>;       Update: Partial<LibraryBook> };
+      library_transactions:{ Row: LibraryTransaction; Insert: Partial<LibraryTransaction>;Update: Partial<LibraryTransaction> };
+      library_settings:    { Row: LibrarySettings;    Insert: Partial<LibrarySettings>;   Update: Partial<LibrarySettings> };
     };
     Views: {};
     Functions: {
@@ -240,6 +313,11 @@ export interface Database {
       get_attendance_summary: { Args: { p_student_id: string; p_semester_id: string }; Returns: unknown[] };
       calculate_student_total:{ Args: { p_student_id: string; p_semester_id: string; p_subject_id: string }; Returns: unknown[] };
       get_class_average:      { Args: { p_subject_id: string; p_stream_id: string; p_semester_id: string; p_assessment_type: string }; Returns: number };
+      get_library_dashboard_stats: { Args: { p_school_id: string }; Returns: unknown };
+      get_overdue_books:           { Args: { p_school_id: string }; Returns: unknown[] };
+      library_check_out:           { Args: { p_school_id: string; p_book_id: string; p_borrower_type: string; p_borrower_id: string; p_due_date: string; p_staff_id: string; p_notes?: string }; Returns: string };
+      library_check_in:            { Args: { p_school_id: string; p_transaction_id: string; p_book_id: string; p_staff_id: string; p_notes?: string }; Returns: void };
+      library_mark_overdue:        { Args: Record<string, never>; Returns: number };
     };
     Enums: {};
   };

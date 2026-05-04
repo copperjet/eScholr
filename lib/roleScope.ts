@@ -7,7 +7,7 @@ import { useAuthStore } from '../stores/authStore';
 
 export type AdminRole =
   | 'super_admin' | 'school_super_admin' | 'admin' | 'principal' | 'coordinator' | 'hod'
-  | 'hrt' | 'st' | 'finance' | 'front_desk' | 'hr';
+  | 'hrt' | 'st' | 'finance' | 'front_desk' | 'hr' | 'librarian';
 
 /**
  * Role hierarchy - higher number = more permissions
@@ -23,6 +23,7 @@ const ROLE_LEVEL: Record<string, number> = {
   st: 40,
   finance: 30,
   hr: 30,
+  librarian: 25,
   front_desk: 20,
   parent: 10,
   student: 10,
@@ -56,13 +57,19 @@ export const ROLE_ACCESS: Record<string, AdminRole[]> = {
   assignments:       ['super_admin', 'school_super_admin', 'admin'],
   timetable:         ['super_admin', 'school_super_admin', 'admin'],
   reports:           ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator', 'hod'],
-  marks_matrix:      ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator', 'hod'],
+  marking:           ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator', 'hod'],
   daybook:           ['admin', 'principal', 'coordinator', 'hod'],
   announcements:     ['admin', 'principal', 'coordinator'],
   attendance:        ['admin', 'principal', 'coordinator'],
 
   // ── Finance only ────────────────────────────────────────────────────────
   fee_structure:     ['super_admin'], // platform admin retains visibility; school finance has its own dashboard
+
+  // ── Library ─────────────────────────────────────────────────────────────
+  library_catalog:       ['super_admin', 'school_super_admin', 'admin', 'librarian'],
+  library_transactions:  ['super_admin', 'school_super_admin', 'librarian'],
+  library_patrons:       ['super_admin', 'school_super_admin', 'librarian'],
+  library_settings:      ['super_admin', 'school_super_admin', 'librarian'],
 };
 
 /**

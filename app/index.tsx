@@ -40,6 +40,8 @@ export default function Index() {
       return <Redirect href="/(app)/(student)/home" />;
     case 'hr':
       return <Redirect href="/(app)/(hr)/home" />;
+    case 'librarian':
+      return <Redirect href="/(app)/(librarian)/home" />;
     default:
       return <Redirect href="/(auth)/school-code" />;
   }

@@ -4,8 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
-import { ThemedText, Card, Badge, EmptyState, ErrorState, SectionHeader } from '../../../components/ui';
-import { Spacing, Radius, Shadow } from '../../../constants/Typography';
+import { ThemedText, Card, Badge, EmptyState, ErrorState, SectionHeader, ScreenHeader } from '../../../components/ui';
+import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 
 function useStudentMarks(studentId: string | null, schoolId: string) {
   return useQuery({
@@ -67,18 +67,17 @@ export default function StudentMarks() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+      <ScreenHeader title="My Marks" showBack />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand.primary} />}
       >
-        <View style={styles.header}>
-          <ThemedText variant="h4">My Marks</ThemedText>
-        </View>
-
         {isLoading ? (
           <View style={{ paddingHorizontal: Spacing.screen, gap: Spacing.sm }}>
             {[0,1,2].map(i => (
-              <Card key={i} style={{ padding: Spacing.md }}>
+              <Card key={i} variant="elevated" style={{ padding: Spacing.md }}>
                 <View style={{ gap: 8 }}>
                   <View style={{ height: 16, width: '50%', backgroundColor: colors.surfaceSecondary, borderRadius: 4 }} />
                   <View style={{ height: 12, width: '30%', backgroundColor: colors.surfaceSecondary, borderRadius: 4 }} />
@@ -89,35 +88,53 @@ export default function StudentMarks() {
         ) : Object.keys(grouped).length === 0 ? (
           <EmptyState title="No marks yet" description="Marks appear once teachers enter them." icon="school-outline" />
         ) : (
-          Object.entries(grouped).map(([subject, items]) => (
-            <View key={subject} style={{ marginHorizontal: Spacing.screen, marginBottom: Spacing.lg }}>
-              <SectionHeader title={subject} noTopMargin />
-              <Card style={{ padding: 0, overflow: 'hidden' }}>
-                {items.map((m: any, i: number) => (
-                  <View
-                    key={m.id}
-                    style={[
-                      styles.row,
-                      { borderBottomColor: colors.border },
-                      i < items.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth },
-                    ]}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <ThemedText style={{ fontWeight: '600' }}>{TYPE_LABELS[m.assessment_type] ?? m.assessment_type}</ThemedText>
-                      <ThemedText variant="caption" color="muted">{m.semesters?.name}</ThemedText>
-                    </View>
-                    {m.is_excused ? (
-                      <Badge label="Excused" preset="warning" variant="tonal" />
-                    ) : (
-                      <ThemedText style={{ fontWeight: '700', fontSize: 16 }}>
-                        {m.value ?? '-'}{m.raw_total ? ` / ${m.raw_total}` : ''}
+          Object.entries(grouped).map(([subject, items]) => {
+            const scored = items.filter((m: any) => !m.is_excused && m.value != null);
+            const avg = scored.length > 0
+              ? (scored.reduce((s: number, m: any) => s + (m.value ?? 0), 0) / scored.length).toFixed(1)
+              : null;
+
+            return (
+              <View key={subject} style={styles.subjectGroup}>
+                <View style={styles.subjectHeading}>
+                  <ThemedText variant="h4" style={{ flex: 1 }}>{subject}</ThemedText>
+                  {avg !== null && (
+                    <View style={[styles.avgChip, { backgroundColor: colors.brand.primarySoft }]}>
+                      <ThemedText style={{ fontSize: 12, fontWeight: '700', color: colors.brand.primary }}>
+                        avg {avg}
                       </ThemedText>
-                    )}
-                  </View>
-                ))}
-              </Card>
-            </View>
-          ))
+                    </View>
+                  )}
+                </View>
+                <Card variant="elevated" style={{ padding: 0, overflow: 'hidden' }}>
+                  {items.map((m: any, i: number) => (
+                    <View
+                      key={m.id}
+                      style={[
+                        styles.row,
+                        { borderBottomColor: colors.border },
+                        i < items.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth },
+                      ]}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={{ fontWeight: '600' }}>
+                          {TYPE_LABELS[m.assessment_type] ?? m.assessment_type}
+                        </ThemedText>
+                        <ThemedText variant="caption" color="muted">{m.semesters?.name}</ThemedText>
+                      </View>
+                      {m.is_excused ? (
+                        <Badge label="Excused" preset="warning" variant="tonal" />
+                      ) : (
+                        <ThemedText style={{ fontWeight: '800', fontSize: 18, color: colors.textPrimary }}>
+                          {m.value ?? '—'}{m.raw_total ? <ThemedText variant="caption" color="muted">/{m.raw_total}</ThemedText> : ''}
+                        </ThemedText>
+                      )}
+                    </View>
+                  ))}
+                </Card>
+              </View>
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>
@@ -125,13 +142,13 @@ export default function StudentMarks() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: Spacing.base, paddingVertical: Spacing.md,
-  },
+  safe:           { flex: 1 },
+  scroll:         { paddingBottom: TAB_BAR_HEIGHT + Spacing.lg },
+  subjectGroup:   { marginHorizontal: Spacing.screen, marginBottom: Spacing.lg },
+  subjectHeading: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm, gap: Spacing.sm },
+  avgChip:        { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: Radius.full },
   row: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: Spacing.md,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.base,
   },
 });

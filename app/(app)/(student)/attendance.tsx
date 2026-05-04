@@ -1,13 +1,25 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
+import { View, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
-import { ThemedText, Card, Badge, EmptyState, ErrorState, SectionHeader, ProgressBar } from '../../../components/ui';
-import { Spacing, Radius } from '../../../constants/Typography';
-import { Colors, resolveAttColor } from '../../../constants/Colors';
+import {
+  ThemedText, Card, EmptyState, ErrorState, SectionHeader,
+  ProgressBar, ScreenHeader, FastList, ListItemSkeleton,
+} from '../../../components/ui';
+import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
+import { Colors, resolveAttColor, resolveAttBg } from '../../../constants/Colors';
+import type { AttendanceStatus } from '../../../types/database';
+
+const STATUS_LABEL: Record<string, string> = {
+  present: 'Present',
+  absent:  'Absent',
+  late:    'Late',
+  ap:      'Auth. Absent',
+  sick:    'Sick',
+};
 
 function useStudentAttendance(studentId: string | null, schoolId: string) {
   return useQuery({
@@ -32,17 +44,21 @@ export default function StudentAttendance() {
   const { colors, scheme } = useTheme();
   const { user } = useAuthStore();
   const studentId = user?.studentId ?? null;
-  const schoolId = user?.schoolId ?? '';
+  const schoolId  = user?.schoolId ?? '';
 
   const { data: records, isLoading, isError, refetch, isRefetching } = useStudentAttendance(studentId, schoolId);
 
+  const total        = records?.length ?? 0;
   const presentCount = (records ?? []).filter((r: any) => r.status === 'present').length;
-  const total = records?.length ?? 0;
-  const rate = total > 0 ? Math.round((presentCount / total) * 100) : 0;
+  const lateCount    = (records ?? []).filter((r: any) => r.status === 'late').length;
+  const absentCount  = (records ?? []).filter((r: any) => r.status === 'absent').length;
+  const rate         = total > 0 ? Math.round((presentCount / total) * 100) : 0;
+  const rateColor    = rate >= 90 ? Colors.semantic.success : rate >= 80 ? Colors.semantic.warning : Colors.semantic.error;
 
   if (isError) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+        <ScreenHeader title="Attendance" showBack />
         <ErrorState title="Could not load attendance" description="Try again." onRetry={refetch} />
       </SafeAreaView>
     );
@@ -50,66 +66,97 @@ export default function StudentAttendance() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <ScrollView
+      <ScreenHeader title="My Attendance" showBack />
+
+      <FastList
+        data={records ?? []}
+        keyExtractor={(_, i) => String(i)}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand.primary} />}
-      >
-        <View style={styles.header}>
-          <ThemedText variant="h4">My Attendance</ThemedText>
-        </View>
-
-        {isLoading ? (
-          <Card style={{ margin: Spacing.screen, padding: Spacing.lg }}>
-            <View style={{ gap: 8 }}>
-              <View style={{ height: 16, width: '60%', backgroundColor: colors.surfaceSecondary, borderRadius: 4 }} />
-              <View style={{ height: 12, width: '40%', backgroundColor: colors.surfaceSecondary, borderRadius: 4 }} />
+        ListHeaderComponent={
+          isLoading ? (
+            <View style={{ gap: Spacing.sm }}>
+              <ListItemSkeleton />
+              <ListItemSkeleton />
             </View>
-          </Card>
-        ) : (
-          <>
-            <Card style={{ marginHorizontal: Spacing.screen, marginBottom: Spacing.lg, padding: Spacing.lg }}>
-              <ThemedText variant="label" color="muted" style={{ marginBottom: Spacing.sm }}>ATTENDANCE RATE</ThemedText>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: Spacing.sm }}>
-                <ThemedText variant="h1" style={{ color: rate >= 85 ? Colors.semantic.success : Colors.semantic.error }}>
-                  {rate}%
-                </ThemedText>
-                <ThemedText variant="body" color="muted" style={{ marginLeft: Spacing.sm }}>
-                  ({presentCount} of {total} days)
-                </ThemedText>
-              </View>
-              <ProgressBar value={rate} max={100} color={rate >= 85 ? Colors.semantic.success : Colors.semantic.error} />
-            </Card>
-
-            <SectionHeader title="Recent Records" />
-            {records?.length === 0 ? (
-              <EmptyState title="No records" description="Attendance records appear once teachers submit." icon="calendar-outline" />
-            ) : (
-              records?.map((r: any, i: number) => (
-                <Card key={i} style={{ marginHorizontal: Spacing.screen, marginBottom: Spacing.sm, padding: Spacing.md }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <View>
-                      <ThemedText style={{ fontWeight: '600' }}>{r.date ? format(new Date(r.date), 'EEEE dd/MM/yy') : ''}</ThemedText>
-                      <ThemedText variant="caption" color="muted">{r.semesters?.name}</ThemedText>
-                    </View>
-                    <Badge
-                      label={(r.status ?? '').toUpperCase()}
-                      preset={r.status === 'present' ? 'success' : r.status === 'absent' ? 'error' : 'warning'}
-                    />
+          ) : (
+            <>
+              {/* ── Summary card ── */}
+              <Card variant="elevated" style={styles.summaryCard}>
+                <View style={styles.rateRow}>
+                  <View>
+                    <ThemedText variant="label" color="muted">ATTENDANCE RATE</ThemedText>
+                    <ThemedText style={{ fontSize: 40, fontWeight: '800', color: rateColor, letterSpacing: -1, marginTop: 2 }}>
+                      {rate}%
+                    </ThemedText>
                   </View>
-                </Card>
-              ))
-            )}
-          </>
-        )}
-      </ScrollView>
+                  <View style={[styles.ratePill, { backgroundColor: rateColor + '18' }]}>
+                    <ThemedText style={{ color: rateColor, fontWeight: '700', fontSize: 14 }}>
+                      {rate >= 90 ? 'Excellent' : rate >= 80 ? 'Good' : 'Needs attention'}
+                    </ThemedText>
+                  </View>
+                </View>
+                <ProgressBar value={rate} max={100} color={rateColor} style={{ marginBottom: Spacing.md }} />
+                <View style={styles.pillRow}>
+                  {[
+                    { label: 'Present', count: presentCount, status: 'present' as AttendanceStatus },
+                    { label: 'Late',    count: lateCount,    status: 'late'    as AttendanceStatus },
+                    { label: 'Absent',  count: absentCount,  status: 'absent'  as AttendanceStatus },
+                  ].map(({ label, count, status }) => (
+                    <View key={label} style={[styles.pill, { backgroundColor: resolveAttBg(status, scheme) }]}>
+                      <ThemedText style={{ fontSize: 20, fontWeight: '700', color: resolveAttColor(status) }}>{count}</ThemedText>
+                      <ThemedText style={{ fontSize: 11, color: resolveAttColor(status), opacity: 0.85 }}>{label}</ThemedText>
+                    </View>
+                  ))}
+                </View>
+              </Card>
+
+              <SectionHeader title="Recent Records" />
+            </>
+          )
+        }
+        ListEmptyComponent={
+          !isLoading ? (
+            <EmptyState title="No records" description="Attendance records appear once teachers submit." icon="calendar-outline" />
+          ) : null
+        }
+        renderItem={({ item: r }: { item: any }) => {
+          const status: AttendanceStatus = r.status ?? 'absent';
+          const color = resolveAttColor(status);
+          const bg    = resolveAttBg(status, scheme);
+          return (
+            <Card variant="elevated" style={styles.recordCard}>
+              <View style={styles.recordRow}>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={{ fontWeight: '600' }}>
+                    {r.date ? format(new Date(r.date), 'EEEE, d MMM yyyy') : ''}
+                  </ThemedText>
+                  <ThemedText variant="caption" color="muted">{r.semesters?.name}</ThemedText>
+                </View>
+                <View style={[styles.statusPill, { backgroundColor: bg }]}>
+                  <ThemedText style={{ color, fontSize: 12, fontWeight: '700' }}>
+                    {STATUS_LABEL[status] ?? status}
+                  </ThemedText>
+                </View>
+              </View>
+            </Card>
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: Spacing.base, paddingVertical: Spacing.md,
-  },
+  safe:        { flex: 1 },
+  list:        { paddingBottom: TAB_BAR_HEIGHT + Spacing.lg },
+  summaryCard: { marginHorizontal: Spacing.screen, marginBottom: Spacing.base },
+  rateRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: Spacing.md },
+  ratePill:    { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.full, alignSelf: 'flex-start', marginTop: 6 },
+  pillRow:     { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
+  pill:        { flex: 1, alignItems: 'center', paddingVertical: Spacing.sm, borderRadius: Radius.md, gap: 2 },
+  recordCard:  { marginHorizontal: Spacing.screen, marginBottom: Spacing.sm },
+  recordRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md },
+  statusPill:  { paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: Radius.full },
 });

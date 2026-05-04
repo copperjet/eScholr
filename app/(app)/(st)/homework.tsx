@@ -31,10 +31,12 @@ import {
   EmptyState,
   Button,
   CardSkeleton,
+  DatePickerField,
 } from '../../../components/ui';
 import { Spacing, Radius, Typography, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
+import { format, isPast, isToday, isTomorrow, addDays } from 'date-fns';
 
 interface Assignment {
   subject_id: string;
@@ -43,6 +45,32 @@ interface Assignment {
   subjects: { name: string } | null;
   streams: { name: string; grades: { name: string } | null } | null;
 }
+
+// Helper functions for improved UI
+const formatDueDate = (dueDate: string): string => {
+  const date = new Date(dueDate);
+  if (isToday(date)) return 'Today';
+  if (isTomorrow(date)) return 'Tomorrow';
+  if (isPast(date)) return 'Overdue';
+  return format(date, 'MMM d');
+};
+
+const getDueDateStatus = (dueDate: string): string => {
+  const date = new Date(dueDate);
+  if (isPast(date)) return 'OVERDUE';
+  if (isToday(date)) return 'DUE TODAY';
+  if (isTomorrow(date)) return 'DUE TOMORROW';
+  const daysUntil = Math.ceil((date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+  return `${daysUntil} DAYS`;
+};
+
+const getDueDateColor = (dueDate: string, colors: any): string => {
+  const date = new Date(dueDate);
+  if (isPast(date)) return Colors.semantic.error;
+  if (isToday(date)) return Colors.semantic.warning;
+  if (isTomorrow(date)) return '#FF9800';
+  return colors.brand.primary;
+};
 
 function useSTAssignments(staffId: string | null, schoolId: string) {
   return useQuery({
@@ -218,34 +246,78 @@ export default function STHomeworkScreen() {
         onRefresh={refetch}
         refreshing={isLoading}
         renderItem={({ item }) => (
-          <Card style={styles.card}>
+          <Card style={[
+              styles.card,
+              {
+                shadowColor: colors.textSecondary,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
+              }
+            ]}>
             <TouchableOpacity
               onPress={() => {
                 haptics.light();
                 setViewingId(item.id);
               }}
+              style={{ padding: 4 }}
             >
               <View style={styles.cardHeader}>
-                <ThemedText variant="body" numberOfLines={1} style={{ flex: 1, fontWeight: '600' }}>
-                  {item.title}
-                </ThemedText>
-                <TouchableOpacity onPress={() => deleteHomework.mutate({ homeworkId: item.id, streamId: streamId! })}>
-                  <Ionicons name="trash-outline" size={18} color={Colors.semantic.error} />
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="body" numberOfLines={1} style={{ fontWeight: '700', fontSize: 16, color: colors.textPrimary }}>
+                    {item.title}
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                    <View style={[
+                      styles.statusBadge,
+                      { backgroundColor: getDueDateColor(item.due_date, colors) }
+                    ]}>
+                      <ThemedText variant="caption" style={{ color: '#fff', fontSize: 10, fontWeight: '600' }}>
+                        {getDueDateStatus(item.due_date)}
+                      </ThemedText>
+                    </View>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => {
+                    Alert.alert('Delete?', 'Are you sure?', [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Delete', style: 'destructive', onPress: () => deleteHomework.mutate({ homeworkId: item.id, streamId: streamId! }) },
+                    ]);
+                  }}
+                  style={[
+                    styles.deleteBtn,
+                    { backgroundColor: Colors.semantic.error + '15' }
+                  ]}
+                >
+                  <Ionicons name="trash-outline" size={16} color={Colors.semantic.error} />
                 </TouchableOpacity>
               </View>
-              <ThemedText variant="bodySm" color="secondary" numberOfLines={2} style={styles.desc}>
-                {item.description || 'No description'}
+              <ThemedText variant="bodySm" color="secondary" numberOfLines={2} style={[styles.desc, { marginTop: 8 }]}>
+                {item.description || 'No description provided'}
               </ThemedText>
-              <View style={styles.footer}>
+              <View style={[styles.footer, { marginTop: 12 }]}>
                 <View style={styles.meta}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
-                  <ThemedText variant="caption" color="secondary">
-                    Due: {item.due_date}
-                  </ThemedText>
+                  <View style={[
+                    styles.metaItem,
+                    { backgroundColor: colors.surfaceSecondary }
+                  ]}>
+                    <Ionicons name="calendar-outline" size={12} color={colors.brand.primary} />
+                    <ThemedText variant="caption" style={{ color: colors.brand.primary, fontWeight: '600' }}>
+                      {formatDueDate(item.due_date)}
+                    </ThemedText>
+                  </View>
+                  <View style={[
+                    styles.metaItem,
+                    { backgroundColor: colors.surfaceSecondary }
+                  ]}>
+                    <Ionicons name="star-outline" size={12} color={colors.textSecondary} />
+                    <ThemedText variant="caption" style={{ color: colors.textSecondary, fontWeight: '600' }}>
+                      {item.max_score} pts
+                    </ThemedText>
+                  </View>
                 </View>
-                <ThemedText variant="caption" color="secondary">
-                  Max: {item.max_score}
-                </ThemedText>
               </View>
             </TouchableOpacity>
           </Card>
@@ -323,12 +395,12 @@ function CreateModal({
             onChangeText={setDesc}
             multiline
           />
-          <TextInput
-            style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
-            placeholder="Due Date (YYYY-MM-DD)"
-            placeholderTextColor={colors.textSecondary}
+          <DatePickerField
+            label="Due Date"
             value={due}
-            onChangeText={setDue}
+            onChange={setDue}
+            placeholder="Select due date"
+            minimumDate={new Date().toISOString().slice(0, 10)}
           />
           <TextInput
             style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
@@ -346,10 +418,7 @@ function CreateModal({
             loading={loading}
             onPress={() => {
               if (!title.trim()) { Alert.alert('Validation', 'Title is required'); return; }
-              if (!/^\d{4}-\d{2}-\d{2}$/.test(due) || isNaN(Date.parse(due))) {
-                Alert.alert('Validation', 'Due date must be YYYY-MM-DD format');
-                return;
-              }
+              if (!due) { Alert.alert('Validation', 'Due date is required'); return; }
               onSubmit({ title, description: desc, dueDate: due, maxScore: max });
             }}
           />
@@ -519,11 +588,50 @@ const styles = StyleSheet.create({
   },
   skeleton: { marginHorizontal: Spacing.base, marginBottom: Spacing.md },
   list: { padding: Spacing.base, gap: Spacing.md, paddingBottom: TAB_BAR_HEIGHT },
-  card: { marginBottom: Spacing.md },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  desc: { marginTop: Spacing.xs },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.sm },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  card: { 
+    marginBottom: Spacing.md,
+    borderRadius: Radius.lg,
+  },
+  cardHeader: { 
+    flexDirection: 'row', 
+    alignItems: 'flex-start', 
+    justifyContent: 'space-between' 
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
+    alignSelf: 'flex-start',
+  },
+  deleteBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  desc: { 
+    marginTop: Spacing.xs,
+    lineHeight: 18,
+  },
+  footer: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginTop: Spacing.sm 
+  },
+  meta: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: Spacing.sm 
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: Radius.md,
+    gap: 4,
+  },
   overlay: { flex: 1, justifyContent: 'center', padding: Spacing.base },
   modal: { borderRadius: Radius.lg, maxHeight: '80%', overflow: 'hidden' },
   modalHeader: {
