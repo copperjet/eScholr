@@ -86,7 +86,7 @@ CREATE OR REPLACE FUNCTION public.library_create_book(
   p_collection_id    uuid DEFAULT NULL,
   p_notes            text DEFAULT NULL,
   p_total_copies     int DEFAULT 1,
-  p_staff_id         uuid,
+  p_staff_id         uuid DEFAULT NULL,
   p_barcode_prefix   text DEFAULT NULL
 )
 RETURNS uuid
