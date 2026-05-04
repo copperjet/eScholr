@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, SafeAreaView, Alert, TextInput } from 'react-native';
+import React, { useState, useRef, useCallback } from 'react';
+import { View, StyleSheet, SafeAreaView, Alert, TextInput, Animated } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
@@ -13,16 +13,25 @@ export default function ScanScreen() {
   const { user } = useAuthStore();
   const schoolId = user?.schoolId ?? '';
   const [permission, requestPermission] = useCameraPermissions();
-  const [scanned, setScanned] = useState(false);
+  const [detectedCode, setDetectedCode] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState('');
+  const processingRef = useRef(false);
   const barcodeMut = useBookByBarcode(schoolId);
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const isIsbnMode = returnTo === 'book-form';
+  const flashAnim = useRef(new Animated.Value(0)).current;
 
-  const handleCode = async (data: string) => {
+  const flashGreen = useCallback(() => {
+    flashAnim.setValue(1);
+    Animated.timing(flashAnim, { toValue: 0, duration: 400, useNativeDriver: true }).start();
+  }, [flashAnim]);
+
+  const handleCode = useCallback(async (data: string) => {
     const code = data.trim();
-    if (!code) return;
-    setScanned(true);
+    if (!code || processingRef.current) return;
+    processingRef.current = true;
+    setDetectedCode(code);
+    flashGreen();
 
     if (isIsbnMode) {
       router.replace({
@@ -36,22 +45,21 @@ export default function ScanScreen() {
       const foundBookId = await barcodeMut.mutateAsync(code);
       if (!foundBookId) {
         Alert.alert('Not Found', `No book found with barcode "${code}"`, [
-          { text: 'Scan Again', onPress: () => setScanned(false) },
+          { text: 'OK', onPress: () => { processingRef.current = false; setDetectedCode(null); } },
         ]);
         return;
       }
       router.replace({ pathname: '/(app)/(librarian)/book-detail' as any, params: { bookId: foundBookId } });
     } catch (e: any) {
       Alert.alert('Error', e.message ?? 'Lookup failed', [
-        { text: 'Scan Again', onPress: () => setScanned(false) },
+        { text: 'OK', onPress: () => { processingRef.current = false; setDetectedCode(null); } },
       ]);
     }
-  };
+  }, [isIsbnMode, barcodeMut, flashGreen]);
 
-  const handleBarCodeScanned = ({ data }: { type: string; data: string }) => {
-    if (scanned) return;
+  const handleBarCodeScanned = useCallback(({ data }: { type: string; data: string }) => {
     handleCode(data);
-  };
+  }, [handleCode]);
 
   if (!permission) {
     return (
@@ -88,7 +96,7 @@ export default function ScanScreen() {
           facing="back"
           animateShutter={false}
           barcodeScannerSettings={{ barcodeTypes: ['code128', 'ean13', 'ean8', 'qr', 'code39', 'upc_a', 'upc_e'] }}
-          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          onBarcodeScanned={handleBarCodeScanned}
         />
 
         {/* Scan overlay */}
@@ -109,56 +117,62 @@ export default function ScanScreen() {
         </View>
       </View>
 
-      {/* Manual entry fallback + scan again */}
+      {/* Detected flash banner */}
+      {detectedCode && (
+        <Animated.View
+          style={[styles.detectedBanner, { opacity: flashAnim }]}
+          pointerEvents="none"
+        >
+          <ThemedText variant="body" style={{ color: '#fff', fontWeight: '700' }}>
+            Detected: {detectedCode}
+          </ThemedText>
+        </Animated.View>
+      )}
+
+      {/* Manual entry - primary input for web */}
       <View style={styles.bottomBar}>
-        <Card style={{ padding: Spacing.base }}>
-          {scanned && (
-            <ThemedText variant="body" style={{ textAlign: 'center', marginBottom: Spacing.sm }}>
-              {barcodeMut.isPending ? 'Looking up book...' : 'Processing...'}
-            </ThemedText>
-          )}
-          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm }}>
+        <Card style={{ padding: Spacing.base, backgroundColor: 'rgba(30,30,30,0.95)' }}>
+          <ThemedText variant="caption" color="muted" style={{ textAlign: 'center', marginBottom: Spacing.sm }}>
+            {isIsbnMode ? 'Camera scan may not work on web. Type ISBN below:' : 'Camera scan may not work on web. Type barcode below:'}
+          </ThemedText>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
             <TextInput
               value={manualCode}
               onChangeText={setManualCode}
-              placeholder={isIsbnMode ? 'Type ISBN manually' : 'Type barcode manually'}
-              placeholderTextColor="rgba(255,255,255,0.5)"
+              placeholder={isIsbnMode ? 'e.g. 9780134685991' : 'e.g. ACC-00001'}
+              placeholderTextColor="rgba(255,255,255,0.4)"
               style={{
                 flex: 1,
-                backgroundColor: 'rgba(255,255,255,0.12)',
+                backgroundColor: 'rgba(255,255,255,0.15)',
                 color: '#fff',
                 borderRadius: Radius.md,
                 paddingHorizontal: Spacing.base,
-                paddingVertical: Spacing.sm,
-                fontSize: 16,
+                paddingVertical: Spacing.md,
+                fontSize: 17,
               }}
-              keyboardType={isIsbnMode ? 'default' : 'default'}
+              keyboardType="default"
               autoCapitalize="characters"
+              autoFocus
               onSubmitEditing={() => {
                 if (manualCode.trim()) {
-                  setScanned(false);
                   handleCode(manualCode.trim());
                   setManualCode('');
                 }
               }}
             />
             <Button
-              label="Go"
+              label="Submit"
               variant="primary"
-              size="sm"
+              size="md"
               onPress={() => {
                 if (manualCode.trim()) {
-                  setScanned(false);
                   handleCode(manualCode.trim());
                   setManualCode('');
                 }
               }}
-              disabled={!manualCode.trim()}
+              disabled={!manualCode.trim() || barcodeMut.isPending}
             />
           </View>
-          {scanned && (
-            <Button label="Scan Again" variant="tonal" onPress={() => setScanned(false)} fullWidth />
-          )}
         </Card>
       </View>
     </SafeAreaView>
@@ -197,5 +211,16 @@ const styles = StyleSheet.create({
     right: 0,
     padding: Spacing.screen,
     paddingBottom: Spacing.xl,
+  },
+  detectedBanner: {
+    position: 'absolute',
+    top: 80,
+    left: Spacing.screen,
+    right: Spacing.screen,
+    backgroundColor: '#22c55e',
+    borderRadius: Radius.md,
+    padding: Spacing.base,
+    alignItems: 'center',
+    zIndex: 10,
   },
 });
