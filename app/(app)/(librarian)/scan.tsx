@@ -86,8 +86,11 @@ export default function ScanScreen() {
         {/* Scan overlay */}
         <View style={styles.overlay}>
           <View style={styles.scanFrame} />
-          <ThemedText variant="bodySm" style={{ color: '#fff', textAlign: 'center', marginTop: Spacing.base }}>
-            Point camera at book barcode
+          <ThemedText variant="body" style={{ color: '#fff', textAlign: 'center', marginTop: Spacing.base, fontWeight: '600' }}>
+            {returnTo === 'book-form' ? 'Scan ISBN barcode on book' : 'Point camera at library barcode'}
+          </ThemedText>
+          <ThemedText variant="bodySm" style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: Spacing.xs }}>
+            {returnTo === 'book-form' ? 'ISBN-13 or ISBN-10 barcode' : 'Library accession barcode'}
           </ThemedText>
         </View>
       </View>

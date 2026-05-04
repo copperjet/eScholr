@@ -141,12 +141,12 @@ export default function BookFormScreen() {
               <FormField label="ISBN" value={isbn} onChangeText={setIsbn} placeholder="e.g. 978-0-13-468599-1" />
             </View>
             <Button
-              label=""
+              label="Scan"
               variant="secondary"
               size="sm"
               onPress={handleScanIsbn}
-              iconLeft={<Ionicons name="scan-outline" size={18} color={colors.brand.primary} />}
-              style={{ marginBottom: Spacing.sm, width: 44 }}
+              iconLeft={<Ionicons name="scan-outline" size={16} color={colors.brand.primary} />}
+              style={{ marginBottom: Spacing.sm }}
             />
             <Button
               label={isbnLoading ? '...' : 'Lookup'}
