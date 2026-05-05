@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, Alert, RefreshControl } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Alert, RefreshControl, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { format } from 'date-fns';
@@ -42,7 +42,11 @@ export default function LoansScreen() {
         staffId: user?.staffId ?? '',
       });
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Check-in failed');
+      if (Platform.OS === 'web') {
+        window.alert(e.message ?? 'Check-in failed');
+      } else {
+        Alert.alert('Error', e.message ?? 'Check-in failed');
+      }
     } finally {
       setReturningId(null);
     }

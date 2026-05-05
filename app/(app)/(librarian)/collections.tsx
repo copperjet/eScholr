@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, Alert, RefreshControl, Pressable } from 'react-native';
+import { View, ScrollView, StyleSheet, SafeAreaView, Alert, RefreshControl, Pressable, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
@@ -50,7 +50,11 @@ export default function CollectionsScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Required', 'Name is required.');
+      if (Platform.OS === 'web') {
+        window.alert('Name is required.');
+      } else {
+        Alert.alert('Required', 'Name is required.');
+      }
       return;
     }
     try {
@@ -61,12 +65,25 @@ export default function CollectionsScreen() {
       }
       setSheetOpen(false);
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Could not save collection');
+      if (Platform.OS === 'web') {
+        window.alert(e.message ?? 'Could not save collection');
+      } else {
+        Alert.alert('Error', e.message ?? 'Could not save collection');
+      }
     }
   };
 
   const handleDelete = (id: string, collName: string) => {
-    Alert.alert('Delete Collection', `Delete "${collName}"? Books in this collection will be unlinked.`, [
+    const msg = `Delete "${collName}"? Books in this collection will be unlinked.`;
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(msg)) {
+        deleteMut.mutateAsync(id).catch((e: any) => {
+          window.alert(e.message ?? 'Could not delete');
+        });
+      }
+      return;
+    }
+    Alert.alert('Delete Collection', msg, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet, SafeAreaView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { format, addDays, parseISO, isValid } from 'date-fns';
@@ -44,7 +44,11 @@ export default function CheckoutScreen() {
 
   const handleCheckout = async () => {
     if (!selectedPatron) {
-      Alert.alert('Required', 'Please select a borrower.');
+      if (Platform.OS === 'web') {
+        window.alert('Please select a borrower.');
+      } else {
+        Alert.alert('Required', 'Please select a borrower.');
+      }
       return;
     }
     try {
@@ -56,11 +60,20 @@ export default function CheckoutScreen() {
         staffId: user?.staffId ?? '',
         notes: notes.trim() || undefined,
       });
-      Alert.alert('Success', `"${book?.title}" checked out to ${selectedPatron.full_name}.`, [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      if (Platform.OS === 'web') {
+        window.alert(`"${book?.title}" checked out to ${selectedPatron.full_name}.`);
+        router.back();
+      } else {
+        Alert.alert('Success', `"${book?.title}" checked out to ${selectedPatron.full_name}.`, [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      }
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Checkout failed');
+      if (Platform.OS === 'web') {
+        window.alert(e.message ?? 'Checkout failed');
+      } else {
+        Alert.alert('Error', e.message ?? 'Checkout failed');
+      }
     }
   };
 

@@ -49,16 +49,28 @@ export default function ScanScreen() {
     try {
       const foundBookId = await barcodeMut.mutateAsync(code);
       if (!foundBookId) {
-        Alert.alert('Not Found', `No book found with barcode "${code}"`, [
-          { text: 'OK', onPress: () => { processingRef.current = false; setDetectedCode(null); } },
-        ]);
+        if (Platform.OS === 'web') {
+          window.alert(`No book found with barcode "${code}"`);
+          processingRef.current = false;
+          setDetectedCode(null);
+        } else {
+          Alert.alert('Not Found', `No book found with barcode "${code}"`, [
+            { text: 'OK', onPress: () => { processingRef.current = false; setDetectedCode(null); } },
+          ]);
+        }
         return;
       }
       router.replace({ pathname: '/(app)/(librarian)/book-detail' as any, params: { bookId: foundBookId } });
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Lookup failed', [
-        { text: 'OK', onPress: () => { processingRef.current = false; setDetectedCode(null); } },
-      ]);
+      if (Platform.OS === 'web') {
+        window.alert(e.message ?? 'Lookup failed');
+        processingRef.current = false;
+        setDetectedCode(null);
+      } else {
+        Alert.alert('Error', e.message ?? 'Lookup failed', [
+          { text: 'OK', onPress: () => { processingRef.current = false; setDetectedCode(null); } },
+        ]);
+      }
     }
   }, [isIsbnMode, barcodeMut, flashGreen]);
 
@@ -89,7 +101,7 @@ export default function ScanScreen() {
               placeholderTextColor={colors.textMuted}
               style={{
                 backgroundColor: colors.surface,
-                color: colors.text,
+                color: colors.foreground,
                 borderRadius: Radius.md,
                 paddingHorizontal: Spacing.base,
                 paddingVertical: Spacing.md,

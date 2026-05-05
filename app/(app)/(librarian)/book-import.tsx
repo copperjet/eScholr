@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet, SafeAreaView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
@@ -73,13 +73,21 @@ export default function BookImportScreen() {
       const content = await FileSystem.readAsStringAsync(asset.uri);
       const parsed = parseCSV(content);
       if (parsed.length === 0) {
-        Alert.alert('Invalid CSV', 'CSV must have at least a "title" column.');
+        if (Platform.OS === 'web') {
+          window.alert('CSV must have at least a "title" column.');
+        } else {
+          Alert.alert('Invalid CSV', 'CSV must have at least a "title" column.');
+        }
         return;
       }
       setRows(parsed);
       setResult(null);
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Could not read file');
+      if (Platform.OS === 'web') {
+        window.alert(e.message ?? 'Could not read file');
+      } else {
+        Alert.alert('Error', e.message ?? 'Could not read file');
+      }
     }
   };
 
@@ -98,7 +106,11 @@ export default function BookImportScreen() {
       setResult({ success: res.count, errors: 0 });
       setRows([]);
     } catch (e: any) {
-      Alert.alert('Import Error', e.message ?? 'Import failed.');
+      if (Platform.OS === 'web') {
+        window.alert(e.message ?? 'Import failed.');
+      } else {
+        Alert.alert('Import Error', e.message ?? 'Import failed.');
+      }
     }
   };
 

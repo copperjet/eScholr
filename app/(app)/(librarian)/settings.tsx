@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet, SafeAreaView, Alert, Platform } from 'react-native';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { useLibrarySettings, useUpsertLibrarySettings } from '../../../hooks/useLibrary';
@@ -38,9 +38,17 @@ export default function SettingsScreen() {
         maxBooksPerStaff: parseInt(maxStaff, 10) || 5,
         overdueNotificationDays: parseInt(overdueDays, 10) || 3,
       });
-      Alert.alert('Saved', 'Library settings updated.');
+      if (Platform.OS === 'web') {
+        window.alert('Library settings updated.');
+      } else {
+        Alert.alert('Saved', 'Library settings updated.');
+      }
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Could not save settings');
+      if (Platform.OS === 'web') {
+        window.alert(e.message ?? 'Could not save settings');
+      } else {
+        Alert.alert('Error', e.message ?? 'Could not save settings');
+      }
     }
   };
 

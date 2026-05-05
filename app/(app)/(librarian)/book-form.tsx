@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
+import { View, ScrollView, StyleSheet, SafeAreaView, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
@@ -67,7 +67,11 @@ export default function BookFormScreen() {
       const json = await res.json();
       const entry = json[`ISBN:${target}`];
       if (!entry) {
-        Alert.alert('Not Found', 'No book found for this ISBN.');
+        if (Platform.OS === 'web') {
+          window.alert('No book found for this ISBN.');
+        } else {
+          Alert.alert('Not Found', 'No book found for this ISBN.');
+        }
         return;
       }
       if (entry.title && !title) setTitle(entry.title);
@@ -78,7 +82,11 @@ export default function BookFormScreen() {
         if (y) setPublishYear(y[0]);
       }
     } catch {
-      Alert.alert('Error', 'Failed to look up ISBN. Check your connection.');
+      if (Platform.OS === 'web') {
+        window.alert('Failed to look up ISBN. Check your connection.');
+      } else {
+        Alert.alert('Error', 'Failed to look up ISBN. Check your connection.');
+      }
     } finally {
       setIsbnLoading(false);
     }
@@ -93,7 +101,11 @@ export default function BookFormScreen() {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('Required', 'Title is required.');
+      if (Platform.OS === 'web') {
+        window.alert('Title is required.');
+      } else {
+        Alert.alert('Required', 'Title is required.');
+      }
       return;
     }
     try {
@@ -105,7 +117,7 @@ export default function BookFormScreen() {
           isbn: isbn.trim() || undefined,
           publisher: publisher.trim() || undefined,
           publishYear: publishYear ? parseInt(publishYear, 10) : undefined,
-          collectionId: collectionId || null,
+          collectionId: collectionId || undefined,
           notes: notes.trim() || undefined,
         });
       } else {
@@ -116,14 +128,18 @@ export default function BookFormScreen() {
           publisher: publisher.trim() || undefined,
           publishYear: publishYear ? parseInt(publishYear, 10) : undefined,
           collectionId: collectionId || undefined,
-          totalCopies: parseInt(totalCopies, 10) || 1,
-          notes: notes.trim() || undefined,
+          totalCopies: totalCopies ? parseInt(totalCopies, 10) : 1,
           staffId: user?.staffId ?? '',
+          notes: notes.trim() || undefined,
         });
       }
       router.back();
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Could not save book');
+      if (Platform.OS === 'web') {
+        window.alert(e.message ?? 'Could not save book');
+      } else {
+        Alert.alert('Error', e.message ?? 'Could not save book');
+      }
     }
   };
 
