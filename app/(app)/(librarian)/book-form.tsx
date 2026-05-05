@@ -113,12 +113,12 @@ export default function BookFormScreen() {
         await updateMut.mutateAsync({
           bookId: bookId!,
           title: title.trim(),
-          author: author.trim() || undefined,
-          isbn: isbn.trim() || undefined,
-          publisher: publisher.trim() || undefined,
-          publishYear: publishYear ? parseInt(publishYear, 10) : undefined,
-          collectionId: collectionId || undefined,
-          notes: notes.trim() || undefined,
+          author: author.trim() || null,
+          isbn: isbn.trim() || null,
+          publisher: publisher.trim() || null,
+          publishYear: publishYear ? parseInt(publishYear, 10) : null,
+          collectionId: collectionId || null,
+          notes: notes.trim() || null,
         });
       } else {
         await createMut.mutateAsync({

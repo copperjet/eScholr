@@ -34,9 +34,9 @@ export default function QuickCheckinScreen() {
         return;
       }
 
-      // Navigate to loans screen filtered to this book for check-in
+      // Navigate to book-detail which shows active transactions with Return buttons
       router.push({
-        pathname: '/(app)/(librarian)/loans' as any,
+        pathname: '/(app)/(librarian)/book-detail' as any,
         params: { bookId },
       });
     } catch (e: any) {
@@ -76,8 +76,8 @@ export default function QuickCheckinScreen() {
           <ThemedText variant="h3" style={{ marginBottom: Spacing.sm }}>Scan Book Barcode</ThemedText>
           <ThemedText variant="body" color="muted" style={{ marginBottom: Spacing.lg }}>
             {IS_WEB
-              ? 'Type the barcode below or use a USB barcode scanner. Navigate to the loans screen to complete check-in.'
-              : 'Point the camera at the book barcode. Navigate to the loans screen to complete check-in.'}
+              ? 'Type the barcode below or use a USB barcode scanner. The book detail will open — tap Return on the active loan.'
+              : 'Point the camera at the book barcode. The book detail will open — tap Return on the active loan.'}
           </ThemedText>
 
           <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
@@ -124,7 +124,7 @@ export default function QuickCheckinScreen() {
 
         <Card variant="tinted" style={styles.tip}>
           <ThemedText variant="bodySm" color="muted">
-            Scan the book barcode to quickly find it. Then tap Return on the loans screen to complete check-in.
+            Scan the book barcode to open the book detail, then tap Return on the active loan to complete check-in.
           </ThemedText>
         </Card>
       </View>

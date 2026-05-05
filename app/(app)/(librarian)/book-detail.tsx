@@ -28,7 +28,7 @@ export default function BookDetailScreen() {
   const schoolId = user?.schoolId ?? '';
 
   const { data: book, isLoading, isError, refetch, isFetching } = useLibraryBook(bookId ?? null);
-  const { data: transactions } = useBookTransactions(bookId ?? null);
+  const { data: transactions } = useBookTransactions(bookId ?? null, schoolId);
   const deleteMut = useDeleteBook(schoolId);
   const checkInMut = useCheckInBook(schoolId);
 

@@ -69,7 +69,7 @@ export default function CatalogScreen() {
         <SearchBar
           value={search}
           onChangeText={setSearch}
-          placeholder="Search title, author, ISBN, accession..."
+          placeholder="Search title, author, ISBN, accession number..."
         />
       </View>
 

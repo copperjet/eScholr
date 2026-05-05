@@ -70,7 +70,12 @@ export default function BookImportScreen() {
       if (res.canceled || !res.assets?.[0]) return;
       const asset = res.assets[0];
       setFileName(asset.name);
-      const content = await FileSystem.readAsStringAsync(asset.uri);
+      let content: string;
+      if (Platform.OS === 'web') {
+        content = await fetch(asset.uri).then((r) => r.text());
+      } else {
+        content = await FileSystem.readAsStringAsync(asset.uri);
+      }
       const parsed = parseCSV(content);
       if (parsed.length === 0) {
         if (Platform.OS === 'web') {

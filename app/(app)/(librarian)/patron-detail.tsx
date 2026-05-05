@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { format } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { usePatronLoans } from '../../../hooks/useLibrary';
+import { useAuthStore } from '../../../stores/authStore';
 import {
   ThemedText, ScreenHeader, ListItem, EmptyState, Card, Skeleton,
 } from '../../../components/ui';
@@ -16,10 +17,13 @@ export default function PatronDetailScreen() {
   const { patronId, patronType, patronName } = useLocalSearchParams<{
     patronId: string; patronType: 'staff' | 'student'; patronName: string;
   }>();
+  const { user } = useAuthStore();
+  const schoolId = user?.schoolId ?? '';
 
   const { data: loans, isLoading, refetch, isFetching } = usePatronLoans(
     patronId ?? null,
     (patronType as 'staff' | 'student') ?? 'student',
+    schoolId,
   );
 
   const activeLoans = (loans ?? []).filter((l) => l.status === 'active' || l.status === 'overdue');

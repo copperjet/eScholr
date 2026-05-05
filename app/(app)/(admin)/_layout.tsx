@@ -30,20 +30,9 @@ function MobileAdminLayout({ isSuper, colors }: { isSuper: boolean; colors: any 
     >
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} /> }} />
 
-      {/* Users tab: visible for all admin roles. Super Admin: hidden (all managed via Quick Actions). */}
-      {isSuper ? (
-        <>
-          <Tabs.Screen name="users"    options={{ href: null }} />
-          <Tabs.Screen name="students" options={{ href: null }} />
-          <Tabs.Screen name="staff"    options={{ href: null }} />
-        </>
-      ) : (
-        <>
-          <Tabs.Screen name="users"    options={{ title: 'Users', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} /> }} />
-          <Tabs.Screen name="students" options={{ href: null }} />
-          <Tabs.Screen name="staff"    options={{ href: null }} />
-        </>
-      )}
+      <Tabs.Screen name="users" options={{ title: 'Users', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} /> }} />
+      <Tabs.Screen name="students" options={{ href: null }} />
+      <Tabs.Screen name="staff"    options={{ href: null }} />
 
       <Tabs.Screen name="more" options={{ title: 'More', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} /> }} />
 

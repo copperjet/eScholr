@@ -102,8 +102,20 @@ export function useLibraryBooks(schoolId: string, filters?: BookFilters) {
         q = q.eq('collection_id', filters.collectionId);
       }
       if (filters?.search) {
-        // search title, author, isbn, and joined copies accession_number
-        q = q.or(`title.ilike.%${filters.search}%,author.ilike.%${filters.search}%,isbn.ilike.%${filters.search}%`);
+        const s = filters.search;
+        // Also search copies accession_number (separate lookup then OR)
+        const { data: copyMatches } = await (supabase as any)
+          .from('library_book_copies')
+          .select('book_id')
+          .eq('school_id', schoolId)
+          .ilike('accession_number', `%${s}%`);
+        const accessionIds: string[] = (copyMatches ?? []).map((r: any) => r.book_id as string);
+        const metaFilter = `title.ilike.%${s}%,author.ilike.%${s}%,isbn.ilike.%${s}%`;
+        if (accessionIds.length > 0) {
+          q = q.or(`${metaFilter},id.in.(${accessionIds.join(',')})`);
+        } else {
+          q = q.or(metaFilter);
+        }
       }
 
       const { data, error } = await q.order('created_at', { ascending: false });
@@ -198,13 +210,13 @@ export function useUpdateBook(schoolId: string) {
     mutationFn: async (params: {
       bookId: string;
       title?: string;
-      author?: string;
-      isbn?: string;
-      publisher?: string;
-      publishYear?: number;
-      coverUrl?: string;
+      author?: string | null;
+      isbn?: string | null;
+      publisher?: string | null;
+      publishYear?: number | null;
+      coverUrl?: string | null;
       collectionId?: string | null;
-      notes?: string;
+      notes?: string | null;
     }) => {
       const db = supabase as any;
       const { error } = await db.rpc('library_update_book', {
@@ -216,7 +228,7 @@ export function useUpdateBook(schoolId: string) {
         p_publisher: params.publisher ?? null,
         p_publish_year: params.publishYear ?? null,
         p_cover_url: params.coverUrl ?? null,
-        p_collection_id: params.collectionId ?? null,
+        p_collection_id: params.collectionId !== undefined ? (params.collectionId ?? null) : null,
         p_notes: params.notes ?? null,
       });
       if (error) throw error;
@@ -225,6 +237,7 @@ export function useUpdateBook(schoolId: string) {
       qc.invalidateQueries({ queryKey: ['library-books', schoolId] });
       qc.invalidateQueries({ queryKey: ['library-book', vars.bookId] });
       qc.invalidateQueries({ queryKey: ['library-dashboard', schoolId] });
+      qc.invalidateQueries({ queryKey: ['library-collections', schoolId] });
     },
   });
 }
@@ -411,14 +424,14 @@ export function useLibraryTransactions(schoolId: string, filters?: TransactionFi
   });
 }
 
-export function useBookTransactions(bookId: string | null) {
+export function useBookTransactions(bookId: string | null, schoolId?: string) {
   return useQuery<LibraryTransaction[]>({
     queryKey: ['library-book-transactions', bookId],
     enabled: !!bookId,
     staleTime: 1000 * 15,
     queryFn: async () => {
       const db = supabase as any;
-      const { data, error } = await db
+      let q = db
         .from('library_transactions')
         .select(`
           *, book:book_id ( title ),
@@ -426,8 +439,9 @@ export function useBookTransactions(bookId: string | null) {
           staff_borrower:borrower_staff_id ( full_name ),
           student_borrower:borrower_student_id ( full_name )
         `)
-        .eq('book_id', bookId)
-        .order('created_at', { ascending: false });
+        .eq('book_id', bookId);
+      if (schoolId) q = q.eq('school_id', schoolId);
+      const { data, error } = await q.order('created_at', { ascending: false });
       if (error) throw error;
       return ((data ?? []) as any[]).map((r: any): LibraryTransaction => ({
         ...r,
@@ -495,7 +509,10 @@ export function useCheckInBook(schoolId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['library-books', schoolId] });
+      qc.invalidateQueries({ queryKey: ['library-book'] });
       qc.invalidateQueries({ queryKey: ['library-transactions', schoolId] });
+      qc.invalidateQueries({ queryKey: ['library-book-transactions'] });
+      qc.invalidateQueries({ queryKey: ['library-patron-loans'] });
       qc.invalidateQueries({ queryKey: ['library-dashboard', schoolId] });
       qc.invalidateQueries({ queryKey: ['library-overdue', schoolId] });
     },
@@ -592,7 +609,7 @@ export function usePatronSearch(schoolId: string, query: string, type: 'staff' |
 
 // ─── Patron loan history ─────────────────────────────────────────────────────
 
-export function usePatronLoans(patronId: string | null, patronType: 'staff' | 'student') {
+export function usePatronLoans(patronId: string | null, patronType: 'staff' | 'student', schoolId?: string) {
   return useQuery<LibraryTransaction[]>({
     queryKey: ['library-patron-loans', patronId, patronType],
     enabled: !!patronId,
@@ -600,7 +617,7 @@ export function usePatronLoans(patronId: string | null, patronType: 'staff' | 's
     queryFn: async () => {
       const db = supabase as any;
       const col = patronType === 'staff' ? 'borrower_staff_id' : 'borrower_student_id';
-      const { data, error } = await db
+      let q = db
         .from('library_transactions')
         .select(`
           *, book:book_id ( title ),
@@ -608,8 +625,9 @@ export function usePatronLoans(patronId: string | null, patronType: 'staff' | 's
           staff_borrower:borrower_staff_id ( full_name ),
           student_borrower:borrower_student_id ( full_name )
         `)
-        .eq(col, patronId)
-        .order('created_at', { ascending: false });
+        .eq(col, patronId);
+      if (schoolId) q = q.eq('school_id', schoolId);
+      const { data, error } = await q.order('created_at', { ascending: false });
       if (error) throw error;
       return ((data ?? []) as any[]).map((r: any): LibraryTransaction => ({
         ...r,
