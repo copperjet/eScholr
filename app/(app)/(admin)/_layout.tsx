@@ -37,6 +37,8 @@ function MobileAdminLayout({ isSuper, colors }: { isSuper: boolean; colors: any 
       <Tabs.Screen name="more" options={{ title: 'More', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} /> }} />
 
       {/* Hidden screens */}
+      <Tabs.Screen name="analysis"          options={{ href: null }} />
+      <Tabs.Screen name="assessment-config" options={{ href: null }} />
       <Tabs.Screen name="attendance-overview" options={{ href: null }} />
       <Tabs.Screen name="attendance-correct"  options={{ href: null }} />
       <Tabs.Screen name="assignments"         options={{ href: null }} />
