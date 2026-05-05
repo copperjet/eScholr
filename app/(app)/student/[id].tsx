@@ -154,9 +154,11 @@ export default function StudentProfileScreen() {
 
   const schoolId = user?.schoolId ?? '';
 
-  // Hide Fees tab from teacher roles (hrt, st)
-  const isTeacher = user?.activeRole === 'hrt' || user?.activeRole === 'st';
-  const TABS = isTeacher ? ALL_TABS.filter(t => t !== 'Fees') : ALL_TABS;
+  const canSeeFees =
+    user?.activeRole === 'super_admin' ||
+    user?.activeRole === 'finance' ||
+    user?.activeRole === 'parent';
+  const TABS = canSeeFees ? ALL_TABS : ALL_TABS.filter(t => t !== 'Fees');
 
   const profileQuery = useStudentProfile(studentId ?? '', schoolId);
   const marksQuery = useStudentMarks(studentId ?? '', schoolId);

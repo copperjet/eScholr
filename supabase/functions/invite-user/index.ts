@@ -106,9 +106,17 @@ Deno.serve(async (req) => {
         temp_password: tempPassword,
       }).eq("id", staff_id);
     } else if (parent_id) {
-      await admin.from("parents").update({ auth_user_id: authUserId }).eq("id", parent_id);
+      await admin.from("parents").update({
+        auth_user_id: authUserId,
+        login_status: "pending_login",
+        temp_password: tempPassword,
+      }).eq("id", parent_id);
     } else if (student_id) {
-      await admin.from("students").update({ auth_user_id: authUserId }).eq("id", student_id);
+      await admin.from("students").update({
+        auth_user_id: authUserId,
+        login_status: "pending_login",
+        temp_password: tempPassword,
+      }).eq("id", student_id);
     }
 
     return json({

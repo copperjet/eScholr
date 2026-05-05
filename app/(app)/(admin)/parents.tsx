@@ -5,7 +5,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, StyleSheet, SafeAreaView,
-  TouchableOpacity, Alert, RefreshControl, TextInput, ScrollView,
+  TouchableOpacity, Alert, RefreshControl, TextInput, ScrollView, Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,7 +39,7 @@ function useParents(schoolId: string) {
       const [parentsRes, linksRes] = await Promise.all([
         supabase
           .from('parents')
-          .select('id, full_name, email, phone, relationship, created_at, auth_user_id')
+          .select('id, full_name, email, phone, relationship, created_at, auth_user_id, login_status, temp_password')
           .eq('school_id', schoolId)
           .order('full_name'),
         supabase
@@ -93,6 +93,7 @@ export default function AdminParentsScreen() {
   const [addVisible, setAddVisible] = useState(false);
   const [linkVisible, setLinkVisible] = useState(false);
   const [studentSearch, setStudentSearch] = useState('');
+  const [showTempPw, setShowTempPw] = useState(false);
 
   const [form, setForm] = useState({ full_name: '', email: '', phone: '', relationship: 'guardian' as RelationshipVal });
   const [formError, setFormError] = useState('');
@@ -200,11 +201,12 @@ export default function AdminParentsScreen() {
       );
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Invite failed');
+      return json;
     },
     onSuccess: () => {
       haptics.success();
       queryClient.invalidateQueries({ queryKey: ['admin-parents'] });
-      Alert.alert('Invite Sent', 'A login link has been emailed to the parent.');
+      setDetailVisible(false);
     },
     onError: (err: any) => {
       haptics.error();
@@ -394,9 +396,9 @@ export default function AdminParentsScreen() {
       {/* ── Parent Detail Sheet ─────────────────────────────── */}
       <BottomSheet
         visible={detailVisible && !!selectedParent}
-        onClose={() => setDetailVisible(false)}
+        onClose={() => { setDetailVisible(false); setShowTempPw(false); }}
         title={selectedParent?.full_name ?? 'Parent'}
-        snapHeight={560}
+        snapHeight={selectedParent?.login_status === 'pending_login' ? 620 : 560}
       >
         {selectedParent && (
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -454,40 +456,86 @@ export default function AdminParentsScreen() {
               </View>
 
               {/* Auth / invite card */}
-              <View style={[styles.authCard, {
-                backgroundColor: selectedParent.auth_user_id ? Colors.semantic.successLight : Colors.semantic.warningLight,
-                borderColor: selectedParent.auth_user_id ? Colors.semantic.success : Colors.semantic.warning,
-              }]}>
-                <Ionicons
-                  name={selectedParent.auth_user_id ? 'shield-checkmark' : 'mail-unread-outline'}
-                  size={16}
-                  color={selectedParent.auth_user_id ? Colors.semantic.success : Colors.semantic.warning}
-                />
-                <View style={{ flex: 1, marginLeft: Spacing.sm }}>
-                  <ThemedText variant="bodySm" style={{ fontWeight: '600', color: selectedParent.auth_user_id ? Colors.semantic.success : Colors.semantic.warning }}>
-                    {selectedParent.auth_user_id ? 'Login enabled' : 'No login account yet'}
-                  </ThemedText>
-                  <ThemedText variant="caption" color="muted">
-                    {selectedParent.auth_user_id ? 'This parent can sign in to view their child\'s progress.' : 'Send an invite email to create their login.'}
+              {selectedParent.login_status === 'pending_login' ? (
+                <View style={[styles.authCard, { backgroundColor: Colors.semantic.warning + '12', borderColor: Colors.semantic.warning }]}>
+                  <Ionicons name="time-outline" size={16} color={Colors.semantic.warning} />
+                  <View style={{ flex: 1, marginLeft: Spacing.sm }}>
+                    <ThemedText variant="bodySm" style={{ fontWeight: '700', color: Colors.semantic.warning }}>Login pending — awaiting first sign-in</ThemedText>
+                    <ThemedText variant="caption" color="muted">Share the temporary password below. It clears once they log in and reset it.</ThemedText>
+                  </View>
+                </View>
+              ) : (
+                <View style={[styles.authCard, {
+                  backgroundColor: selectedParent.auth_user_id ? Colors.semantic.successLight : Colors.semantic.warningLight,
+                  borderColor: selectedParent.auth_user_id ? Colors.semantic.success : Colors.semantic.warning,
+                }]}>
+                  <Ionicons
+                    name={selectedParent.auth_user_id ? 'shield-checkmark' : 'mail-unread-outline'}
+                    size={16}
+                    color={selectedParent.auth_user_id ? Colors.semantic.success : Colors.semantic.warning}
+                  />
+                  <View style={{ flex: 1, marginLeft: Spacing.sm }}>
+                    <ThemedText variant="bodySm" style={{ fontWeight: '600', color: selectedParent.auth_user_id ? Colors.semantic.success : Colors.semantic.warning }}>
+                      {selectedParent.auth_user_id ? 'Login active' : 'No login account yet'}
+                    </ThemedText>
+                    <ThemedText variant="caption" color="muted">
+                      {selectedParent.auth_user_id ? 'Parent has signed in and set their password.' : 'Create a login so this parent can access the app.'}
+                    </ThemedText>
+                  </View>
+                  {!selectedParent.auth_user_id && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        Alert.alert('Create Login', `Create a login account for ${selectedParent.full_name}?`, [
+                          { text: 'Cancel', style: 'cancel' },
+                          { text: 'Create', onPress: () => sendInvite.mutate(selectedParent) },
+                        ]);
+                      }}
+                      disabled={sendInvite.isPending}
+                      style={[styles.inviteBtn, { backgroundColor: Colors.semantic.warning }]}
+                    >
+                      <ThemedText variant="label" style={{ color: '#fff', fontWeight: '700' }}>
+                        {sendInvite.isPending ? '…' : 'Create Login'}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
+              {/* Temporary password card */}
+              {selectedParent.login_status === 'pending_login' && selectedParent.temp_password && (
+                <View style={[styles.tempPwCard, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm }}>
+                    <Ionicons name="key-outline" size={15} color={colors.brand.primary} />
+                    <ThemedText variant="label" color="muted" style={{ marginLeft: 6, flex: 1 }}>TEMPORARY PASSWORD</ThemedText>
+                    <TouchableOpacity onPress={() => setShowTempPw(v => !v)} hitSlop={8}>
+                      <Ionicons name={showTempPw ? 'eye-off-outline' : 'eye-outline'} size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                    <ThemedText style={{ flex: 1, fontFamily: 'monospace', fontSize: 16, fontWeight: '700', letterSpacing: 2, color: colors.textPrimary }}>
+                      {showTempPw ? selectedParent.temp_password : '••••••••••••'}
+                    </ThemedText>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (Platform.OS === 'web') {
+                          navigator.clipboard?.writeText(selectedParent.temp_password);
+                          haptics.success();
+                          Alert.alert('Copied', 'Temporary password copied to clipboard.');
+                        } else {
+                          Alert.alert('Temporary Password', selectedParent.temp_password);
+                        }
+                      }}
+                      hitSlop={8}
+                      style={[styles.inviteBtn, { backgroundColor: colors.brand.primary }]}
+                    >
+                      <ThemedText variant="label" style={{ color: '#fff', fontWeight: '700' }}>Copy</ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                  <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.sm }}>
+                    Share this with {selectedParent.full_name.split(' ')[0]}. They will be prompted to set a new password on first login.
                   </ThemedText>
                 </View>
-                {!selectedParent.auth_user_id && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      Alert.alert('Send Invite', `Send a login invite to ${selectedParent.email}?`, [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Send', onPress: () => sendInvite.mutate(selectedParent) },
-                      ]);
-                    }}
-                    disabled={sendInvite.isPending}
-                    style={[styles.inviteBtn, { backgroundColor: Colors.semantic.warning }]}
-                  >
-                    <ThemedText variant="label" style={{ color: '#fff', fontWeight: '700' }}>
-                      {sendInvite.isPending ? '…' : 'Invite'}
-                    </ThemedText>
-                  </TouchableOpacity>
-                )}
-              </View>
+              )}
             </View>
           </ScrollView>
         )}
@@ -586,6 +634,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg, borderWidth: 1,
   },
   inviteBtn: { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: Radius.md },
+  tempPwCard: { padding: Spacing.base, borderRadius: Radius.lg, borderWidth: 1 },
   input: {
     borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: Spacing.md,
     paddingVertical: 12, fontSize: 15,

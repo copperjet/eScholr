@@ -21,13 +21,15 @@ import {
   useDeleteSchoolNote, usePinSchoolNote, useImpersonateSchool,
   useImpersonationLog,
   useDeleteSchool, useSchoolAdmins, useInviteSchoolAdmin,
+  useSchoolStaff, useAssignStaffRole, useRemoveStaffRole,
+  ALL_STAFF_ROLES, StaffRole,
 } from '../../../hooks/usePlatform';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type SubscriptionStatus = 'active' | 'trial' | 'suspended' | 'cancelled';
 type SubscriptionPlan   = 'starter' | 'growth' | 'scale' | 'enterprise';
-type Tab = 'info' | 'usage' | 'notes' | 'admins';
+type Tab = 'info' | 'staff' | 'usage' | 'notes' | 'admins';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -459,6 +461,7 @@ export default function SchoolDetail() {
 
   const TABS: { id: Tab; label: string; icon: string }[] = [
     { id: 'info',   label: 'Info',   icon: 'information-circle-outline' },
+    { id: 'staff',  label: 'Staff',  icon: 'id-card-outline' },
     { id: 'admins', label: 'Admins', icon: 'people-circle-outline' },
     { id: 'usage',  label: 'Usage',  icon: 'bar-chart-outline' },
     { id: 'notes',  label: 'Notes',  icon: 'document-text-outline' },
@@ -524,10 +527,11 @@ export default function SchoolDetail() {
 
           {/* Tab content */}
           <View style={{ flex: 1 }}>
-            {activeTab === 'info'   && <InfoTab   school={school} colors={colors} refetch={refetch} isFetching={isFetching} />}
-            {activeTab === 'admins' && <AdminsTab school={school} colors={colors} />}
-            {activeTab === 'usage'  && <UsageTab  school={school} colors={colors} refetch={refetch} isFetching={isFetching} />}
-            {activeTab === 'notes'  && <NotesTab  school={school} colors={colors} />}
+            {activeTab === 'info'   && <InfoTab        school={school} colors={colors} refetch={refetch} isFetching={isFetching} />}
+            {activeTab === 'staff'  && <StaffRolesTab  school={school} colors={colors} />}
+            {activeTab === 'admins' && <AdminsTab       school={school} colors={colors} />}
+            {activeTab === 'usage'  && <UsageTab        school={school} colors={colors} refetch={refetch} isFetching={isFetching} />}
+            {activeTab === 'notes'  && <NotesTab        school={school} colors={colors} />}
           </View>
         </View>
       ) : null}
@@ -570,8 +574,205 @@ const styles = StyleSheet.create({
   roleBadge:   { paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full },
   dangerCard:  { borderRadius: Radius.md, borderWidth: 1.5, padding: Spacing.base },
   dangerBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: Spacing.md, borderRadius: Radius.md, borderWidth: 1.5, marginTop: Spacing.sm },
+  searchInput: { borderRadius: Radius.full, borderWidth: 1, paddingHorizontal: Spacing.base, paddingVertical: Spacing.sm, fontSize: 14 },
+  staffRow:    { flexDirection: 'row', alignItems: 'center', padding: Spacing.base, borderRadius: Radius.md, borderWidth: 1, gap: Spacing.sm },
+  staffAvatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  miniRoleBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: Radius.sm },
+  sheetOverlay: { ...StyleSheet.absoluteFillObject, flexDirection: 'column', justifyContent: 'flex-end', zIndex: 100 },
+  sheet:        { borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, borderWidth: 1, paddingTop: Spacing.sm, paddingBottom: Spacing['2xl'] },
+  sheetHandle:  { width: 36, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', alignSelf: 'center', marginBottom: Spacing.md },
+  sheetHeader:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.base, paddingBottom: Spacing.base, gap: Spacing.sm },
+  roleRow:      { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, borderRadius: Radius.md, borderWidth: 1.5, gap: Spacing.md },
+  roleIcon:     { width: 34, height: 34, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
 });
 
+
+// ── Staff Roles tab ───────────────────────────────────────────────────────────
+
+const ROLE_META: Record<StaffRole, { label: string; color: string }> = {
+  school_super_admin: { label: 'School Super Admin', color: '#7C3AED' },
+  admin:              { label: 'Admin',               color: Colors.semantic.info },
+  principal:          { label: 'Principal',           color: Colors.semantic.success },
+  coordinator:        { label: 'Coordinator',         color: '#0891B2' },
+  hod:                { label: 'HOD',                 color: '#D97706' },
+  hrt:                { label: 'Homeroom Teacher',    color: '#059669' },
+  st:                 { label: 'Subject Teacher',     color: '#2563EB' },
+  finance:            { label: 'Finance',             color: '#B45309' },
+  front_desk:         { label: 'Front Desk',          color: '#7C3AED' },
+  hr:                 { label: 'HR',                  color: '#DC2626' },
+};
+
+function StaffRoleSheet({
+  staff, schoolId, colors, onClose,
+}: {
+  staff: any; schoolId: string; colors: any; onClose: () => void;
+}) {
+  const assign = useAssignStaffRole(schoolId);
+  const remove = useRemoveStaffRole(schoolId);
+  const pendingRef = React.useRef<string | null>(null);
+
+  const toggle = async (role: StaffRole) => {
+    if (pendingRef.current) return;
+    pendingRef.current = role;
+    haptics.light();
+    try {
+      if (staff.roles.includes(role)) {
+        await remove.mutateAsync({ staffId: staff.id, role });
+      } else {
+        await assign.mutateAsync({ staffId: staff.id, role });
+      }
+    } catch (e: any) {
+      haptics.error();
+      Alert.alert('Failed', e?.message ?? 'Could not update role.');
+    } finally {
+      pendingRef.current = null;
+    }
+  };
+
+  const isBusy = assign.isPending || remove.isPending;
+
+  return (
+    <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={styles.sheetHandle} />
+      <View style={styles.sheetHeader}>
+        <View style={{ flex: 1 }}>
+          <ThemedText style={{ fontWeight: '700', fontSize: 16 }} numberOfLines={1}>{staff.full_name}</ThemedText>
+          <ThemedText variant="caption" color="muted">{staff.email}</ThemedText>
+        </View>
+        <TouchableOpacity onPress={onClose} hitSlop={8}>
+          <Ionicons name="close" size={22} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      <ThemedText variant="label" color="muted" style={{ paddingHorizontal: Spacing.base, paddingBottom: Spacing.sm, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+        Assign Roles
+      </ThemedText>
+
+      <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
+        <View style={{ paddingHorizontal: Spacing.base, paddingBottom: Spacing.xl, gap: Spacing.sm }}>
+          {ALL_STAFF_ROLES.map((role) => {
+            const meta = ROLE_META[role];
+            const active = staff.roles.includes(role);
+            return (
+              <Pressable
+                key={role}
+                onPress={() => toggle(role)}
+                disabled={isBusy}
+                style={[
+                  styles.roleRow,
+                  {
+                    backgroundColor: active ? meta.color + '12' : colors.surfaceSecondary,
+                    borderColor: active ? meta.color : colors.border,
+                  },
+                ]}
+              >
+                <View style={[styles.roleIcon, { backgroundColor: meta.color + '20' }]}>
+                  <Ionicons name={active ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={meta.color} />
+                </View>
+                <ThemedText style={{ flex: 1, fontWeight: active ? '700' : '500', fontSize: 14, color: active ? meta.color : colors.textPrimary }}>
+                  {meta.label}
+                </ThemedText>
+                {isBusy && pendingRef.current === role && (
+                  <ActivityIndicator size="small" color={meta.color} />
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function StaffRolesTab({ school, colors }: { school: any; colors: any }) {
+  const { data: staffList, isLoading, refetch, isFetching } = useSchoolStaff(school.id);
+  const [search, setSearch] = React.useState('');
+  const [selected, setSelected] = React.useState<any | null>(null);
+
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return staffList ?? [];
+    return (staffList ?? []).filter(
+      (s) => s.full_name.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q),
+    );
+  }, [staffList, search]);
+
+  return (
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + 80 }}
+        refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} tintColor={colors.brand.primary} />}
+      >
+        <View style={{ paddingHorizontal: Spacing.screen, paddingTop: Spacing.base, paddingBottom: Spacing.sm }}>
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search staff…"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.searchInput, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, color: colors.textPrimary }]}
+          />
+        </View>
+
+        <View style={{ paddingHorizontal: Spacing.screen, gap: Spacing.sm }}>
+          {isLoading
+            ? [0, 1, 2, 3, 4].map((i) => <ListItemSkeleton key={i} />)
+            : filtered.length === 0
+              ? (
+                <View style={[styles.emptyNotes, { borderColor: colors.border, marginTop: Spacing.base }]}>
+                  <Ionicons name="people-outline" size={28} color={colors.textMuted} />
+                  <ThemedText color="muted" style={{ marginTop: 8, textAlign: 'center' }}>
+                    {search ? 'No staff match.' : 'No staff found.'}
+                  </ThemedText>
+                </View>
+              )
+              : filtered.map((staff) => (
+                <Pressable
+                  key={staff.id}
+                  onPress={() => { haptics.light(); setSelected(staff); }}
+                  style={[styles.staffRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={[styles.staffAvatar, { backgroundColor: colors.brand.primary + '20' }]}>
+                    <ThemedText style={{ fontWeight: '700', fontSize: 14, color: colors.brand.primary }}>
+                      {staff.full_name.charAt(0).toUpperCase()}
+                    </ThemedText>
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <ThemedText style={{ fontWeight: '600', fontSize: 14 }} numberOfLines={1}>{staff.full_name}</ThemedText>
+                    <ThemedText variant="caption" color="muted" numberOfLines={1}>{staff.email}</ThemedText>
+                    {staff.roles.length > 0 && (
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                        {staff.roles.map((r) => (
+                          <View key={r} style={[styles.miniRoleBadge, { backgroundColor: (ROLE_META[r]?.color ?? colors.brand.primary) + '18' }]}>
+                            <ThemedText style={{ fontSize: 10, fontWeight: '700', color: ROLE_META[r]?.color ?? colors.brand.primary }}>
+                              {ROLE_META[r]?.label ?? r}
+                            </ThemedText>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </Pressable>
+              ))
+          }
+        </View>
+      </ScrollView>
+
+      {selected && (
+        <View style={[styles.sheetOverlay, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
+          <Pressable style={{ flex: 1 }} onPress={() => setSelected(null)} />
+          <StaffRoleSheet
+            staff={selected}
+            schoolId={school.id}
+            colors={colors}
+            onClose={() => setSelected(null)}
+          />
+        </View>
+      )}
+    </View>
+  );
+}
 
 function DangerZone({ school }: { school: any }) {
   const deleteSchool = useDeleteSchool(school.id);

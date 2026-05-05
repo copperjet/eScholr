@@ -69,6 +69,8 @@ export default function LibrarianLayout() {
       <Tabs.Screen name="patrons"           options={{ href: null }} />
       <Tabs.Screen name="patron-detail"     options={{ href: null }} />
       <Tabs.Screen name="settings"          options={{ href: null }} />
+      <Tabs.Screen name="quick-checkin"     options={{ href: null }} />
+      <Tabs.Screen name="quick-checkout"    options={{ href: null }} />
     </Tabs>
   );
 }

@@ -92,6 +92,14 @@ const ROLE_NAV_ITEMS: Record<string, NavItem[]> = {
     { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline' },
     { path: '/(app)/(student)/more', label: 'More', icon: 'menu-outline' },
   ],
+  librarian: [
+    { path: '/(app)/(librarian)/home',        label: 'Dashboard',   icon: 'grid-outline' },
+    { path: '/(app)/(librarian)/catalog',     label: 'Catalog',     icon: 'library-outline' },
+    { path: '/(app)/(librarian)/loans',       label: 'Loans',       icon: 'swap-horizontal-outline' },
+    { path: '/(app)/(librarian)/collections', label: 'Collections', icon: 'albums-outline' },
+    { path: '/(app)/(librarian)/patrons',     label: 'Patrons',     icon: 'people-outline' },
+    { path: '/(app)/(librarian)/more',        label: 'More',        icon: 'menu-outline' },
+  ],
 };
 
 // Map role variations to base role
@@ -99,6 +107,7 @@ function getBaseRole(role: string): string {
   if (role === 'super_admin') return 'super_admin';
   if (['school_super_admin', 'admin', 'principal', 'coordinator', 'hod'].includes(role)) return 'admin';
   if (role === 'front_desk') return 'frontdesk';
+  if (role === 'librarian') return 'librarian';
   return role;
 }
 
@@ -121,6 +130,9 @@ export function Sidebar() {
       return true;
     }
     if (path === '/(app)/(st)/home' && pathname?.includes('(st)/home')) {
+      return true;
+    }
+    if (path === '/(app)/(librarian)/home' && pathname?.includes('(librarian)/home')) {
       return true;
     }
     return pathname?.startsWith(path) ?? false;

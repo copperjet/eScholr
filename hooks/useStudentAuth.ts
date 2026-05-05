@@ -37,6 +37,7 @@ export function useCreateStudentAuth(schoolId: string) {
         success: data?.success ?? false,
         auth_user_id: data?.auth_user_id,
         email: params.email,
+        temp_password: data?.temp_password,
       };
     },
     onSuccess: (_, params) => {

@@ -5,8 +5,9 @@
 import React, { useState } from 'react';
 import {
   View, StyleSheet, SafeAreaView, ScrollView,
-  Alert, KeyboardAvoidingView, Platform,
+  Alert, KeyboardAvoidingView, Platform, TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../lib/theme';
@@ -68,6 +69,8 @@ export default function StudentCredentialsScreen() {
 
   const [email, setEmail] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [showTempPw, setShowTempPw] = useState(false);
 
   const hasAuth = !!student?.auth_user_id;
   const schoolDomain = config?.student_email_domain || 'students.school.edu';
@@ -94,11 +97,7 @@ export default function StudentCredentialsScreen() {
     setGenerating(false);
 
     if (result.success) {
-      Alert.alert(
-        'Account Created',
-        `Login email: ${finalEmail}\n\nThe student will receive an email invitation to set their password.`,
-        [{ text: 'OK', onPress: () => router.back() }]
-      );
+      setTempPassword(result.temp_password ?? null);
     } else {
       Alert.alert('Error', result.error || 'Failed to create account');
     }
@@ -150,7 +149,7 @@ export default function StudentCredentialsScreen() {
               )}
             </View>
 
-            {hasAuth ? (
+            {hasAuth && !tempPassword ? (
               <>
                 <ThemedText variant="label" color="muted">EMAIL</ThemedText>
                 <ThemedText style={{ marginBottom: Spacing.lg }}>
@@ -168,10 +167,10 @@ export default function StudentCredentialsScreen() {
                   onPress={() => Alert.alert('Info', 'Password reset email would be sent')}
                 />
               </>
-            ) : (
+            ) : !tempPassword ? (
               <>
                 <ThemedText variant="body" color="muted" style={{ marginBottom: Spacing.lg }}>
-                  Create a login account for this student. They will receive an email invitation.
+                  Create a login account for this student.
                 </ThemedText>
 
                 <FormField
@@ -194,17 +193,53 @@ export default function StudentCredentialsScreen() {
                   style={{ marginTop: Spacing.lg }}
                 />
               </>
-            )}
+            ) : null}
           </Card>
 
-          {!hasAuth && (
+          {/* Temporary password card — shown immediately after account creation */}
+          {tempPassword && (
+            <Card style={{ margin: Spacing.screen, padding: Spacing.lg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm }}>
+                <Ionicons name="key-outline" size={15} color={colors.brand.primary} />
+                <ThemedText variant="label" color="muted" style={{ marginLeft: 6, flex: 1 }}>TEMPORARY PASSWORD</ThemedText>
+                <TouchableOpacity onPress={() => setShowTempPw(v => !v)} hitSlop={8}>
+                  <Ionicons name={showTempPw ? 'eye-off-outline' : 'eye-outline'} size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm }}>
+                <ThemedText style={{ flex: 1, fontFamily: 'monospace', fontSize: 18, fontWeight: '700', letterSpacing: 2, color: colors.textPrimary }}>
+                  {showTempPw ? tempPassword : '••••••••••••'}
+                </ThemedText>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (Platform.OS === 'web') {
+                      navigator.clipboard?.writeText(tempPassword);
+                      Alert.alert('Copied', 'Temporary password copied to clipboard.');
+                    } else {
+                      Alert.alert('Temporary Password', tempPassword);
+                    }
+                  }}
+                  hitSlop={8}
+                  style={{ backgroundColor: colors.brand.primary, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: 8 }}
+                >
+                  <ThemedText variant="label" style={{ color: '#fff', fontWeight: '700' }}>Copy</ThemedText>
+                </TouchableOpacity>
+              </View>
+              <ThemedText variant="caption" color="muted">
+                Share this with {student.full_name.split(' ')[0]}. They will be prompted to set a new password on first login.
+              </ThemedText>
+              <Button label="Done" onPress={() => router.back()} style={{ marginTop: Spacing.lg }} />
+            </Card>
+          )}
+
+          {!hasAuth && !tempPassword && (
             <Card style={{ marginHorizontal: Spacing.screen, padding: Spacing.lg, backgroundColor: colors.surfaceSecondary }}>
               <ThemedText variant="label" color="muted">HOW IT WORKS</ThemedText>
               <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.sm }}>
                 1. Enter the student&apos;s email{'\n'}
-                2. We create their auth account{'\n'}
-                3. They receive an invitation email{'\n'}
-                4. They set their password and can log in
+                2. We generate a temporary password{'\n'}
+                3. Share the password with the student{'\n'}
+                4. They log in and set a new password
               </ThemedText>
             </Card>
           )}

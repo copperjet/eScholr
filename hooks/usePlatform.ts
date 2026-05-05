@@ -275,6 +275,87 @@ export function useInviteSchoolAdmin(schoolId: string) {
   });
 }
 
+// ── Staff role management (platform-level) ───────────────────────────────────
+
+export const ALL_STAFF_ROLES = [
+  'school_super_admin',
+  'admin',
+  'principal',
+  'coordinator',
+  'hod',
+  'hrt',
+  'st',
+  'finance',
+  'front_desk',
+  'hr',
+] as const;
+
+export type StaffRole = typeof ALL_STAFF_ROLES[number];
+
+export interface StaffWithRoles {
+  id: string;
+  full_name: string;
+  email: string;
+  staff_number: string | null;
+  status: string;
+  roles: StaffRole[];
+}
+
+export function useSchoolStaff(schoolId: string) {
+  return useQuery<StaffWithRoles[]>({
+    queryKey: ['platform-school-staff', schoolId],
+    enabled: !!schoolId,
+    staleTime: 1000 * 60,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('staff')
+        .select('id, full_name, email, staff_number, status, staff_roles(role)')
+        .eq('school_id', schoolId)
+        .order('full_name');
+      if (error) throw new Error(error.message);
+      return ((data ?? []) as any[]).map((s: any) => ({
+        id: s.id,
+        full_name: s.full_name,
+        email: s.email,
+        staff_number: s.staff_number,
+        status: s.status,
+        roles: (s.staff_roles ?? []).map((r: any) => r.role as StaffRole),
+      }));
+    },
+  });
+}
+
+export function useAssignStaffRole(schoolId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ staffId, role }: { staffId: string; role: StaffRole }) => {
+      const { error } = await (supabase as any)
+        .from('staff_roles')
+        .upsert({ school_id: schoolId, staff_id: staffId, role }, { onConflict: 'school_id,staff_id,role' });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['platform-school-staff', schoolId] }),
+  });
+}
+
+export function useRemoveStaffRole(schoolId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ staffId, role }: { staffId: string; role: StaffRole }) => {
+      const { error } = await (supabase as any)
+        .from('staff_roles')
+        .delete()
+        .eq('school_id', schoolId)
+        .eq('staff_id', staffId)
+        .eq('role', role);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['platform-school-staff', schoolId] }),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Upload a logo image (base64) to Supabase Storage and return the public URL.
  * Caller is responsible for setting the URL on the school row afterwards.
