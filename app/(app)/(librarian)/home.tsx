@@ -87,10 +87,10 @@ export default function LibrarianHome() {
         <SectionHeader title="Quick Actions" />
         <View style={styles.actionRow}>
           {[
-            { icon: 'add-circle-outline' as const, label: 'Add Book', color: Colors.semantic.success, route: '/(app)/(librarian)/book-form' },
+            { icon: 'arrow-undo-circle-outline' as const, label: 'Check In', color: Colors.semantic.warning, route: '/(app)/(librarian)/loans' },
             { icon: 'barcode-outline' as const, label: 'Scan', color: Colors.semantic.info, route: '/(app)/(librarian)/scan' },
-            { icon: 'people-outline' as const, label: 'Patrons', color: Colors.semantic.warning, route: '/(app)/(librarian)/patrons' },
-            { icon: 'folder-outline' as const, label: 'Collections', color: '#8B5CF6', route: '/(app)/(librarian)/collections' },
+            { icon: 'add-circle-outline' as const, label: 'Add Book', color: Colors.semantic.success, route: '/(app)/(librarian)/book-form' },
+            { icon: 'people-outline' as const, label: 'Patrons', color: '#8B5CF6', route: '/(app)/(librarian)/patrons' },
           ].map((a) => (
             <Pressable key={a.label} onPress={() => router.push(a.route as any)} style={styles.actionItem}>
               <View style={[styles.actionIcon, { backgroundColor: a.color + '18' }]}>
@@ -128,7 +128,7 @@ export default function LibrarianHome() {
               radius={16}
             />
             <ThemedText variant="bodySm" color="muted" style={{ flex: 1 }}>
-              Use the barcode scanner to quickly check in or check out books. Tap + to add a new book.
+              Use the barcode scanner to quickly check in or check out books. Tap Check Out to start a new loan.
             </ThemedText>
           </View>
         </Card>
@@ -137,9 +137,9 @@ export default function LibrarianHome() {
       </ScrollView>
 
       <FAB
-        icon={<Ionicons name="add" size={26} color="#fff" />}
-        label="Add Book"
-        onPress={() => router.push('/(app)/(librarian)/book-form' as any)}
+        icon={<Ionicons name="arrow-forward-circle" size={26} color="#fff" />}
+        label="Check Out"
+        onPress={() => router.push('/(app)/(librarian)/catalog' as any)}
       />
     </SafeAreaView>
   );
