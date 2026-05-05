@@ -16,12 +16,16 @@ import { Colors } from '../../../constants/Colors';
 
 const PRESET_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#6B7280'];
 
+type Tab = 'collection' | 'genre';
+
 export default function CollectionsScreen() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const schoolId = user?.schoolId ?? '';
+  const [activeTab, setActiveTab] = useState<Tab>('collection');
 
-  const { data: collections, isLoading, isError, refetch, isFetching } = useLibraryCollections(schoolId);
+  const { data: collections, isLoading: loadingC, isError: errorC, refetch: refetchC, isFetching: fetchingC } = useLibraryCollections(schoolId, 'collection');
+  const { data: genres, isLoading: loadingG, isError: errorG, refetch: refetchG, isFetching: fetchingG } = useLibraryCollections(schoolId, 'genre');
   const createMut = useCreateCollection(schoolId);
   const updateMut = useUpdateCollection(schoolId);
   const deleteMut = useDeleteCollection(schoolId);
@@ -31,6 +35,12 @@ export default function CollectionsScreen() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState(PRESET_COLORS[0]);
+
+  const isLoading = activeTab === 'collection' ? loadingC : loadingG;
+  const isError   = activeTab === 'collection' ? errorC   : errorG;
+  const refetch   = activeTab === 'collection' ? refetchC : refetchG;
+  const isFetching = activeTab === 'collection' ? fetchingC : fetchingG;
+  const items     = (activeTab === 'collection' ? collections : genres) ?? [];
 
   const openCreate = () => {
     setEditId(null);
@@ -61,29 +71,27 @@ export default function CollectionsScreen() {
       if (editId) {
         await updateMut.mutateAsync({ id: editId, name: name.trim(), description: description.trim(), color });
       } else {
-        await createMut.mutateAsync({ name: name.trim(), description: description.trim(), color });
+        await createMut.mutateAsync({ name: name.trim(), description: description.trim(), color, collectionType: activeTab });
       }
       setSheetOpen(false);
     } catch (e: any) {
       if (Platform.OS === 'web') {
-        window.alert(e.message ?? 'Could not save collection');
+        window.alert(e.message ?? 'Could not save');
       } else {
-        Alert.alert('Error', e.message ?? 'Could not save collection');
+        Alert.alert('Error', e.message ?? 'Could not save');
       }
     }
   };
 
   const handleDelete = (id: string, collName: string) => {
-    const msg = `Delete "${collName}"? Books in this collection will be unlinked.`;
+    const msg = `Delete "${collName}"? Books in this ${activeTab} will be unlinked.`;
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm(msg)) {
-        deleteMut.mutateAsync(id).catch((e: any) => {
-          window.alert(e.message ?? 'Could not delete');
-        });
+        deleteMut.mutateAsync(id).catch((e: any) => { window.alert(e.message ?? 'Could not delete'); });
       }
       return;
     }
-    Alert.alert('Delete Collection', msg, [
+    Alert.alert(`Delete ${activeTab === 'genre' ? 'Genre' : 'Collection'}`, msg, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',
@@ -99,15 +107,36 @@ export default function CollectionsScreen() {
   if (isError) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-        <ScreenHeader title="Collections" showBack />
-        <ErrorState title="Could not load collections" onRetry={refetch} />
+        <ScreenHeader title="Collections & Genres" showBack />
+        <ErrorState title="Could not load" onRetry={refetch} />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <ScreenHeader title="Collections" showBack />
+      <ScreenHeader title="Collections & Genres" showBack />
+
+      {/* Tab bar */}
+      <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
+        {(['collection', 'genre'] as Tab[]).map((tab) => (
+          <Pressable
+            key={tab}
+            onPress={() => setActiveTab(tab)}
+            style={[
+              styles.tab,
+              activeTab === tab && { borderBottomColor: colors.brand.primary, borderBottomWidth: 2 },
+            ]}
+          >
+            <ThemedText
+              variant="label"
+              style={{ color: activeTab === tab ? colors.brand.primary : colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}
+            >
+              {tab === 'collection' ? 'Collections' : 'Genres'}
+            </ThemedText>
+          </Pressable>
+        ))}
+      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -117,10 +146,15 @@ export default function CollectionsScreen() {
           <View style={{ padding: Spacing.screen }}>
             {[1, 2, 3].map((i) => <Skeleton key={i} height={56} style={{ marginBottom: Spacing.sm, borderRadius: 12 }} />)}
           </View>
-        ) : (collections ?? []).length === 0 ? (
-          <EmptyState title="No collections" description="Create a collection to organize your books." />
+        ) : items.length === 0 ? (
+          <EmptyState
+            title={activeTab === 'genre' ? 'No genres' : 'No collections'}
+            description={activeTab === 'genre'
+              ? 'Create genres like "Mystery" or "Science Fiction" to group books by subject.'
+              : 'Create a collection to organise your books.'}
+          />
         ) : (
-          (collections ?? []).map((c) => (
+          items.map((c) => (
             <ListItem
               key={c.id}
               title={c.name}
@@ -146,12 +180,23 @@ export default function CollectionsScreen() {
 
       <FAB
         icon={<Ionicons name="add" size={26} color="#fff" />}
-        label="New Collection"
+        label={activeTab === 'genre' ? 'New Genre' : 'New Collection'}
         onPress={openCreate}
       />
 
-      <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} title={editId ? 'Edit Collection' : 'New Collection'}>
-        <FormField label="Name *" value={name} onChangeText={setName} placeholder="e.g. Fiction, Science, History" />
+      <BottomSheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title={editId
+          ? (activeTab === 'genre' ? 'Edit Genre' : 'Edit Collection')
+          : (activeTab === 'genre' ? 'New Genre' : 'New Collection')}
+      >
+        <FormField
+          label="Name *"
+          value={name}
+          onChangeText={setName}
+          placeholder={activeTab === 'genre' ? 'e.g. Mystery, Science Fiction' : 'e.g. Reference, Donated Books'}
+        />
         <FormField label="Description" value={description} onChangeText={setDescription} placeholder="Optional description" textarea />
 
         <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.sm, marginBottom: Spacing.xs }}>Color</ThemedText>
@@ -170,7 +215,7 @@ export default function CollectionsScreen() {
 
         <View style={{ marginTop: Spacing.lg }}>
           <Button
-            label={editId ? 'Save Changes' : 'Create Collection'}
+            label={editId ? 'Save Changes' : (activeTab === 'genre' ? 'Create Genre' : 'Create Collection')}
             onPress={handleSave}
             loading={createMut.isPending || updateMut.isPending}
             fullWidth
@@ -182,5 +227,7 @@ export default function CollectionsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
+  safe:   { flex: 1 },
+  tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
+  tab:    { flex: 1, alignItems: 'center', paddingVertical: Spacing.md },
 });

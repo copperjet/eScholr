@@ -22,7 +22,8 @@ export default function BookFormScreen() {
   const processedScan = useRef<string | null>(null);
 
   const { data: existing } = useLibraryBook(bookId ?? null);
-  const { data: collections } = useLibraryCollections(schoolId);
+  const { data: collections } = useLibraryCollections(schoolId, 'collection');
+  const { data: genres } = useLibraryCollections(schoolId, 'genre');
   const createMut = useCreateBook(schoolId);
   const updateMut = useUpdateBook(schoolId);
 
@@ -32,6 +33,7 @@ export default function BookFormScreen() {
   const [publisher, setPublisher] = useState('');
   const [publishYear, setPublishYear] = useState('');
   const [collectionId, setCollectionId] = useState<string>('');
+  const [genreId, setGenreId] = useState<string>('');
   const [totalCopies, setTotalCopies] = useState('1');
   const [notes, setNotes] = useState('');
   const [isbnLoading, setIsbnLoading] = useState(false);
@@ -44,6 +46,7 @@ export default function BookFormScreen() {
       setPublisher(existing.publisher ?? '');
       setPublishYear(existing.publish_year ? String(existing.publish_year) : '');
       setCollectionId(existing.collection_id ?? '');
+      setGenreId(existing.genre_id ?? '');
       setTotalCopies(String(existing.copies?.length ?? 1));
       setNotes(existing.notes ?? '');
     }
@@ -118,6 +121,7 @@ export default function BookFormScreen() {
           publisher: publisher.trim() || null,
           publishYear: publishYear ? parseInt(publishYear, 10) : null,
           collectionId: collectionId || null,
+          genreId: genreId || null,
           notes: notes.trim() || null,
         });
       } else {
@@ -128,6 +132,7 @@ export default function BookFormScreen() {
           publisher: publisher.trim() || undefined,
           publishYear: publishYear ? parseInt(publishYear, 10) : undefined,
           collectionId: collectionId || undefined,
+          genreId: genreId || undefined,
           totalCopies: totalCopies ? parseInt(totalCopies, 10) : 1,
           staffId: user?.staffId ?? '',
           notes: notes.trim() || undefined,
@@ -183,32 +188,56 @@ export default function BookFormScreen() {
           )}
 
           {/* Collection picker */}
-          {(collections ?? []).length > 0 && (
-            <View>
-              <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.sm, marginBottom: Spacing.xs }}>
-                Collection
-              </ThemedText>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingVertical: Spacing.xs }}>
+          <View style={{ marginTop: Spacing.sm }}>
+            <ThemedText variant="caption" color="muted" style={{ marginBottom: Spacing.xs }}>
+              Collection
+            </ThemedText>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingVertical: Spacing.xs }}>
+                <CollectionChip
+                  label="None"
+                  selected={!collectionId}
+                  onPress={() => setCollectionId('')}
+                  color={colors.textMuted}
+                />
+                {(collections ?? []).map((c) => (
                   <CollectionChip
-                    label="None"
-                    selected={!collectionId}
-                    onPress={() => setCollectionId('')}
-                    color={colors.textMuted}
+                    key={c.id}
+                    label={c.name}
+                    selected={collectionId === c.id}
+                    onPress={() => setCollectionId(c.id)}
+                    color={c.color}
                   />
-                  {(collections ?? []).map((c) => (
-                    <CollectionChip
-                      key={c.id}
-                      label={c.name}
-                      selected={collectionId === c.id}
-                      onPress={() => setCollectionId(c.id)}
-                      color={c.color}
-                    />
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
-          )}
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+
+          {/* Genre picker */}
+          <View style={{ marginTop: Spacing.sm }}>
+            <ThemedText variant="caption" color="muted" style={{ marginBottom: Spacing.xs }}>
+              Genre
+            </ThemedText>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingVertical: Spacing.xs }}>
+                <CollectionChip
+                  label="None"
+                  selected={!genreId}
+                  onPress={() => setGenreId('')}
+                  color={colors.textMuted}
+                />
+                {(genres ?? []).map((g) => (
+                  <CollectionChip
+                    key={g.id}
+                    label={g.name}
+                    selected={genreId === g.id}
+                    onPress={() => setGenreId(g.id)}
+                    color={g.color}
+                  />
+                ))}
+              </View>
+            </ScrollView>
+          </View>
 
           <FormField label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional notes" textarea />
         </Card>

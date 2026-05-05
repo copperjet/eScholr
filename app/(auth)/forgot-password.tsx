@@ -26,7 +26,7 @@ import { Spacing, Radius, Shadow } from '../../constants/Typography';
 import { haptics } from '../../lib/haptics';
 
 export default function ForgotPasswordScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -87,9 +87,9 @@ export default function ForgotPasswordScreen() {
           <View style={[styles.sheet, { backgroundColor: colors.background }]}>
             {sent ? (
               <View style={{ gap: Spacing.md, alignItems: 'flex-start' }}>
-                <View style={[styles.successBox, { backgroundColor: '#DCFCE7' }]}>
+                <View style={[styles.successBox, { backgroundColor: isDark ? '#14532D' : '#DCFCE7' }]}>
                   <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
-                  <ThemedText style={{ color: '#15803D', flex: 1, marginLeft: 8, fontSize: 14 }}>
+                  <ThemedText style={{ color: isDark ? '#86EFAC' : '#15803D', flex: 1, marginLeft: 8, fontSize: 14 }}>
                     If an account exists for <ThemedText style={{ fontWeight: '700' }}>{email.trim().toLowerCase()}</ThemedText>,
                     a reset link is on the way. Open the link on this device to choose a new password.
                   </ThemedText>
@@ -111,7 +111,7 @@ export default function ForgotPasswordScreen() {
                   onSubmitEditing={handleSend}
                 />
                 {error ? (
-                  <View style={[styles.errorBox, { backgroundColor: '#FEE2E2' }]}>
+                  <View style={[styles.errorBox, { backgroundColor: isDark ? '#7F1D1D' : '#FEE2E2' }]}>
                     <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
                     <ThemedText style={{ color: '#DC2626', marginLeft: 6, flex: 1, fontSize: 14 }}>{error}</ThemedText>
                   </View>

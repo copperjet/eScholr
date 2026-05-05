@@ -27,7 +27,7 @@ async function logAttempt(email: string, success: boolean, reason?: string) {
 }
 
 export default function PlatformLoginScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { setUser } = useAuthStore();
 
   const [email, setEmail]       = useState('');
@@ -116,7 +116,7 @@ export default function PlatformLoginScreen() {
               />
 
               {error ? (
-                <View style={[styles.errorBox, { backgroundColor: '#FEE2E2' }]}>
+                <View style={[styles.errorBox, { backgroundColor: isDark ? '#7F1D1D' : '#FEE2E2' }]}>
                   <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
                   <ThemedText style={{ color: '#DC2626', marginLeft: 6, flex: 1, fontSize: 14 }}>{error}</ThemedText>
                 </View>

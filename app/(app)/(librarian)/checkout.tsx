@@ -28,6 +28,7 @@ export default function CheckoutScreen() {
   const [patronQuery, setPatronQuery] = useState('');
   const [patronType, setPatronType] = useState<'all' | 'staff' | 'student'>('all');
   const [selectedPatron, setSelectedPatron] = useState<PatronResult | null>(null);
+  const [selectedCopyId, setSelectedCopyId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
 
   const defaultDays = settings?.default_loan_days ?? 14;
@@ -36,9 +37,14 @@ export default function CheckoutScreen() {
   const parsedCustom = customDueDate ? parseISO(customDueDate) : null;
   const isCustomValid = parsedCustom && isValid(parsedCustom);
   const effectiveDueDate = isCustomValid ? customDueDate : dueDate;
-  const availableCount = book?.copies?.filter((c) => c.status === 'available').length ?? 0;
+
+  const availableCopies = useMemo(
+    () => (book?.copies ?? []).filter((c) => c.status === 'available'),
+    [book]
+  );
   const totalCount = book?.copies?.length ?? 0;
-  const bookUnavailable = availableCount < 1;
+  const bookUnavailable = availableCopies.length < 1;
+  const needsCopySelect = availableCopies.length > 1;
 
   const { data: patrons } = usePatronSearch(schoolId, patronQuery, patronType);
 
@@ -51,9 +57,18 @@ export default function CheckoutScreen() {
       }
       return;
     }
+    if (needsCopySelect && !selectedCopyId) {
+      if (Platform.OS === 'web') {
+        window.alert('Multiple copies available — select a copy by accession number.');
+      } else {
+        Alert.alert('Required', 'Multiple copies available — select a copy by accession number.');
+      }
+      return;
+    }
     try {
       await checkOutMut.mutateAsync({
         bookId: bookId!,
+        copyId: selectedCopyId ?? undefined,
         borrowerType: selectedPatron.type,
         borrowerId: selectedPatron.id,
         dueDate: effectiveDueDate,
@@ -64,7 +79,7 @@ export default function CheckoutScreen() {
         window.alert(`"${book?.title}" checked out to ${selectedPatron.full_name}.`);
         router.back();
       } else {
-        Alert.alert('Success', `"${book?.title}" checked out to ${selectedPatron.full_name}.`, [
+        Alert.alert('Checked Out', `"${book?.title}" checked out to ${selectedPatron.full_name}.`, [
           { text: 'OK', onPress: () => router.back() },
         ]);
       }
@@ -82,22 +97,45 @@ export default function CheckoutScreen() {
       <ScreenHeader title="Check Out" showBack />
 
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
         {/* Book info */}
         {book && (
           <Card style={styles.card}>
             <ThemedText variant="h3">{book.title}</ThemedText>
             {book.author && <ThemedText variant="bodySm" color="muted">{book.author}</ThemedText>}
             <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.xs }}>
-              Available: {availableCount}/{totalCount} copies
+              Available: {availableCopies.length}/{totalCount} copies
             </ThemedText>
           </Card>
+        )}
+
+        {/* Copy selection — only shown when multiple copies available */}
+        {!bookUnavailable && needsCopySelect && (
+          <View style={{ paddingHorizontal: Spacing.screen, marginTop: Spacing.base }}>
+            <ThemedText variant="h4" style={{ marginBottom: Spacing.sm }}>Select Copy</ThemedText>
+            {availableCopies.map((copy) => (
+              <ListItem
+                key={copy.id}
+                title={copy.accession_number}
+                subtitle={copy.barcode && copy.barcode !== copy.accession_number ? `Barcode: ${copy.barcode}` : undefined}
+                badge={selectedCopyId === copy.id ? { label: 'Selected', preset: 'success' } : undefined}
+                leading={
+                  <Ionicons
+                    name={selectedCopyId === copy.id ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={22}
+                    color={selectedCopyId === copy.id ? Colors.semantic.success : colors.textMuted}
+                  />
+                }
+                onPress={() => setSelectedCopyId(copy.id)}
+              />
+            ))}
+          </View>
         )}
 
         {/* Patron search */}
         <View style={{ paddingHorizontal: Spacing.screen, marginTop: Spacing.base }}>
           <ThemedText variant="h4" style={{ marginBottom: Spacing.sm }}>Select Borrower</ThemedText>
 
-          {/* Type toggle */}
           <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm }}>
             {(['all', 'student', 'staff'] as const).map((t) => (
               <Button
@@ -160,7 +198,7 @@ export default function CheckoutScreen() {
           </View>
           {customDueDate !== '' && !isCustomValid && (
             <ThemedText variant="caption" style={{ color: Colors.semantic.error, marginTop: Spacing.xs }}>
-              Invalid date format. Use YYYY-MM-DD.
+              Invalid date — use YYYY-MM-DD.
             </ThemedText>
           )}
           <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.xs }}>
@@ -196,7 +234,7 @@ export default function CheckoutScreen() {
             label="Confirm Check Out"
             onPress={handleCheckout}
             loading={checkOutMut.isPending}
-            disabled={!selectedPatron || checkOutMut.isPending || bookUnavailable}
+            disabled={!selectedPatron || checkOutMut.isPending || bookUnavailable || (needsCopySelect && !selectedCopyId)}
             fullWidth
           />
         </View>

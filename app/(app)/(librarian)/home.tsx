@@ -137,9 +137,9 @@ export default function LibrarianHome() {
       </ScrollView>
 
       <FAB
-        icon={<Ionicons name="arrow-forward-circle" size={26} color="#fff" />}
+        icon={<Ionicons name="scan" size={26} color="#fff" />}
         label="Check Out"
-        onPress={() => router.push('/(app)/(librarian)/catalog' as any)}
+        onPress={() => router.push('/(app)/(librarian)/quick-checkout' as any)}
       />
     </SafeAreaView>
   );

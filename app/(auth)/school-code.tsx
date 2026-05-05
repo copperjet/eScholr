@@ -85,7 +85,7 @@ export default function SchoolCodeScreen() {
       {/* ── White sheet ── */}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
-          <View style={[styles.sheet, Platform.OS !== 'web' && { flex: 1 }, { backgroundColor: colors.background }]}>
+          <View style={[styles.sheet, Platform.OS !== 'web' && { flex: 1 }, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <Animated.View style={[styles.form, { transform: [{ translateX: shakeAnim }] }]}>
               <ThemedText variant="h2" style={{ marginBottom: Spacing.xs }}>Enter school code</ThemedText>
               <ThemedText variant="body" color="muted" style={{ marginBottom: Spacing.lg }}>
@@ -106,7 +106,7 @@ export default function SchoolCodeScreen() {
                   autoCorrect={false}
                   returnKeyType="done"
                   onSubmitEditing={handleContinue}
-                  style={[{ flex: 1, fontSize: 18, fontWeight: '700', letterSpacing: 3, color: colors.brand.primary }, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]}
+                  style={[{ flex: 1, fontSize: 18, fontWeight: '700', letterSpacing: 3, color: colors.textPrimary }, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]}
                 />
               </View>
 
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   logoArea: { alignItems: 'center' },
   mainLogo: { width: 200, height: 67 },
   overlayLogo: { width: 72, height: 72, tintColor: '#fff' },
-  schoolLogo: { width: 120, height: 120, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)' },
+  schoolLogo: { width: 120, height: 120, borderRadius: 16, backgroundColor: '#FFFFFF' },
   sheet: {
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -168,7 +168,6 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing['4xl'],
     borderWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#E5E7EB',
   },
   form: { gap: Spacing.sm },
   codeInput: {

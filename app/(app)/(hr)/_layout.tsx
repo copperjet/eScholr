@@ -71,6 +71,7 @@ export default function HRLayout() {
       <Tabs.Screen name="leave-request" options={{ href: null }} />
       <Tabs.Screen name="leave-approve" options={{ href: null }} />
       <Tabs.Screen name="leave-balances" options={{ href: null }} />
+      <Tabs.Screen name="staff-detail"  options={{ href: null }} />
     </Tabs>
   );
 }

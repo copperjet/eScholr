@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
+import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
@@ -90,7 +91,12 @@ export default function HRStaff() {
                 caption={subtitle ? s.email : undefined}
                 avatarName={s.full_name}
                 avatarUrl={s.photo_url}
+                showChevron
                 separator
+                onPress={() => router.push({
+                  pathname: '/(app)/(hr)/staff-detail' as any,
+                  params: { staffId: s.id, staffName: s.full_name },
+                })}
               />
             );
           }}

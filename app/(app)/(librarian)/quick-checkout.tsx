@@ -7,7 +7,6 @@ import { useBookByBarcode } from '../../../hooks/useLibrary';
 import { ThemedText, ScreenHeader, Button, Card } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
 
-const IS_WEB = Platform.OS === 'web';
 
 export default function QuickCheckoutScreen() {
   const { colors } = useTheme();
@@ -71,13 +70,6 @@ export default function QuickCheckoutScreen() {
 
       <View style={styles.container}>
         <Card style={styles.card}>
-          <ThemedText variant="h3" style={{ marginBottom: Spacing.sm }}>Scan Book Barcode</ThemedText>
-          <ThemedText variant="body" color="muted" style={{ marginBottom: Spacing.lg }}>
-            {IS_WEB
-              ? 'Type the barcode below or use a USB barcode scanner. The book will be checked out after selecting a patron.'
-              : 'Point the camera at the book barcode. The book will be checked out after selecting a patron.'}
-          </ThemedText>
-
           <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
             <View style={{ flex: 1 }}>
               <ThemedText variant="caption" color="muted" style={{ marginBottom: Spacing.xs }}>Barcode</ThemedText>
@@ -120,11 +112,6 @@ export default function QuickCheckoutScreen() {
           />
         </Card>
 
-        <Card variant="tinted" style={styles.tip}>
-          <ThemedText variant="bodySm" color="muted">
-            After scanning, you'll select a patron and confirm the due date.
-          </ThemedText>
-        </Card>
       </View>
     </SafeAreaView>
   );

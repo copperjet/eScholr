@@ -188,7 +188,7 @@ export default function AdminHome() {
               />
             </View>
           ) : (
-            // Regular admin: Staff, Students, Reports Pending
+            // Regular admin: Staff, Students, Analysis
             <View style={styles.statRow}>
               <StatCard
                 label="Staff"
@@ -207,12 +207,13 @@ export default function AdminHome() {
                 style={styles.statCell}
               />
               <StatCard
-                label="Reports Pending"
-                value={data?.pendingReports ?? 0}
-                icon="document-text"
+                label="Analysis"
+                value="›"
+                icon="bar-chart"
                 iconBg={Colors.semantic.warningLight}
                 iconColor={Colors.semantic.warning}
                 style={styles.statCell}
+                onPress={() => router.push('/(app)/(admin)/analysis' as any)}
               />
             </View>
           )}
@@ -390,6 +391,14 @@ export default function AdminHome() {
                   style={styles.qaCard}
                 />
               )}
+              <QuickActionCard
+                title="Analysis"
+                subtitle="Results by class & subject"
+                icon="bar-chart-outline"
+                variant="surface"
+                onPress={() => router.push('/(app)/(admin)/analysis' as any)}
+                style={styles.qaCard}
+              />
             </>
           )}
         </View>

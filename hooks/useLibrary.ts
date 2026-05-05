@@ -177,6 +177,7 @@ export function useCreateBook(schoolId: string) {
       publishYear?: number;
       coverUrl?: string;
       collectionId?: string;
+      genreId?: string;
       totalCopies?: number;
       notes?: string;
       staffId: string;
@@ -192,6 +193,7 @@ export function useCreateBook(schoolId: string) {
         p_publish_year: params.publishYear ?? null,
         p_cover_url: params.coverUrl ?? null,
         p_collection_id: params.collectionId ?? null,
+        p_genre_id: params.genreId ?? null,
         p_notes: params.notes ?? null,
         p_total_copies: params.totalCopies ?? 1,
         p_staff_id: params.staffId,
@@ -216,6 +218,7 @@ export function useUpdateBook(schoolId: string) {
       publishYear?: number | null;
       coverUrl?: string | null;
       collectionId?: string | null;
+      genreId?: string | null;
       notes?: string | null;
     }) => {
       const db = supabase as any;
@@ -229,6 +232,7 @@ export function useUpdateBook(schoolId: string) {
         p_publish_year: params.publishYear ?? null,
         p_cover_url: params.coverUrl ?? null,
         p_collection_id: params.collectionId !== undefined ? (params.collectionId ?? null) : null,
+        p_genre_id: params.genreId !== undefined ? (params.genreId ?? null) : null,
         p_notes: params.notes ?? null,
       });
       if (error) throw error;
@@ -301,18 +305,21 @@ export function useImportBooks(schoolId: string) {
 
 // ─── Collections ──────────────────────────────────────────────────────────────
 
-export function useLibraryCollections(schoolId: string) {
+export function useLibraryCollections(schoolId: string, collectionType?: 'collection' | 'genre') {
   return useQuery<LibraryCollection[]>({
-    queryKey: ['library-collections', schoolId],
+    queryKey: ['library-collections', schoolId, collectionType ?? 'all'],
     enabled: !!schoolId,
     staleTime: 1000 * 60,
     queryFn: async () => {
       const db = supabase as any;
-      const { data, error } = await db
+      let q = db
         .from('library_collections')
         .select('*')
-        .eq('school_id', schoolId)
-        .order('name');
+        .eq('school_id', schoolId);
+      if (collectionType) {
+        q = q.eq('collection_type', collectionType);
+      }
+      const { data, error } = await q.order('name');
       if (error) throw error;
       return (data ?? []) as LibraryCollection[];
     },
@@ -322,7 +329,7 @@ export function useLibraryCollections(schoolId: string) {
 export function useCreateCollection(schoolId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (params: { name: string; description?: string; color?: string; icon?: string }) => {
+    mutationFn: async (params: { name: string; description?: string; color?: string; icon?: string; collectionType?: 'collection' | 'genre' }) => {
       const db = supabase as any;
       const { error } = await db.from('library_collections').insert({
         school_id: schoolId,
@@ -330,6 +337,7 @@ export function useCreateCollection(schoolId: string) {
         description: params.description ?? null,
         color: params.color ?? '#3B82F6',
         icon: params.icon ?? 'library-outline',
+        collection_type: params.collectionType ?? 'collection',
       });
       if (error) throw error;
     },
@@ -461,6 +469,7 @@ export function useCheckOutBook(schoolId: string) {
   return useMutation({
     mutationFn: async (params: {
       bookId: string;
+      copyId?: string;
       borrowerType: 'staff' | 'student';
       borrowerId: string;
       dueDate: string;
@@ -471,6 +480,7 @@ export function useCheckOutBook(schoolId: string) {
       const { data, error } = await db.rpc('library_check_out_copy', {
         p_school_id: schoolId,
         p_book_id: params.bookId,
+        p_copy_id: params.copyId ?? null,
         p_borrower_type: params.borrowerType,
         p_borrower_id: params.borrowerId,
         p_due_date: params.dueDate,

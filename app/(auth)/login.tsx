@@ -16,7 +16,7 @@ import { Spacing, Radius, Shadow } from '../../constants/Typography';
 import { haptics } from '../../lib/haptics';
 
 export default function LoginScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { school, setUser, clearSchool } = useAuthStore();
   const navigation = useNavigation();
   const canGoBack = navigation.canGoBack();
@@ -135,7 +135,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           bounces={false}
         >
-          <View style={[styles.sheet, Platform.OS !== 'web' && { flex: 1 }, { backgroundColor: colors.background }]}>
+          <View style={[styles.sheet, Platform.OS !== 'web' && { flex: 1 }, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <View style={styles.form}>
               <FormField
                 label="Email address"
@@ -160,7 +160,7 @@ export default function LoginScreen() {
               />
 
               {error ? (
-                <View style={[styles.errorBox, { backgroundColor: '#FEE2E2' }]}>
+                <View style={[styles.errorBox, { backgroundColor: isDark ? '#7F1D1D' : '#FEE2E2' }]}>
                   <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
                   <ThemedText style={{ color: '#DC2626', marginLeft: 6, flex: 1, fontSize: 14 }}>{error}</ThemedText>
                 </View>
@@ -252,7 +252,6 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing['4xl'],
     borderWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#E5E7EB',
     ...Shadow.lg,
   },
   form: {
