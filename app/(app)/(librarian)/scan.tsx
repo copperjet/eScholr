@@ -46,6 +46,14 @@ export default function ScanScreen() {
       return;
     }
 
+    if (returnTo === 'quick-checkout' || returnTo === 'quick-checkin') {
+      router.replace({
+        pathname: `/(app)/(librarian)/${returnTo}` as any,
+        params: { scannedBarcode: code },
+      });
+      return;
+    }
+
     try {
       const foundBookId = await barcodeMut.mutateAsync(code);
       if (!foundBookId) {
@@ -72,7 +80,7 @@ export default function ScanScreen() {
         ]);
       }
     }
-  }, [isIsbnMode, barcodeMut, flashGreen]);
+  }, [isIsbnMode, returnTo, barcodeMut, flashGreen]);
 
   const handleBarCodeScanned = useCallback(({ data }: { type: string; data: string }) => {
     handleCode(data);

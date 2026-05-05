@@ -87,9 +87,9 @@ export default function LibrarianHome() {
         <SectionHeader title="Quick Actions" />
         <View style={styles.actionRow}>
           {[
-            { icon: 'arrow-undo-circle-outline' as const, label: 'Check In', color: Colors.semantic.warning, route: '/(app)/(librarian)/loans' },
-            { icon: 'barcode-outline' as const, label: 'Scan', color: Colors.semantic.info, route: '/(app)/(librarian)/scan' },
-            { icon: 'add-circle-outline' as const, label: 'Add Book', color: Colors.semantic.success, route: '/(app)/(librarian)/book-form' },
+            { icon: 'arrow-undo-circle-outline' as const, label: 'Check In', color: Colors.semantic.warning, route: '/(app)/(librarian)/quick-checkin' },
+            { icon: 'arrow-forward-circle-outline' as const, label: 'Check Out', color: Colors.semantic.success, route: '/(app)/(librarian)/quick-checkout' },
+            { icon: 'add-circle-outline' as const, label: 'Add Book', color: Colors.semantic.info, route: '/(app)/(librarian)/book-form' },
             { icon: 'people-outline' as const, label: 'Patrons', color: '#8B5CF6', route: '/(app)/(librarian)/patrons' },
           ].map((a) => (
             <Pressable key={a.label} onPress={() => router.push(a.route as any)} style={styles.actionItem}>
