@@ -90,8 +90,8 @@ export default function ScanScreen() {
             </ThemedText>
             <ThemedText variant="body" color="muted" style={{ marginBottom: Spacing.lg }}>
               {isIsbnMode
-                ? 'Camera scanning only works in the mobile app. Type the ISBN from the book below.'
-                : 'Camera scanning only works in the mobile app. Type the barcode or accession number below.'}
+                ? 'Camera scanning only works in the mobile app. Type the ISBN below or use a USB barcode scanner.'
+                : 'Camera scanning only works in the mobile app. Type the barcode below or use a USB barcode scanner.'}
             </ThemedText>
 
             <TextInput
@@ -101,7 +101,7 @@ export default function ScanScreen() {
               placeholderTextColor={colors.textMuted}
               style={{
                 backgroundColor: colors.surface,
-                color: colors.foreground,
+                color: colors.textPrimary,
                 borderRadius: Radius.md,
                 paddingHorizontal: Spacing.base,
                 paddingVertical: Spacing.md,
