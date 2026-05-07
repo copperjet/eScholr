@@ -97,10 +97,22 @@ export default function RootLayout() {
         router.replace('/(app)/reset-password' as any);
         return;
       }
+      // Skip INITIAL_SESSION — bootstrap above already handled it, and we
+      // must not yank users off /platform-login or other auth routes they
+      // navigated to directly.
+      if (event === 'INITIAL_SESSION') return;
       if (!session) {
         const { user: prevUser, school } = useAuthStore.getState();
         const wasPlatformAdmin = prevUser?.activeRole === 'super_admin';
         setUser(null);
+        // Don't redirect if user is already on an auth screen (e.g. typed
+        // /platform-login directly while signed out).
+        try {
+          const path = (globalThis as any).location?.pathname ?? '';
+          if (path.includes('platform-login') || path.includes('login') || path.includes('school-code') || path.includes('forgot-password')) {
+            return;
+          }
+        } catch {}
         if (wasPlatformAdmin) {
           router.replace('/(auth)/platform-login' as any);
         } else {
