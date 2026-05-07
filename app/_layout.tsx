@@ -98,11 +98,14 @@ export default function RootLayout() {
         return;
       }
       if (!session) {
+        const { user: prevUser, school } = useAuthStore.getState();
+        const wasPlatformAdmin = prevUser?.activeRole === 'super_admin';
         setUser(null);
-        // If school is persisted, go to login so user just re-enters credentials.
-        // Only send to school-code if no school is known.
-        const { school } = useAuthStore.getState();
-        router.replace(school ? '/(auth)/login' : '/(auth)/school-code' as any);
+        if (wasPlatformAdmin) {
+          router.replace('/(auth)/platform-login' as any);
+        } else {
+          router.replace(school ? '/(auth)/login' : '/(auth)/school-code' as any);
+        }
       }
     });
 
