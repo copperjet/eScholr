@@ -45,6 +45,13 @@ export default function StudentMore() {
 
   const sections: { title: string; items: MenuItem[] }[] = [
     {
+      title: 'Academics',
+      items: [
+        { icon: 'calendar-clear-outline', label: 'Attendance', sublabel: 'My attendance record', onPress: () => router.push('/(app)/(student)/attendance' as any) },
+        { icon: 'cash-outline',           label: 'Fees',       sublabel: 'Invoices & balance',   onPress: () => router.push('/(app)/(student)/fees' as any) },
+      ],
+    },
+    {
       title: 'My School',
       items: [
         { icon: 'megaphone-outline', label: 'Announcements', sublabel: 'School news & updates', onPress: () => router.push('/(app)/(student)/announcements' as any) },

@@ -4,12 +4,18 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { AppTabBar, ResponsiveShell } from '../../../components/ui';
 import { useShouldShowSidebar } from '../../../lib/responsive';
+import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
 
 export default function FinanceLayout() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const showSidebar = useShouldShowSidebar();
+  const financeEnabled = useIsModuleEnabled('finance');
+
   if (user && user.activeRole !== 'finance') {
+    return <Redirect href="/" />;
+  }
+  if (!financeEnabled) {
     return <Redirect href="/" />;
   }
   if (showSidebar) {

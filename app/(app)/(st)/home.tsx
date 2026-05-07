@@ -100,8 +100,9 @@ export default function STHome() {
         <View style={styles.topBar}>
           <View style={{ flex: 1 }}>
             <ThemedText variant="caption" color="muted">{TODAY}</ThemedText>
-            <ThemedText variant="h2">{greeting} 👋</ThemedText>
-            <ThemedText variant="bodySm" color="muted" style={{ marginTop: 2 }}>{user?.fullName ?? 'Teacher'}</ThemedText>
+            <ThemedText variant="h2">
+              {greeting}, {user?.fullName?.split(' ')[0] ?? 'Teacher'} 👋
+            </ThemedText>
           </View>
           <Pressable onPress={() => router.push('/(app)/switch-role' as any)}>
             <Avatar name={user?.fullName ?? 'T'} photoUrl={school?.logo_url} size={44} />

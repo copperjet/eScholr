@@ -1,46 +1,43 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
+import { View, StyleSheet, SafeAreaView, RefreshControl, Pressable } from 'react-native';
 import { router } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
-import { supabase } from '../../../lib/supabase';
 import {
-  SearchBar, ListItem, Skeleton, EmptyState, ErrorState, ScreenHeader, FastList,
+  SearchBar, ListItem, Skeleton, EmptyState, ErrorState,
+  ScreenHeader, FastList, FilterChipRow,
 } from '../../../components/ui';
 import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
+import { useStaffList } from '../../../hooks/useStaffRecords';
 
-function useStaffList(schoolId: string) {
-  return useQuery({
-    queryKey: ['hr-staff-list', schoolId],
-    enabled: !!schoolId,
-    staleTime: 1000 * 60 * 5,
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from('staff')
-        .select('id, full_name, staff_number, email, department, photo_url, staff_roles(role)')
-        .eq('school_id', schoolId)
-        .eq('status', 'active')
-        .order('full_name');
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-}
+type StaffTypeFilter = 'all' | 'teacher' | 'support' | 'substitute' | 'administrator';
+
+const TYPE_CHIPS: Array<{ label: string; value: StaffTypeFilter }> = [
+  { label: 'All',           value: 'all' },
+  { label: 'Teachers',      value: 'teacher' },
+  { label: 'Support',       value: 'support' },
+  { label: 'Substitutes',   value: 'substitute' },
+  { label: 'Administrators',value: 'administrator' },
+];
 
 export default function HRStaff() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const schoolId = user?.schoolId ?? '';
-  const [search, setSearch] = useState('');
+  const [search, setSearch]         = useState('');
+  const [typeFilter, setTypeFilter] = useState<StaffTypeFilter>('all');
 
-  const { data: staff, isLoading, isError, refetch, isRefetching } = useStaffList(schoolId);
+  const { data: staff, isLoading, isError, refetch, isRefetching } = useStaffList(schoolId, 'active');
 
-  const filtered = (staff ?? []).filter((s: any) =>
-    s.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    (s.staff_number ?? '').toLowerCase().includes(search.toLowerCase()) ||
-    (s.department ?? '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = (staff ?? []).filter((s: any) => {
+    const matchSearch =
+      s.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      (s.staff_number ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (s.department ?? '').toLowerCase().includes(search.toLowerCase());
+    const matchType = typeFilter === 'all' || s.staff_type === typeFilter;
+    return matchSearch && matchType;
+  });
 
   if (isError) {
     return (
@@ -52,10 +49,28 @@ export default function HRStaff() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <ScreenHeader title="Staff Directory" />
+      <ScreenHeader
+        title="Staff Directory"
+        right={
+          <Pressable
+            onPress={() => router.push('/(app)/(hr)/staff-add' as any)}
+            style={[styles.addBtn, { backgroundColor: colors.brand.primary }]}
+          >
+            <Ionicons name="add" size={20} color="#fff" />
+          </Pressable>
+        }
+      />
+
       <View style={styles.searchBar}>
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search by name, number, department…" />
       </View>
+
+      <FilterChipRow
+        options={TYPE_CHIPS.map((c) => c.label)}
+        selected={TYPE_CHIPS.find((c) => c.value === typeFilter)?.label ?? 'All'}
+        onSelect={(label) => setTypeFilter(TYPE_CHIPS.find((c) => c.label === label)?.value ?? 'all')}
+        style={{ paddingHorizontal: Spacing.screen, marginBottom: Spacing.sm }}
+      />
 
       {isLoading ? (
         <View style={{ padding: Spacing.base, gap: Spacing.sm }}>
@@ -71,8 +86,8 @@ export default function HRStaff() {
         </View>
       ) : filtered.length === 0 ? (
         <EmptyState
-          title={search ? 'No results' : 'No staff found'}
-          description={search ? `No staff match "${search}"` : 'Staff records appear once added by admin.'}
+          title={search || typeFilter !== 'all' ? 'No results' : 'No staff found'}
+          description={search ? `No staff match "${search}"` : 'Add staff with the + button.'}
           icon="people-outline"
         />
       ) : (
@@ -110,4 +125,5 @@ const styles = StyleSheet.create({
   safe:      { flex: 1 },
   searchBar: { paddingHorizontal: Spacing.base, paddingVertical: Spacing.md },
   skRow:     { flexDirection: 'row', alignItems: 'center' },
+  addBtn:    { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
 });

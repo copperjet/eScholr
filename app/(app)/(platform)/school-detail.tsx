@@ -6,13 +6,15 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Button, ErrorState, StatCard, SectionHeader, ListItemSkeleton,
+  ToggleRow, CardSkeleton,
 } from '../../../components/ui';
+import { MODULES, MODULE_CATEGORIES, type ModuleKey } from '../../../lib/modules';
 import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
@@ -29,7 +31,7 @@ import {
 
 type SubscriptionStatus = 'active' | 'trial' | 'suspended' | 'cancelled';
 type SubscriptionPlan   = 'starter' | 'growth' | 'scale' | 'enterprise';
-type Tab = 'info' | 'staff' | 'usage' | 'notes' | 'admins';
+type Tab = 'info' | 'staff' | 'usage' | 'notes' | 'admins' | 'modules';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -68,6 +70,7 @@ function useSchoolDetail(schoolId: string) {
 
 function InfoTab({ school, colors, refetch, isFetching }: { school: any; colors: any; refetch: () => void; isFetching: boolean }) {
   const updateSchool = useUpdateSchoolPlatform(school.id);
+  const qc = useQueryClient();
 
   const handleStatusChange = (status: SubscriptionStatus) => {
     if (status === school.subscription_status) return;
@@ -83,18 +86,57 @@ function InfoTab({ school, colors, refetch, isFetching }: { school: any; colors:
     ]);
   };
 
+  /** Build module defaults map for the given tier */
+  const buildTierModules = (tier: SubscriptionPlan): Record<string, boolean> => {
+    const out: Record<string, boolean> = {};
+    MODULES.forEach((m) => { out[`module.${m.key}`] = m.tierDefault[tier]; });
+    return out;
+  };
+
+  /** Call set-school-modules-bulk with tier defaults */
+  const syncModulesToTier = async (schoolId: string, tier: SubscriptionPlan) => {
+    const { error } = await (supabase as any).functions.invoke('set-school-modules-bulk', {
+      body: { school_id: schoolId, modules: buildTierModules(tier) },
+    });
+    if (error) throw error;
+    qc.invalidateQueries({ queryKey: ['platform-school-modules', schoolId] });
+  };
+
   const handlePlanChange = (plan: SubscriptionPlan) => {
     if (plan === school.subscription_plan) return;
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Switch "${school.name}" to ${plan.toUpperCase()} plan?`)) {
-        haptics.light(); updateSchool.mutate({ subscription_plan: plan });
+
+    const doChangePlan = () => {
+      haptics.light();
+      updateSchool.mutate({ subscription_plan: plan });
+    };
+
+    const doChangePlanAndSync = async () => {
+      haptics.medium();
+      updateSchool.mutate({ subscription_plan: plan });
+      try {
+        await syncModulesToTier(school.id, plan);
+      } catch (e: any) {
+        Alert.alert('Module sync failed', e.message ?? 'Could not reset modules to tier defaults.');
       }
+    };
+
+    if (Platform.OS === 'web') {
+      const syncToo = window.confirm(
+        `Switch "${school.name}" to ${plan.toUpperCase()} plan?\n\nClick OK to also reset modules to ${plan} tier defaults, or Cancel to change plan only.`,
+      );
+      if (syncToo) { doChangePlanAndSync(); } else { doChangePlan(); }
       return;
     }
-    Alert.alert('Change Plan', `Switch "${school.name}" to ${plan.toUpperCase()} plan?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Confirm', onPress: () => { haptics.light(); updateSchool.mutate({ subscription_plan: plan }); } },
-    ]);
+
+    Alert.alert(
+      'Change Plan',
+      `Switch "${school.name}" to ${plan.toUpperCase()} plan?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Plan Only', onPress: doChangePlan },
+        { text: 'Plan + Sync Modules', style: 'default', onPress: () => { doChangePlanAndSync(); } },
+      ],
+    );
   };
 
   return (
@@ -438,6 +480,204 @@ function NotesTab({ school, colors }: { school: any; colors: any }) {
   );
 }
 
+// ── Modules tab ───────────────────────────────────────────────────────────────
+
+type ModuleMap = Record<ModuleKey, boolean>;
+
+function usePlatformSchoolModules(schoolId: string) {
+  return useQuery<ModuleMap>({
+    queryKey: ['platform-school-modules', schoolId],
+    enabled: !!schoolId,
+    staleTime: 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).functions.invoke('get-school-modules', {
+        body: { school_id: schoolId },
+      });
+      if (error) throw new Error(error.message);
+      return (data as any).modules as ModuleMap;
+    },
+  });
+}
+
+function ModulesTab({ school, colors }: { school: any; colors: any }) {
+  const qc = useQueryClient();
+  const { data: moduleMap, isLoading, isError, refetch } = usePlatformSchoolModules(school.id);
+  const [pending, setPending] = useState<ModuleKey | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const handleResetToTier = async () => {
+    const tier = school.subscription_plan as 'starter' | 'growth' | 'scale' | 'enterprise';
+    const confirmFn = Platform.OS === 'web'
+      ? () => window.confirm(`Reset all modules to "${tier}" tier defaults? This will overwrite current toggles.`)
+      : () => new Promise<boolean>((resolve) =>
+          Alert.alert('Reset to tier defaults', `Reset all modules to "${tier}" tier defaults? This overwrites current toggles.`, [
+            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+            { text: 'Reset', style: 'destructive', onPress: () => resolve(true) },
+          ])
+        );
+
+    const confirmed = await confirmFn();
+    if (!confirmed) return;
+
+    setBulkBusy(true);
+    haptics.light();
+
+    // Build tier-default map
+    const tierMap: Record<string, boolean> = {};
+    for (const mod of MODULES) {
+      tierMap[mod.key] = mod.tierDefault[tier];
+    }
+
+    try {
+      const { error } = await (supabase as any).functions.invoke('set-school-modules-bulk', {
+        body: { school_id: school.id, modules: tierMap },
+      });
+      if (error) throw new Error(error.message);
+      haptics.success();
+      qc.invalidateQueries({ queryKey: ['platform-school-modules', school.id] });
+    } catch (e: any) {
+      haptics.error();
+      Alert.alert('Reset failed', e?.message ?? 'Could not reset modules.');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleToggle = async (key: ModuleKey, enabled: boolean) => {
+    if (pending) return;
+    setPending(key);
+    haptics.light();
+
+    // Optimistic update
+    const prev = qc.getQueryData<ModuleMap>(['platform-school-modules', school.id]);
+    qc.setQueryData<ModuleMap>(['platform-school-modules', school.id], (old) =>
+      old ? { ...old, [key]: enabled } : old
+    );
+
+    try {
+      const { data, error } = await (supabase as any).functions.invoke('set-school-module', {
+        body: { school_id: school.id, module_key: key, enabled },
+      });
+      if (error) throw new Error(error.message);
+
+      // Apply cascade results to optimistic cache
+      const cascade = (data as any)?.cascade_disabled as string[] | undefined;
+      if (cascade && cascade.length > 0) {
+        qc.setQueryData<ModuleMap>(['platform-school-modules', school.id], (old) => {
+          if (!old) return old;
+          const updated = { ...old };
+          for (const k of cascade) {
+            const moduleKey = k.replace('module.', '') as ModuleKey;
+            updated[moduleKey] = false;
+          }
+          return updated;
+        });
+        Alert.alert(
+          'Modules cascaded',
+          `Disabling this module also turned off: ${cascade.map((k) => k.replace('module.', '')).join(', ')}`
+        );
+      }
+      haptics.success();
+    } catch (e: any) {
+      // Rollback optimistic update
+      haptics.error();
+      if (prev) {
+        qc.setQueryData(['platform-school-modules', school.id], prev);
+      }
+      Alert.alert('Update failed', e?.message ?? 'Could not update module. Try again.');
+    } finally {
+      setPending(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: Spacing.screen, gap: Spacing.base, paddingBottom: TAB_BAR_HEIGHT }}>
+        {[0, 1, 2, 3, 4].map((i) => <CardSkeleton key={i} lines={2} />)}
+      </ScrollView>
+    );
+  }
+
+  if (isError || !moduleMap) {
+    return (
+      <ErrorState
+        title="Could not load modules"
+        description="Check connection and try again."
+        onRetry={refetch}
+      />
+    );
+  }
+
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + Spacing.xl }}
+      refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.brand.primary} />}
+    >
+      {/* Info banner */}
+      <View style={[styles.moduleInfoBanner, { backgroundColor: colors.brand.primary + '12', borderColor: colors.brand.primary + '30' }]}>
+        <Ionicons name="information-circle-outline" size={16} color={colors.brand.primary} />
+        <ThemedText style={{ flex: 1, fontSize: 13, color: colors.brand.primary, marginLeft: 8, lineHeight: 18 }}>
+          Module changes propagate live via realtime. Disabling a parent module cascades to its dependents.
+        </ThemedText>
+      </View>
+
+      {/* Reset to tier defaults */}
+      <View style={{ paddingHorizontal: Spacing.screen, paddingBottom: Spacing.sm }}>
+        <TouchableOpacity
+          onPress={handleResetToTier}
+          disabled={bulkBusy}
+          style={[styles.resetBtn, { borderColor: colors.brand.primary, backgroundColor: bulkBusy ? colors.border : 'transparent' }]}
+        >
+          {bulkBusy ? (
+            <ActivityIndicator size="small" color={colors.brand.primary} />
+          ) : (
+            <Ionicons name="refresh-outline" size={16} color={colors.brand.primary} />
+          )}
+          <ThemedText style={{ color: colors.brand.primary, fontWeight: '700', fontSize: 13, marginLeft: 6 }}>
+            Reset to {school.subscription_plan} tier defaults
+          </ThemedText>
+        </TouchableOpacity>
+      </View>
+
+      {MODULE_CATEGORIES.map((cat) => {
+        const catModules = MODULES.filter((m) => m.category === cat.id);
+        return (
+          <View key={cat.id}>
+            <SectionHeader title={cat.label} />
+            <View style={{ paddingHorizontal: Spacing.screen, gap: Spacing.sm }}>
+              {catModules.map((mod) => (
+                <View key={mod.key} style={{ opacity: pending && pending !== mod.key ? 0.6 : 1 }}>
+                  <ToggleRow
+                    label={mod.label}
+                    description={mod.description}
+                    value={moduleMap[mod.key] ?? true}
+                    onValueChange={(val) => handleToggle(mod.key, val)}
+                    disabled={!!pending}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        );
+      })}
+
+      {/* Tier reference */}
+      <SectionHeader title="Tier Defaults" />
+      <View style={[styles.tierTable, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {(['starter', 'growth', 'scale', 'enterprise'] as const).map((tier, i, arr) => (
+          <View key={tier} style={[styles.tierRow, i < arr.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
+            <ThemedText style={{ flex: 1, fontWeight: '600', fontSize: 13, textTransform: 'capitalize' }}>{tier}</ThemedText>
+            <ThemedText variant="caption" color="muted">
+              {MODULES.filter((m) => m.tierDefault[tier]).map((m) => m.label).join(', ')}
+            </ThemedText>
+          </View>
+        ))}
+      </View>
+    </ScrollView>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function SchoolDetail() {
@@ -460,11 +700,12 @@ export default function SchoolDetail() {
   }
 
   const TABS: { id: Tab; label: string; icon: string }[] = [
-    { id: 'info',   label: 'Info',   icon: 'information-circle-outline' },
-    { id: 'staff',  label: 'Staff',  icon: 'id-card-outline' },
-    { id: 'admins', label: 'Admins', icon: 'people-circle-outline' },
-    { id: 'usage',  label: 'Usage',  icon: 'bar-chart-outline' },
-    { id: 'notes',  label: 'Notes',  icon: 'document-text-outline' },
+    { id: 'info',    label: 'Info',    icon: 'information-circle-outline' },
+    { id: 'staff',   label: 'Staff',   icon: 'id-card-outline' },
+    { id: 'admins',  label: 'Admins',  icon: 'people-circle-outline' },
+    { id: 'usage',   label: 'Usage',   icon: 'bar-chart-outline' },
+    { id: 'notes',   label: 'Notes',   icon: 'document-text-outline' },
+    { id: 'modules', label: 'Modules', icon: 'toggle-outline' },
   ];
 
   return (
@@ -527,11 +768,12 @@ export default function SchoolDetail() {
 
           {/* Tab content */}
           <View style={{ flex: 1 }}>
-            {activeTab === 'info'   && <InfoTab        school={school} colors={colors} refetch={refetch} isFetching={isFetching} />}
-            {activeTab === 'staff'  && <StaffRolesTab  school={school} colors={colors} />}
-            {activeTab === 'admins' && <AdminsTab       school={school} colors={colors} />}
-            {activeTab === 'usage'  && <UsageTab        school={school} colors={colors} refetch={refetch} isFetching={isFetching} />}
-            {activeTab === 'notes'  && <NotesTab        school={school} colors={colors} />}
+            {activeTab === 'info'    && <InfoTab        school={school} colors={colors} refetch={refetch} isFetching={isFetching} />}
+            {activeTab === 'staff'   && <StaffRolesTab  school={school} colors={colors} />}
+            {activeTab === 'admins'  && <AdminsTab       school={school} colors={colors} />}
+            {activeTab === 'usage'   && <UsageTab        school={school} colors={colors} refetch={refetch} isFetching={isFetching} />}
+            {activeTab === 'notes'   && <NotesTab        school={school} colors={colors} />}
+            {activeTab === 'modules' && <ModulesTab      school={school} colors={colors} />}
           </View>
         </View>
       ) : null}
@@ -578,6 +820,10 @@ const styles = StyleSheet.create({
   staffRow:    { flexDirection: 'row', alignItems: 'center', padding: Spacing.base, borderRadius: Radius.md, borderWidth: 1, gap: Spacing.sm },
   staffAvatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   miniRoleBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: Radius.sm },
+  moduleInfoBanner: { flexDirection: 'row', alignItems: 'flex-start', margin: Spacing.screen, padding: Spacing.md, borderRadius: Radius.md, borderWidth: 1 },
+  tierTable: { marginHorizontal: Spacing.screen, borderRadius: Radius.md, borderWidth: 1, overflow: 'hidden', marginBottom: Spacing.xl },
+  tierRow: { flexDirection: 'row', alignItems: 'flex-start', padding: Spacing.md, gap: Spacing.sm },
+  resetBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: Spacing.md, borderRadius: Radius.md, borderWidth: 1.5 },
   sheetOverlay: { ...StyleSheet.absoluteFillObject, flexDirection: 'column', justifyContent: 'flex-end', zIndex: 100 },
   sheet:        { borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, borderWidth: 1, paddingTop: Spacing.sm, paddingBottom: Spacing['2xl'] },
   sheetHandle:  { width: 36, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', alignSelf: 'center', marginBottom: Spacing.md },

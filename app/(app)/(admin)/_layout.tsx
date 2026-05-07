@@ -67,6 +67,7 @@ function MobileAdminLayout({ isSuper, colors }: { isSuper: boolean; colors: any 
       <Tabs.Screen name="fee-structure"       options={{ href: null }} />
       <Tabs.Screen name="backup-settings"     options={{ href: null }} />
       <Tabs.Screen name="student-credentials" options={{ href: null }} />
+      <Tabs.Screen name="modules"             options={{ href: null }} />
     </Tabs>
   );
 }

@@ -1,6 +1,7 @@
 /**
  * Desktop Sidebar Navigation — shown on tablet/desktop instead of bottom tabs.
  * Mirrors the structure of AppTabBar but in a vertical sidebar layout.
+ * Module-gated: nav items with a `module` field are hidden if that module is disabled.
  */
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
@@ -12,12 +13,15 @@ import { useTheme } from '../../lib/theme';
 import { useAuthStore } from '../../stores/authStore';
 import { Radius, Spacing } from '../../constants/Typography';
 import { haptics } from '../../lib/haptics';
+import { type ModuleKey } from '../../lib/modules';
+import { useModuleMap } from '../../hooks/useSchoolModules';
 
 interface NavItem {
   path: string;
   label: string;
   icon: string;
   roles?: string[]; // Optional: restrict to specific roles
+  module?: ModuleKey; // If set, hidden when module is disabled
 }
 
 // Define navigation structure for each role
@@ -34,7 +38,7 @@ const ROLE_NAV_ITEMS: Record<string, NavItem[]> = {
     { path: '/(app)/(admin)/staff', label: 'Staff', icon: 'briefcase-outline' },
     { path: '/(app)/(admin)/reports', label: 'Reports', icon: 'document-text-outline' },
     { path: '/(app)/(admin)/attendance-overview', label: 'Attendance', icon: 'calendar-outline' },
-    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline' },
+    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline', module: 'announcements' as ModuleKey },
     { path: '/(app)/(admin)/more', label: 'More', icon: 'menu-outline' },
   ],
   hrt: [
@@ -43,7 +47,7 @@ const ROLE_NAV_ITEMS: Record<string, NavItem[]> = {
     { path: '/(app)/(hrt)/attendance', label: 'Attendance', icon: 'calendar-outline' },
     { path: '/(app)/(hrt)/marks', label: 'Marks', icon: 'create-outline' },
     { path: '/(app)/(hrt)/homework', label: 'Homework', icon: 'book-outline' },
-    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline' },
+    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline', module: 'announcements' as ModuleKey },
     { path: '/(app)/(hrt)/more', label: 'More', icon: 'menu-outline' },
   ],
   st: [
@@ -51,53 +55,57 @@ const ROLE_NAV_ITEMS: Record<string, NavItem[]> = {
     { path: '/(app)/(st)/students', label: 'Students', icon: 'people-outline' },
     { path: '/(app)/(st)/marks', label: 'Marks', icon: 'create-outline' },
     { path: '/(app)/(st)/homework', label: 'Homework', icon: 'book-outline' },
-    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline' },
+    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline', module: 'announcements' as ModuleKey },
     { path: '/(app)/(st)/more', label: 'More', icon: 'menu-outline' },
   ],
   finance: [
-    { path: '/(app)/(finance)', label: 'Dashboard', icon: 'grid-outline' },
-    { path: '/(app)/(finance)/finance-reports', label: 'Reports', icon: 'bar-chart-outline' },
-    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline' },
+    { path: '/(app)/(finance)', label: 'Dashboard', icon: 'grid-outline', module: 'finance' as ModuleKey },
+    { path: '/(app)/(finance)/finance-reports', label: 'Reports', icon: 'bar-chart-outline', module: 'finance' as ModuleKey },
+    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline', module: 'announcements' as ModuleKey },
     { path: '/(app)/(finance)/more', label: 'More', icon: 'menu-outline' },
   ],
   hr: [
-    { path: '/(app)/(hr)', label: 'Dashboard', icon: 'grid-outline' },
-    { path: '/(app)/(hr)/staff', label: 'Staff', icon: 'people-outline' },
-    { path: '/(app)/(hr)/leave', label: 'Leave', icon: 'calendar-outline' },
-    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline' },
+    { path: '/(app)/(hr)', label: 'Dashboard', icon: 'grid-outline', module: 'hr' as ModuleKey },
+    { path: '/(app)/(hr)/staff', label: 'Staff', icon: 'people-outline', module: 'hr' as ModuleKey },
+    { path: '/(app)/(hr)/leave', label: 'Leave', icon: 'calendar-outline', module: 'hr' as ModuleKey },
+    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline', module: 'announcements' as ModuleKey },
     { path: '/(app)/(hr)/more', label: 'More', icon: 'menu-outline' },
   ],
   frontdesk: [
-    { path: '/(app)/(frontdesk)', label: 'Dashboard', icon: 'grid-outline' },
-    { path: '/(app)/(frontdesk)/inquiries', label: 'Inquiries', icon: 'chatbubble-outline' },
-    { path: '/(app)/(frontdesk)/visitors', label: 'Visitors', icon: 'people-outline' },
-    { path: '/(app)/(frontdesk)/applications', label: 'Applications', icon: 'document-outline' },
-    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline' },
+    { path: '/(app)/(frontdesk)', label: 'Dashboard', icon: 'grid-outline', module: 'frontdesk' as ModuleKey },
+    { path: '/(app)/(frontdesk)/inquiries', label: 'Inquiries', icon: 'chatbubble-outline', module: 'frontdesk' as ModuleKey },
+    { path: '/(app)/(frontdesk)/visitors', label: 'Visitors', icon: 'people-outline', module: 'frontdesk' as ModuleKey },
+    { path: '/(app)/(frontdesk)/applications', label: 'Applications', icon: 'document-outline', module: 'frontdesk' as ModuleKey },
+    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline', module: 'announcements' as ModuleKey },
     { path: '/(app)/(frontdesk)/more', label: 'More', icon: 'menu-outline' },
   ],
   parent: [
     { path: '/(app)/(parent)', label: 'Dashboard', icon: 'grid-outline' },
+    { path: '/(app)/(parent)/marks', label: 'Marks', icon: 'school-outline' },
+    { path: '/(app)/(parent)/attendance', label: 'Attendance', icon: 'calendar-clear-outline' },
     { path: '/(app)/(parent)/homework', label: 'Homework', icon: 'book-outline' },
     { path: '/(app)/(parent)/reports', label: 'Reports', icon: 'document-text-outline' },
-    { path: '/(app)/(parent)/fees', label: 'Fees', icon: 'cash-outline' },
+    { path: '/(app)/(parent)/fees', label: 'Fees', icon: 'cash-outline', module: 'finance' as ModuleKey },
     { path: '/(app)/(parent)/messages', label: 'Messages', icon: 'chatbubble-outline' },
-    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline' },
+    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline', module: 'announcements' as ModuleKey },
     { path: '/(app)/(parent)/more', label: 'More', icon: 'menu-outline' },
   ],
   student: [
     { path: '/(app)/(student)', label: 'Dashboard', icon: 'grid-outline' },
     { path: '/(app)/(student)/marks', label: 'Marks', icon: 'school-outline' },
+    { path: '/(app)/(student)/attendance', label: 'Attendance', icon: 'calendar-clear-outline' },
     { path: '/(app)/(student)/reports', label: 'Reports', icon: 'document-text-outline' },
     { path: '/(app)/(student)/homework', label: 'Homework', icon: 'book-outline' },
-    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline' },
+    { path: '/(app)/(student)/fees', label: 'Fees', icon: 'cash-outline', module: 'finance' as ModuleKey },
+    { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline', module: 'announcements' as ModuleKey },
     { path: '/(app)/(student)/more', label: 'More', icon: 'menu-outline' },
   ],
   librarian: [
-    { path: '/(app)/(librarian)/home',        label: 'Dashboard',   icon: 'grid-outline' },
-    { path: '/(app)/(librarian)/catalog',     label: 'Catalog',     icon: 'library-outline' },
-    { path: '/(app)/(librarian)/loans',       label: 'Loans',       icon: 'swap-horizontal-outline' },
-    { path: '/(app)/(librarian)/collections', label: 'Collections', icon: 'albums-outline' },
-    { path: '/(app)/(librarian)/patrons',     label: 'Patrons',     icon: 'people-outline' },
+    { path: '/(app)/(librarian)/home',        label: 'Dashboard',   icon: 'grid-outline',            module: 'library' as ModuleKey },
+    { path: '/(app)/(librarian)/catalog',     label: 'Catalog',     icon: 'library-outline',         module: 'library' as ModuleKey },
+    { path: '/(app)/(librarian)/loans',       label: 'Loans',       icon: 'swap-horizontal-outline', module: 'library' as ModuleKey },
+    { path: '/(app)/(librarian)/collections', label: 'Collections', icon: 'albums-outline',          module: 'library' as ModuleKey },
+    { path: '/(app)/(librarian)/patrons',     label: 'Patrons',     icon: 'people-outline',          module: 'library' as ModuleKey },
     { path: '/(app)/(librarian)/more',        label: 'More',        icon: 'menu-outline' },
   ],
 };
@@ -116,10 +124,16 @@ export function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuthStore();
+  const moduleMap = useModuleMap();
 
   const activeRole = user?.activeRole ?? 'hrt';
   const baseRole = getBaseRole(activeRole);
-  const navItems = ROLE_NAV_ITEMS[baseRole] ?? ROLE_NAV_ITEMS.hrt;
+  const allNavItems = ROLE_NAV_ITEMS[baseRole] ?? ROLE_NAV_ITEMS.hrt;
+
+  // Filter out nav items whose module is disabled
+  const navItems = allNavItems.filter(
+    (item) => !item.module || moduleMap[item.module] !== false
+  );
 
   const isActive = (path: string) => {
     // Check if current pathname starts with this path (handles nested routes)

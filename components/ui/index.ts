@@ -33,3 +33,7 @@ export { AnimatedNumber } from './AnimatedNumber';
 export { FadeIn } from './FadeIn';
 export { AcademicPeriodPicker } from './AcademicPeriodPicker';
 export { DatePickerField } from './DatePickerField';
+// Module gating system
+export { ModuleGate, type ModuleGateProps } from './ModuleGate';
+export { ToggleRow, type ToggleRowProps } from './ToggleRow';
+export { ModuleDisabledScreen, type ModuleDisabledScreenProps } from './ModuleDisabledScreen';

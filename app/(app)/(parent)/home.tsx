@@ -171,7 +171,9 @@ export default function ParentHome() {
         {isLoading ? (
           <View style={styles.cardPad}><ListItemSkeleton /></View>
         ) : data?.attendance ? (
-          <AttendanceCard summary={data.attendance} scheme={scheme} />
+          <Pressable onPress={() => router.push(`/(app)/(parent)/attendance?studentId=${activeChild?.id ?? ''}` as any)}>
+            <AttendanceCard summary={data.attendance} scheme={scheme} />
+          </Pressable>
         ) : (
           <Card variant="tinted" style={styles.cardPad}>
             <ThemedText color="muted" style={{ textAlign: 'center' }}>No attendance recorded yet.</ThemedText>
@@ -196,10 +198,12 @@ export default function ParentHome() {
         <SectionHeader title="Quick Links" />
         <View style={styles.quickLinksGrid}>
           {[
+            { icon: 'school-outline',        label: 'Marks',         route: `/(app)/(parent)/marks?studentId=${activeChild?.id ?? ''}` },
+            { icon: 'calendar-clear-outline',label: 'Attendance',    route: `/(app)/(parent)/attendance?studentId=${activeChild?.id ?? ''}` },
             { icon: 'megaphone-outline',     label: 'Announcements', route: '/(app)/announcements' },
             { icon: 'book-outline',          label: 'Homework',      route: '/(app)/(parent)/homework' },
             { icon: 'calendar-outline',      label: 'Timetable',     route: '/(app)/timetable' },
-            { icon: 'cash-outline',          label: 'Fees',          route: '/(parent)/fees' },
+            { icon: 'cash-outline',          label: 'Fees',          route: '/(app)/(parent)/fees' },
             { icon: 'notifications-outline', label: 'Notifications', route: '/(app)/notifications' },
           ].map(({ icon, label, route }) => (
             <Pressable

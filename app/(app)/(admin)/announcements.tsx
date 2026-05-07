@@ -9,7 +9,7 @@ import {
   TextInput, Switch, ScrollView, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, Redirect } from 'expo-router';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
@@ -23,6 +23,7 @@ import {
   useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement,
   sendAnnouncementPush, type AnnouncementAudience, type Announcement,
 } from '../../../hooks/useAnnouncements';
+import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
 
 const AUDIENCE_META: Record<AnnouncementAudience, { label: string; color: string; icon: string }> = {
   school: { label: 'Whole School', color: Colors.semantic.info,    icon: 'school-outline' },
@@ -76,7 +77,11 @@ function AnnouncementCard({ item, colors, onDelete }: { item: Announcement; colo
 export default function AnnouncementsScreen() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
+  const announcementsEnabled = useIsModuleEnabled('announcements');
   const schoolId = user?.schoolId ?? '';
+
+  if (!announcementsEnabled) return <Redirect href="/(app)/(admin)/home" />;
+
 
   const { data: items = [], isLoading, isError, refetch } = useAnnouncements(schoolId);
   const createMutation = useCreateAnnouncement();

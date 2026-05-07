@@ -7,6 +7,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import { AppTabBar, ResponsiveShell } from '../../../components/ui';
 import { useShouldShowSidebar } from '../../../lib/responsive';
+import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
 
 export default function LibrarianLayout() {
   const { colors } = useTheme();
@@ -14,6 +15,7 @@ export default function LibrarianLayout() {
   const showSidebar = useShouldShowSidebar();
   const qc = useQueryClient();
   const schoolId = user?.schoolId ?? '';
+  const libraryEnabled = useIsModuleEnabled('library');
 
   // Realtime: invalidate queries on library table changes
   useEffect(() => {
@@ -34,6 +36,9 @@ export default function LibrarianLayout() {
   }, [schoolId, qc]);
 
   if (user && user.activeRole !== 'librarian') {
+    return <Redirect href="/" />;
+  }
+  if (!libraryEnabled) {
     return <Redirect href="/" />;
   }
 

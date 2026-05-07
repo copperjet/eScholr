@@ -5,7 +5,23 @@
 -- cover_url still uses COALESCE (no UI to edit it).
 -- ============================================================
 
-CREATE OR REPLACE FUNCTION public.library_update_book(
+-- Dynamically drop ALL overloads of library_update_book to avoid ambiguity
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT oid::regprocedure::text AS sig
+    FROM pg_proc
+    WHERE proname = 'library_update_book'
+      AND pronamespace = 'public'::regnamespace
+  LOOP
+    EXECUTE 'DROP FUNCTION ' || r.sig;
+  END LOOP;
+END;
+$$;
+
+CREATE FUNCTION public.library_update_book(
   p_book_id          uuid,
   p_school_id        uuid,
   p_title            text DEFAULT NULL,
@@ -19,7 +35,7 @@ CREATE OR REPLACE FUNCTION public.library_update_book(
 )
 RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER
-AS $$
+AS $fn$
 BEGIN
   UPDATE library_books SET
     title          = COALESCE(p_title, title),
@@ -33,6 +49,6 @@ BEGIN
     updated_at     = now()
   WHERE id = p_book_id AND school_id = p_school_id;
 END;
-$$;
+$fn$;
 
-GRANT EXECUTE ON FUNCTION public.library_update_book TO authenticated;
+GRANT EXECUTE ON FUNCTION public.library_update_book(uuid, uuid, text, text, text, text, int, text, uuid, text) TO authenticated;

@@ -7,7 +7,7 @@ import {
   View, StyleSheet, SafeAreaView, TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, Redirect } from 'expo-router';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../lib/theme';
 import { useAuthStore } from '../../stores/authStore';
@@ -20,6 +20,7 @@ import {
   useAnnouncementFeed, useReadAnnouncements, useMarkAnnouncementRead,
   type Announcement,
 } from '../../hooks/useAnnouncements';
+import { useIsModuleEnabled } from '../../hooks/useSchoolModules';
 
 const AUDIENCE_COLORS: Record<string, string> = {
   school: Colors.semantic.info,
@@ -31,9 +32,13 @@ const AUDIENCE_COLORS: Record<string, string> = {
 export default function AnnouncementsFeed() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
+  const announcementsEnabled = useIsModuleEnabled('announcements');
   const schoolId = user?.schoolId ?? '';
   const userId   = user?.id ?? '';
   const role     = user?.activeRole ?? '';
+
+  // Silently redirect if module disabled — users shouldn't see this screen
+  if (!announcementsEnabled) return <Redirect href="/" />;
 
   const { data: items = [], isLoading, isError, refetch } = useAnnouncementFeed(schoolId, role);
   const { data: readSet = new Set<string>() } = useReadAnnouncements(userId);

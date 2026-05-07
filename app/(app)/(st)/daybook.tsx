@@ -63,7 +63,7 @@ function useSTStudents(staffId: string | null, schoolId: string) {
         .select('id, full_name, student_number, photo_url')
         .eq('school_id', schoolId)
         .in('stream_id', streamIds)
-        .eq('is_active', true)
+        .eq('status', 'active')
         .order('full_name');
       return (data ?? []) as any[];
     },

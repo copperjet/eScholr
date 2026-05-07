@@ -37,6 +37,7 @@ export default function STLayout() {
       <Tabs.Screen name="marks-import" options={{ href: null }} />
       <Tabs.Screen name="daybook"      options={{ href: null }} />
       <Tabs.Screen name="messages"     options={{ href: null }} />
+      <Tabs.Screen name="analysis"     options={{ href: null }} />
     </Tabs>
   );
 }

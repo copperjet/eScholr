@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, SafeAreaView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -38,13 +38,25 @@ export default function CheckoutScreen() {
   const isCustomValid = parsedCustom && isValid(parsedCustom);
   const effectiveDueDate = isCustomValid ? customDueDate : dueDate;
 
+  // Sort by accession_number — matches RPC ORDER BY for determinism
   const availableCopies = useMemo(
-    () => (book?.copies ?? []).filter((c) => c.status === 'available'),
+    () => (book?.copies ?? [])
+      .filter((c) => c.status === 'available')
+      .sort((a, b) => a.accession_number.localeCompare(b.accession_number)),
     [book]
   );
   const totalCount = book?.copies?.length ?? 0;
   const bookUnavailable = availableCopies.length < 1;
   const needsCopySelect = availableCopies.length > 1;
+
+  // Auto-select first available copy when book loads (or copies change)
+  useEffect(() => {
+    if (availableCopies.length > 0 && !selectedCopyId) {
+      setSelectedCopyId(availableCopies[0].id);
+    }
+  }, [availableCopies]);
+
+  const selectedCopy = availableCopies.find((c) => c.id === selectedCopyId) ?? availableCopies[0] ?? null;
 
   const { data: patrons } = usePatronSearch(schoolId, patronQuery, patronType);
 
@@ -68,7 +80,7 @@ export default function CheckoutScreen() {
     try {
       await checkOutMut.mutateAsync({
         bookId: bookId!,
-        copyId: selectedCopyId ?? undefined,
+        copyId: selectedCopy?.id ?? undefined,
         borrowerType: selectedPatron.type,
         borrowerId: selectedPatron.id,
         dueDate: effectiveDueDate,
@@ -103,9 +115,19 @@ export default function CheckoutScreen() {
           <Card style={styles.card}>
             <ThemedText variant="h3">{book.title}</ThemedText>
             {book.author && <ThemedText variant="bodySm" color="muted">{book.author}</ThemedText>}
-            <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.xs }}>
-              Available: {availableCopies.length}/{totalCount} copies
-            </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.sm, gap: Spacing.sm }}>
+              <Ionicons name="barcode-outline" size={16} color={colors.brand.primary} />
+              <ThemedText variant="bodySm">
+                {selectedCopy
+                  ? selectedCopy.accession_number
+                  : 'No copies available'}
+              </ThemedText>
+              {availableCopies.length > 0 && (
+                <ThemedText variant="caption" color="muted">
+                  ({availableCopies.length}/{totalCount} available)
+                </ThemedText>
+              )}
+            </View>
           </Card>
         )}
 

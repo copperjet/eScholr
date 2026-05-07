@@ -54,10 +54,12 @@ export default function BookFormScreen() {
 
   useEffect(() => {
     if (scannedIsbn && processedScan.current !== scannedIsbn && !isEdit) {
-      processedScan.current = scannedIsbn;
+      processedScan.current = String(scannedIsbn);
       const s = String(scannedIsbn).trim();
       setIsbn(s);
       lookupISBN(s);
+      // Clear param so re-renders don't retrigger
+      router.setParams({ scannedIsbn: undefined as any });
     }
   }, [scannedIsbn, isEdit]);
 
@@ -65,16 +67,19 @@ export default function BookFormScreen() {
     const target = (isbnToLookup ?? isbn).trim();
     if (!target) return;
     setIsbnLoading(true);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
     try {
-      const res = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${target}&format=json&jscmd=data`);
+      const res = await fetch(
+        `https://openlibrary.org/api/books?bibkeys=ISBN:${encodeURIComponent(target)}&format=json&jscmd=data`,
+        { signal: ctrl.signal },
+      );
       const json = await res.json();
       const entry = json[`ISBN:${target}`];
       if (!entry) {
-        if (Platform.OS === 'web') {
-          window.alert('No book found for this ISBN.');
-        } else {
-          Alert.alert('Not Found', 'No book found for this ISBN.');
-        }
+        const msg = `No book found for ISBN ${target}. Fill the fields manually.`;
+        if (Platform.OS === 'web') window.alert(msg);
+        else Alert.alert('Not Found', msg);
         return;
       }
       if (entry.title && !title) setTitle(entry.title);
@@ -84,13 +89,14 @@ export default function BookFormScreen() {
         const y = entry.publish_date.match(/\d{4}/);
         if (y) setPublishYear(y[0]);
       }
-    } catch {
-      if (Platform.OS === 'web') {
-        window.alert('Failed to look up ISBN. Check your connection.');
-      } else {
-        Alert.alert('Error', 'Failed to look up ISBN. Check your connection.');
-      }
+    } catch (e: any) {
+      const msg = e?.name === 'AbortError'
+        ? 'Lookup timed out. Fill the fields manually.'
+        : 'Failed to look up ISBN. Check your connection or fill manually.';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Error', msg);
     } finally {
+      clearTimeout(timer);
       setIsbnLoading(false);
     }
   };

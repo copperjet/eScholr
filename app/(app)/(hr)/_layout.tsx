@@ -4,13 +4,18 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useTheme } from '../../../lib/theme';
 import { AppTabBar, ResponsiveShell } from '../../../components/ui';
 import { useShouldShowSidebar } from '../../../lib/responsive';
+import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
 
 export default function HRLayout() {
   const { user } = useAuthStore();
   const { colors } = useTheme();
   const showSidebar = useShouldShowSidebar();
+  const hrEnabled = useIsModuleEnabled('hr');
 
   if (user?.activeRole !== 'hr') {
+    return <Redirect href="/" />;
+  }
+  if (!hrEnabled) {
     return <Redirect href="/" />;
   }
 
@@ -68,10 +73,14 @@ export default function HRLayout() {
         }}
       />
       {/* Hidden screens */}
-      <Tabs.Screen name="leave-request" options={{ href: null }} />
-      <Tabs.Screen name="leave-approve" options={{ href: null }} />
-      <Tabs.Screen name="leave-balances" options={{ href: null }} />
-      <Tabs.Screen name="staff-detail"  options={{ href: null }} />
+      <Tabs.Screen name="leave-request"   options={{ href: null }} />
+      <Tabs.Screen name="leave-approve"   options={{ href: null }} />
+      <Tabs.Screen name="leave-balances"  options={{ href: null }} />
+      <Tabs.Screen name="staff-detail"    options={{ href: null }} />
+      <Tabs.Screen name="staff-add"       options={{ href: null }} />
+      <Tabs.Screen name="staff-edit"      options={{ href: null }} />
+      <Tabs.Screen name="certifications"  options={{ href: null }} />
+      <Tabs.Screen name="documents"       options={{ href: null }} />
     </Tabs>
   );
 }

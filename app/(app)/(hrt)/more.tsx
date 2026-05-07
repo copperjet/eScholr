@@ -88,7 +88,6 @@ export default function HRTMore() {
           sublabel: user?.email ?? undefined,
           onPress: () => router.push('/(app)/profile' as any),
         },
-        { icon: 'finger-print-outline', label: 'Biometric Login', sublabel: 'Face ID / Fingerprint', onPress: () => {} },
         ...((user?.roles ?? []).length > 1
           ? [{ icon: 'swap-horizontal-outline' as IoniconsName, label: 'Switch Role', sublabel: `Active: ${user?.activeRole ?? ''}`, onPress: () => router.push('/(app)/switch-role' as any) }]
           : []),

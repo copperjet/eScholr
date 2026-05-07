@@ -3,13 +3,12 @@ import {
   View, StyleSheet, SafeAreaView, Alert, TextInput, Animated, Platform,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { useBookByBarcode } from '../../../hooks/useLibrary';
 import { ThemedText, ScreenHeader, Button, Card } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
-import { Colors } from '../../../constants/Colors';
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -20,11 +19,24 @@ export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [manualCode, setManualCode] = useState('');
   const [detectedCode, setDetectedCode] = useState<string | null>(null);
+  const [cameraKey, setCameraKey] = useState(0);
   const processingRef = useRef(false);
   const barcodeMut = useBookByBarcode(schoolId);
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const isIsbnMode = returnTo === 'book-form';
   const flashAnim = useRef(new Animated.Value(0)).current;
+
+  // Reset scanner each time screen focuses (fix re-scan after navigation)
+  useFocusEffect(
+    useCallback(() => {
+      processingRef.current = false;
+      setDetectedCode(null);
+      setCameraKey((k) => k + 1);
+      return () => {
+        processingRef.current = true; // block stray callbacks during unmount
+      };
+    }, [])
+  );
 
   const flashGreen = useCallback(() => {
     flashAnim.setValue(1);
@@ -41,7 +53,7 @@ export default function ScanScreen() {
     if (isIsbnMode) {
       router.replace({
         pathname: '/(app)/(librarian)/book-form' as any,
-        params: { scannedIsbn: code },
+        params: { scannedIsbn: code, scanNonce: String(Date.now()) },
       });
       return;
     }
@@ -49,7 +61,7 @@ export default function ScanScreen() {
     if (returnTo === 'quick-checkout' || returnTo === 'quick-checkin') {
       router.replace({
         pathname: `/(app)/(librarian)/${returnTo}` as any,
-        params: { scannedBarcode: code },
+        params: { scannedBarcode: code, scanNonce: String(Date.now()) },
       });
       return;
     }
@@ -57,28 +69,16 @@ export default function ScanScreen() {
     try {
       const foundBookId = await barcodeMut.mutateAsync(code);
       if (!foundBookId) {
-        if (Platform.OS === 'web') {
-          window.alert(`No book found with barcode "${code}"`);
-          processingRef.current = false;
-          setDetectedCode(null);
-        } else {
-          Alert.alert('Not Found', `No book found with barcode "${code}"`, [
-            { text: 'OK', onPress: () => { processingRef.current = false; setDetectedCode(null); } },
-          ]);
-        }
+        const reset = () => { processingRef.current = false; setDetectedCode(null); };
+        if (Platform.OS === 'web') { window.alert(`No book found with barcode "${code}"`); reset(); }
+        else Alert.alert('Not Found', `No book found with barcode "${code}"`, [{ text: 'OK', onPress: reset }]);
         return;
       }
       router.replace({ pathname: '/(app)/(librarian)/book-detail' as any, params: { bookId: foundBookId } });
     } catch (e: any) {
-      if (Platform.OS === 'web') {
-        window.alert(e.message ?? 'Lookup failed');
-        processingRef.current = false;
-        setDetectedCode(null);
-      } else {
-        Alert.alert('Error', e.message ?? 'Lookup failed', [
-          { text: 'OK', onPress: () => { processingRef.current = false; setDetectedCode(null); } },
-        ]);
-      }
+      const reset = () => { processingRef.current = false; setDetectedCode(null); };
+      if (Platform.OS === 'web') { window.alert(e.message ?? 'Lookup failed'); reset(); }
+      else Alert.alert('Error', e.message ?? 'Lookup failed', [{ text: 'OK', onPress: reset }]);
     }
   }, [isIsbnMode, returnTo, barcodeMut, flashGreen]);
 
@@ -178,6 +178,7 @@ export default function ScanScreen() {
 
       <View style={styles.cameraContainer}>
         <CameraView
+          key={cameraKey}
           style={StyleSheet.absoluteFillObject}
           facing="back"
           animateShutter={false}
@@ -193,10 +194,7 @@ export default function ScanScreen() {
             <View style={[styles.corner, styles.cornerBR]} />
           </View>
           <ThemedText variant="body" style={{ color: '#fff', textAlign: 'center', marginTop: Spacing.base, fontWeight: '600' }}>
-            {isIsbnMode ? 'Scan ISBN barcode on book' : 'Point camera at library barcode'}
-          </ThemedText>
-          <ThemedText variant="bodySm" style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: Spacing.xs }}>
-            {isIsbnMode ? 'ISBN-13 or ISBN-10 barcode' : 'Library accession barcode'}
+            {isIsbnMode ? 'Scan ISBN on book cover' : 'Scan accession barcode'}
           </ThemedText>
         </View>
       </View>
@@ -208,51 +206,6 @@ export default function ScanScreen() {
           </ThemedText>
         </Animated.View>
       )}
-
-      <View style={styles.bottomBar}>
-        <Card style={{ padding: Spacing.base, backgroundColor: 'rgba(30,30,30,0.95)' }}>
-          <ThemedText variant="caption" color="muted" style={{ textAlign: 'center', marginBottom: Spacing.sm }}>
-            {isIsbnMode ? 'Or type ISBN manually:' : 'Or type barcode manually:'}
-          </ThemedText>
-          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-            <TextInput
-              value={manualCode}
-              onChangeText={setManualCode}
-              placeholder={isIsbnMode ? 'e.g. 9780134685991' : 'e.g. ACC-00001'}
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              style={{
-                flex: 1,
-                backgroundColor: 'rgba(255,255,255,0.15)',
-                color: '#fff',
-                borderRadius: Radius.md,
-                paddingHorizontal: Spacing.base,
-                paddingVertical: Spacing.md,
-                fontSize: 17,
-              }}
-              keyboardType="default"
-              autoCapitalize="characters"
-              onSubmitEditing={() => {
-                if (manualCode.trim()) {
-                  handleCode(manualCode.trim());
-                  setManualCode('');
-                }
-              }}
-            />
-            <Button
-              label="Submit"
-              variant="primary"
-              size="md"
-              onPress={() => {
-                if (manualCode.trim()) {
-                  handleCode(manualCode.trim());
-                  setManualCode('');
-                }
-              }}
-              disabled={!manualCode.trim() || barcodeMut.isPending}
-            />
-          </View>
-        </Card>
-      </View>
     </SafeAreaView>
   );
 }
@@ -284,14 +237,6 @@ const styles = StyleSheet.create({
   cornerTR: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4 },
   cornerBL: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4 },
   cornerBR: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4 },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: Spacing.screen,
-    paddingBottom: Spacing.xl,
-  },
   detectedBanner: {
     position: 'absolute',
     top: 80,

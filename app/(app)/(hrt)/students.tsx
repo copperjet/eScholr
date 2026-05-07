@@ -8,16 +8,26 @@ import { supabase } from '../../../lib/supabase';
 import { SearchBar, ListItem, Skeleton, EmptyState, ErrorState, FastList } from '../../../components/ui';
 import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 
-function useStudents(schoolId: string) {
+function useStudents(staffId: string | null, schoolId: string) {
   return useQuery({
-    queryKey: ['hrt-students', schoolId],
-    enabled: !!schoolId,
+    queryKey: ['hrt-students', staffId, schoolId],
+    enabled: !!staffId && !!schoolId,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
+      const { data: assignment } = await (supabase as any)
+        .from('hrt_assignments')
+        .select('stream_id')
+        .eq('staff_id', staffId!)
+        .eq('school_id', schoolId)
+        .limit(1)
+        .maybeSingle();
+      if (!assignment) return [];
+
       const { data } = await (supabase as any)
         .from('students')
         .select('id, full_name, student_number, photo_url, status, streams(name, grades(name))')
         .eq('school_id', schoolId)
+        .eq('stream_id', assignment.stream_id)
         .eq('status', 'active')
         .order('full_name');
       return (data ?? []) as any[];
@@ -29,7 +39,7 @@ export default function HRTStudentsScreen() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const [search, setSearch] = useState('');
-  const { data: students, isLoading, isError, refetch, isFetching } = useStudents(user?.schoolId ?? '');
+  const { data: students, isLoading, isError, refetch, isFetching } = useStudents(user?.staffId ?? null, user?.schoolId ?? '');
 
   const filtered = (students ?? []).filter((s: any) =>
     s.full_name.toLowerCase().includes(search.toLowerCase()) ||

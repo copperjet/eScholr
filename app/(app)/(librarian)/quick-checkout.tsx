@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, StyleSheet, SafeAreaView, Alert, Platform, TextInput } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
@@ -15,10 +15,13 @@ export default function QuickCheckoutScreen() {
   const schoolId = user?.schoolId ?? '';
   const [barcode, setBarcode] = useState('');
   const [processing, setProcessing] = useState(false);
+  const processingRef = useRef(false);
+  const lastHandledScan = useRef<string | null>(null);
   const barcodeMut = useBookByBarcode(schoolId);
 
   const processBarcode = useCallback(async (code: string) => {
-    if (!code || processing) return;
+    if (!code || processingRef.current) return;
+    processingRef.current = true;
     setProcessing(true);
 
     try {
@@ -29,9 +32,12 @@ export default function QuickCheckoutScreen() {
         } else {
           Alert.alert('Not Found', `No book found with barcode "${code}"`);
         }
+        processingRef.current = false;
         setProcessing(false);
         return;
       }
+      processingRef.current = false;
+      setProcessing(false);
       router.push({
         pathname: '/(app)/(librarian)/checkout' as any,
         params: { bookId },
@@ -42,14 +48,17 @@ export default function QuickCheckoutScreen() {
       } else {
         Alert.alert('Error', e.message ?? 'Lookup failed');
       }
+      processingRef.current = false;
       setProcessing(false);
     }
-  }, [processing, barcodeMut]);
+  }, [barcodeMut]);
 
   useEffect(() => {
-    if (scannedBarcode) {
-      setBarcode(scannedBarcode);
-      processBarcode(scannedBarcode);
+    if (scannedBarcode && lastHandledScan.current !== scannedBarcode) {
+      lastHandledScan.current = String(scannedBarcode);
+      setBarcode(String(scannedBarcode));
+      processBarcode(String(scannedBarcode));
+      router.setParams({ scannedBarcode: undefined as any, scanNonce: undefined as any });
     }
   }, [scannedBarcode, processBarcode]);
 

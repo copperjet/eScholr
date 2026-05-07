@@ -13,6 +13,7 @@ import {
 } from '../../../components/ui';
 import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
+import { useCertStatusCounts } from '../../../hooks/useCertifications';
 
 // TODAY computed inside component to avoid stale dates
 
@@ -43,6 +44,7 @@ export default function HRHome() {
   const schoolId = user?.schoolId ?? '';
 
   const { data, isLoading, isError, refetch, isRefetching } = useHRDashboard(schoolId);
+  const { data: certCounts } = useCertStatusCounts(schoolId);
 
   if (isError) {
     return (
@@ -77,6 +79,7 @@ export default function HRHome() {
           <View style={styles.statRow}>
             <View style={[styles.statCell, { height: 80, backgroundColor: colors.surfaceSecondary, borderRadius: 12 }]} />
             <View style={[styles.statCell, { height: 80, backgroundColor: colors.surfaceSecondary, borderRadius: 12 }]} />
+            <View style={[styles.statCell, { height: 80, backgroundColor: colors.surfaceSecondary, borderRadius: 12 }]} />
           </View>
         ) : (
           <View style={styles.statRow}>
@@ -96,6 +99,19 @@ export default function HRHome() {
               iconColor={Colors.semantic.warning}
               style={styles.statCell}
             />
+            <Pressable
+              onPress={() => router.push('/(app)/(hr)/certifications' as any)}
+              style={styles.statCell}
+            >
+              <StatCard
+                label="Certs Expiring"
+                value={(certCounts?.expiring ?? 0) + (certCounts?.expired ?? 0)}
+                icon="ribbon"
+                iconBg={Colors.semantic.errorLight}
+                iconColor={Colors.semantic.error}
+                style={{ flex: 1 }}
+              />
+            </Pressable>
           </View>
         )}
 
@@ -114,6 +130,13 @@ export default function HRHome() {
             subtitle="Directory"
             icon="people-outline"
             onPress={() => router.push('/(app)/(hr)/staff' as any)}
+            style={styles.qaCard}
+          />
+          <QuickActionCard
+            title="Certs"
+            subtitle="Track renewals"
+            icon="ribbon-outline"
+            onPress={() => router.push('/(app)/(hr)/certifications' as any)}
             style={styles.qaCard}
           />
         </View>

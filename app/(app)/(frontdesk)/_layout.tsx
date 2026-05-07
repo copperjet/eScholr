@@ -4,12 +4,18 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { AppTabBar, ResponsiveShell } from '../../../components/ui';
 import { useShouldShowSidebar } from '../../../lib/responsive';
+import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
 
 export default function FrontDeskLayout() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const showSidebar = useShouldShowSidebar();
+  const frontdeskEnabled = useIsModuleEnabled('frontdesk');
+
   if (user && user.activeRole !== 'front_desk') {
+    return <Redirect href="/" />;
+  }
+  if (!frontdeskEnabled) {
     return <Redirect href="/" />;
   }
   if (showSidebar) {

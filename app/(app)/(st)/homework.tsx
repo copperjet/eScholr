@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   SafeAreaView,
-  FlatList,
   TouchableOpacity,
   TextInput,
   Modal,
@@ -32,6 +31,7 @@ import {
   Button,
   CardSkeleton,
   DatePickerField,
+  FastList,
 } from '../../../components/ui';
 import { Spacing, Radius, Typography, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -239,10 +239,10 @@ export default function STHomeworkScreen() {
         ))}
       </ScrollView>
 
-      <FlatList
+      <FastList
         data={filtered}
         contentContainerStyle={styles.list}
-        keyExtractor={(i) => i.id}
+        keyExtractor={(i: any) => i.id}
         onRefresh={refetch}
         refreshing={isLoading}
         renderItem={({ item }) => (
@@ -468,9 +468,9 @@ function SubmissionsModal({
         {loading ? (
           <CardSkeleton lines={3} />
         ) : (
-          <FlatList
+          <FastList
             data={submissions}
-            keyExtractor={(s) => s.id}
+            keyExtractor={(s: any) => s.id}
             contentContainerStyle={styles.subList}
             renderItem={({ item }) => (
               <Card style={styles.subCard}>
