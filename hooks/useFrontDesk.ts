@@ -20,6 +20,7 @@ export interface Inquiry {
   notes: string | null;
   assigned_to: string | null;
   assigned_name: string | null;
+  note_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -57,7 +58,8 @@ export function useInquiryList(schoolId: string, status?: InquiryStatus | 'all')
         .select(`
           id, school_id, name, contact_phone, contact_email, nature_of_inquiry,
           date, status, notes, assigned_to, created_at, updated_at,
-          staff:assigned_to ( full_name )
+          staff:assigned_to ( full_name ),
+          inquiry_notes ( count )
         `)
         .eq('school_id', schoolId);
       if (status && status !== 'all') q = q.eq('status', status);
@@ -75,6 +77,7 @@ export function useInquiryList(schoolId: string, status?: InquiryStatus | 'all')
         notes: r.notes ?? null,
         assigned_to: r.assigned_to ?? null,
         assigned_name: r.staff?.full_name ?? null,
+        note_count: Array.isArray(r.inquiry_notes) ? (r.inquiry_notes[0]?.count ?? 0) : 0,
         created_at: r.created_at,
         updated_at: r.updated_at,
       }));
@@ -176,6 +179,125 @@ export function useAddInquiryNote(schoolId: string) {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['inquiries'] }); // canonical
       qc.invalidateQueries({ queryKey: ['inquiries', 'activity', vars.inquiryId] });
+    },
+  });
+}
+
+/**
+ * Staff who can be assigned to inquiries / applications.
+ * Sources from `staff` joined with `staff_roles` (multi-role).
+ * Returns one row per staff member with their primary role label.
+ */
+export function useSchoolStaff(schoolId: string) {
+  return useQuery({
+    queryKey: ['school-staff', schoolId],
+    enabled: !!schoolId,
+    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      const db = supabase as any;
+      const ASSIGNABLE_ROLES = [
+        'school_super_admin', 'admin', 'principal',
+        'coordinator', 'hod', 'front_desk',
+      ];
+      const { data, error } = await db
+        .from('staff')
+        .select('id, full_name, status, staff_roles ( role )')
+        .eq('school_id', schoolId)
+        .eq('status', 'active')
+        .order('full_name');
+      if (error) throw error;
+      return ((data ?? []) as any[])
+        .map((s) => {
+          const roles: string[] = (s.staff_roles ?? []).map((r: any) => r.role);
+          const primary = ASSIGNABLE_ROLES.find((r) => roles.includes(r));
+          return primary
+            ? { id: s.id, full_name: s.full_name, role: primary }
+            : null;
+        })
+        .filter((s): s is { id: string; full_name: string; role: string } => s !== null);
+    },
+  });
+}
+
+export function useAssignInquiry(schoolId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { inquiryId: string; assigneeId: string | null }) => {
+      const db = supabase as any;
+      const { error } = await db
+        .from('inquiries')
+        .update({ assigned_to: params.assigneeId, updated_at: new Date().toISOString() })
+        .eq('id', params.inquiryId)
+        .eq('school_id', schoolId);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['inquiries'] });
+      qc.invalidateQueries({ queryKey: ['inquiries', 'detail', vars.inquiryId] });
+    },
+  });
+}
+
+export function useCreateApplicationFromInquiry(schoolId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      inquiryId: string;
+      name: string;
+      contactPhone: string | null;
+      contactEmail: string | null;
+      staffId: string;
+    }) => {
+      const db = supabase as any;
+
+      // Reject duplicates: one open application per inquiry
+      const { data: existing } = await db
+        .from('admissions_applications')
+        .select('id, reference_no, status')
+        .eq('inquiry_id', params.inquiryId)
+        .eq('school_id', schoolId)
+        .limit(1)
+        .maybeSingle();
+      if (existing) return { applicationId: existing.id, referenceNo: existing.reference_no, existed: true };
+
+      const { data: app, error } = await db
+        .from('admissions_applications')
+        .insert({
+          school_id: schoolId,
+          inquiry_id: params.inquiryId,
+          student_name: params.name,
+          full_name: params.name,
+          parent_name: params.name,
+          parent_email: params.contactEmail,
+          parent_phone: params.contactPhone,
+          status: 'submitted',
+          documents: {},
+        })
+        .select('id, reference_no')
+        .single();
+      if (error) throw error;
+
+      await db
+        .from('inquiries')
+        .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+        .eq('id', params.inquiryId)
+        .eq('school_id', schoolId);
+
+      db.from('inquiry_notes').insert({
+        inquiry_id: params.inquiryId,
+        school_id: schoolId,
+        author_id: params.staffId,
+        body: `Application created (${app.reference_no ?? app.id}).`,
+        kind: 'conversion',
+        meta: { application_id: app.id },
+      }).then(() => {});
+
+      return { applicationId: app.id, referenceNo: app.reference_no, existed: false };
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['inquiries'] });
+      qc.invalidateQueries({ queryKey: ['inquiries', 'detail', vars.inquiryId] });
+      qc.invalidateQueries({ queryKey: ['admissions'] });
     },
   });
 }

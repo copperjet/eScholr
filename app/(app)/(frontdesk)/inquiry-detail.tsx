@@ -29,6 +29,9 @@ import {
   useUpdateInquiryStatus,
   useAddInquiryNote,
   useConvertToEnrollment,
+  useSchoolStaff,
+  useAssignInquiry,
+  useCreateApplicationFromInquiry,
   INQUIRY_STATUS_META,
   type InquiryStatus,
   type Inquiry,
@@ -69,6 +72,7 @@ function useInquiryDetail(inquiryId: string, schoolId: string) {
         notes: r.notes ?? null,
         assigned_to: r.assigned_to ?? null,
         assigned_name: r.staff?.full_name ?? null,
+        note_count: 0,
         created_at: r.created_at,
         updated_at: r.updated_at,
       };
@@ -108,10 +112,14 @@ export default function InquiryDetailScreen() {
   const statusMutation = useUpdateInquiryStatus(schoolId);
   const addNoteMutation = useAddInquiryNote(schoolId);
   const convertMutation = useConvertToEnrollment(schoolId);
+  const assignMutation = useAssignInquiry(schoolId);
+  const createAppMutation = useCreateApplicationFromInquiry(schoolId);
+  const { data: staff = [] } = useSchoolStaff(schoolId);
 
   const [noteText, setNoteText] = useState('');
   const [statusSheetVisible, setStatusSheetVisible] = useState(false);
   const [convertSheetVisible, setConvertSheetVisible] = useState(false);
+  const [assignSheetVisible, setAssignSheetVisible] = useState(false);
   const [selectedStreamId, setSelectedStreamId] = useState('');
 
   const handleStatusChange = useCallback(async (status: InquiryStatus) => {
@@ -141,6 +149,53 @@ export default function InquiryDetailScreen() {
       haptics.error();
     }
   }, [addNoteMutation, noteText, inquiry_id, user]);
+
+  const handleCreateApplication = useCallback(async () => {
+    if (!inquiry || !user?.staffId) return;
+    Alert.alert(
+      'Create Application',
+      `Start a formal admissions application from this inquiry? You can edit details and upload documents afterward.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Create',
+          onPress: async () => {
+            haptics.medium();
+            try {
+              const res = await createAppMutation.mutateAsync({
+                inquiryId: inquiry.id,
+                name: inquiry.name,
+                contactPhone: inquiry.contact_phone,
+                contactEmail: inquiry.contact_email,
+                staffId: user.staffId!,
+              });
+              haptics.success();
+              router.push({
+                pathname: '/(app)/(frontdesk)/application-detail' as any,
+                params: { id: res.applicationId },
+              });
+            } catch (e: any) {
+              haptics.error();
+              Alert.alert('Error', e.message ?? 'Could not create application.');
+            }
+          },
+        },
+      ],
+    );
+  }, [createAppMutation, inquiry, user]);
+
+  const handleAssign = useCallback(async (assigneeId: string | null) => {
+    if (!inquiry_id) return;
+    haptics.medium();
+    try {
+      await assignMutation.mutateAsync({ inquiryId: inquiry_id, assigneeId });
+      haptics.success();
+      setAssignSheetVisible(false);
+    } catch (e: any) {
+      haptics.error();
+      Alert.alert('Error', e.message ?? 'Could not assign.');
+    }
+  }, [assignMutation, inquiry_id]);
 
   const handleConvert = useCallback(async () => {
     if (!selectedStreamId || !inquiry) return;
@@ -222,7 +277,16 @@ export default function InquiryDetailScreen() {
                 <InfoLine icon="bookmark-outline" text={inquiry.nature_of_inquiry} colors={colors} />
                 {inquiry.contact_phone && <InfoLine icon="call-outline" text={inquiry.contact_phone} colors={colors} />}
                 {inquiry.contact_email && <InfoLine icon="mail-outline" text={inquiry.contact_email} colors={colors} />}
-                {inquiry.assigned_name && <InfoLine icon="person-outline" text={`Handled by: ${inquiry.assigned_name}`} colors={colors} />}
+                <TouchableOpacity
+                  onPress={() => setAssignSheetVisible(true)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}
+                >
+                  <Ionicons name="person-outline" size={14} color={colors.textMuted} />
+                  <ThemedText variant="bodySm" color="secondary">
+                    {inquiry.assigned_name ? `Handled by: ${inquiry.assigned_name}` : 'Unassigned — tap to assign'}
+                  </ThemedText>
+                  <Ionicons name="chevron-forward" size={12} color={colors.textMuted} />
+                </TouchableOpacity>
               </View>
 
               {inquiry.notes && (
@@ -233,17 +297,29 @@ export default function InquiryDetailScreen() {
               )}
             </View>
 
-            {/* Convert to enrollment */}
+            {/* Action buttons */}
             {inquiry.status !== 'enrolled' && inquiry.status !== 'closed' && (
-              <TouchableOpacity
-                onPress={() => setConvertSheetVisible(true)}
-                style={[styles.convertBtn, { backgroundColor: Colors.semantic.success }]}
-              >
-                <Ionicons name="person-add-outline" size={18} color="#fff" />
-                <ThemedText variant="body" style={{ color: '#fff', fontWeight: '700', marginLeft: 8 }}>
-                  Convert to Enrollment
-                </ThemedText>
-              </TouchableOpacity>
+              <View style={{ gap: Spacing.sm }}>
+                <TouchableOpacity
+                  onPress={handleCreateApplication}
+                  disabled={createAppMutation.isPending}
+                  style={[styles.convertBtn, { backgroundColor: colors.brand.primary }]}
+                >
+                  <Ionicons name="document-text-outline" size={18} color="#fff" />
+                  <ThemedText variant="body" style={{ color: '#fff', fontWeight: '700', marginLeft: 8 }}>
+                    {createAppMutation.isPending ? 'Creating…' : 'Create Application'}
+                  </ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setConvertSheetVisible(true)}
+                  style={[styles.convertBtn, { backgroundColor: Colors.semantic.success }]}
+                >
+                  <Ionicons name="person-add-outline" size={18} color="#fff" />
+                  <ThemedText variant="body" style={{ color: '#fff', fontWeight: '700', marginLeft: 8 }}>
+                    Convert to Enrollment
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
             )}
 
             {/* Activity notes */}
@@ -322,6 +398,59 @@ export default function InquiryDetailScreen() {
             );
           })}
         </View>
+      </BottomSheet>
+
+      {/* Assign to staff sheet */}
+      <BottomSheet
+        visible={assignSheetVisible}
+        onClose={() => setAssignSheetVisible(false)}
+        title="Assign Inquiry"
+        snapHeight={420}
+      >
+        <ThemedText variant="bodySm" color="secondary" style={{ marginBottom: Spacing.md }}>
+          Select a staff member to handle this inquiry.
+        </ThemedText>
+        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 280 }}>
+          <TouchableOpacity
+            onPress={() => handleAssign(null)}
+            disabled={assignMutation.isPending}
+            style={[
+              styles.streamOption,
+              {
+                backgroundColor: !inquiry?.assigned_to ? colors.brand.primary + '12' : colors.surfaceSecondary,
+                borderColor: !inquiry?.assigned_to ? colors.brand.primary : colors.border,
+              },
+            ]}
+          >
+            <ThemedText variant="body" style={{ color: colors.textPrimary }}>Unassigned</ThemedText>
+            {!inquiry?.assigned_to && <Ionicons name="checkmark-circle" size={18} color={colors.brand.primary} />}
+          </TouchableOpacity>
+          {staff.map((s) => {
+            const selected = inquiry?.assigned_to === s.id;
+            return (
+              <TouchableOpacity
+                key={s.id}
+                onPress={() => handleAssign(s.id)}
+                disabled={assignMutation.isPending}
+                style={[
+                  styles.streamOption,
+                  {
+                    backgroundColor: selected ? colors.brand.primary + '12' : colors.surfaceSecondary,
+                    borderColor: selected ? colors.brand.primary : colors.border,
+                  },
+                ]}
+              >
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="body" style={{ fontWeight: selected ? '700' : '400', color: selected ? colors.brand.primary : colors.textPrimary }}>
+                    {s.full_name}
+                  </ThemedText>
+                  <ThemedText variant="caption" color="muted">{s.role.replace(/_/g, ' ')}</ThemedText>
+                </View>
+                {selected && <Ionicons name="checkmark-circle" size={18} color={colors.brand.primary} />}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </BottomSheet>
 
       {/* Convert to enrollment sheet */}

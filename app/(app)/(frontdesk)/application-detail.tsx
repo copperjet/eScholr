@@ -23,6 +23,15 @@ import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 
+const DOC_LABELS: Record<string, string> = {
+  birth_cert: 'Birth Certificate',
+  prev_school_report: 'School Report',
+  immunization: 'Immunization Record',
+  passport: 'Passport',
+  id_card: 'ID Card',
+  medical: 'Medical Record',
+};
+
 const STATUS_META: Record<string, { label: string; preset: any; color: string }> = {
   pending:   { label: 'Pending',   preset: 'neutral', color: '#9CA3AF' },
   submitted: { label: 'Submitted', preset: 'info',    color: Colors.semantic.info },
@@ -195,6 +204,9 @@ export default function ApplicationDetailScreen() {
             )}
           </Card>
 
+          {/* Documents */}
+          <DocumentsCard documents={app.documents} colors={colors} />
+
           {/* Notes */}
           {app.notes && (
             <Card style={styles.card}>
@@ -301,6 +313,64 @@ export default function ApplicationDetailScreen() {
   );
 }
 
+function DocumentsCard({ documents, colors }: { documents: any; colors: any }) {
+  const entries = documents && typeof documents === 'object'
+    ? Object.entries(documents).filter(([, v]) => v && (v as any).path)
+    : [];
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const open = useCallback(async (key: string, path: string) => {
+    try {
+      setBusy(key);
+      const { data, error } = await (supabase as any).storage
+        .from('admissions-documents')
+        .createSignedUrl(path, 300);
+      if (error) throw error;
+      if (!data?.signedUrl) throw new Error('No URL returned');
+      Linking.openURL(data.signedUrl);
+    } catch (e: any) {
+      Alert.alert('Cannot open document', e.message ?? 'Try again.');
+    } finally {
+      setBusy(null);
+    }
+  }, []);
+
+  return (
+    <Card style={styles.card}>
+      <ThemedText variant="label" color="muted" style={styles.sectionLabel}>DOCUMENTS</ThemedText>
+      {entries.length === 0 ? (
+        <ThemedText variant="bodySm" color="muted">No documents uploaded.</ThemedText>
+      ) : (
+        <View style={{ gap: Spacing.sm }}>
+          {entries.map(([key, doc]: any) => (
+            <TouchableOpacity
+              key={key}
+              onPress={() => open(key, doc.path)}
+              disabled={busy === key}
+              style={[styles.docRow, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
+            >
+              <Ionicons name="document-text-outline" size={18} color={colors.brand.primary} />
+              <View style={{ flex: 1, marginLeft: Spacing.sm }}>
+                <ThemedText variant="bodySm" style={{ fontWeight: '600' }}>
+                  {DOC_LABELS[key] ?? key.replace(/_/g, ' ')}
+                </ThemedText>
+                <ThemedText variant="caption" color="muted" numberOfLines={1}>
+                  {doc.name}{doc.size ? ` · ${(doc.size / 1024 / 1024).toFixed(2)} MB` : ''}
+                </ThemedText>
+              </View>
+              <Ionicons
+                name={busy === key ? 'hourglass-outline' : 'open-outline'}
+                size={16}
+                color={colors.textMuted}
+              />
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </Card>
+  );
+}
+
 function InfoRow({ icon, label, value, colors, tappable }: {
   icon: string; label: string; value: string; colors: any; tappable?: boolean;
 }) {
@@ -340,6 +410,10 @@ const styles = StyleSheet.create({
     padding: Spacing.md, borderRadius: Radius.lg, borderWidth: 1,
   },
   summaryBox: { padding: Spacing.md, borderRadius: Radius.md, gap: Spacing.xs },
+  docRow: {
+    flexDirection: 'row', alignItems: 'center',
+    padding: Spacing.sm, borderRadius: Radius.md, borderWidth: 1,
+  },
   checkRow:   { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: Spacing.xs },
   checkbox:   {
     width: 20, height: 20, borderRadius: 4, borderWidth: 2,

@@ -71,10 +71,12 @@ export default function ApplicationsScreen() {
     if (!search) return true;
     const s = search.toLowerCase();
     return a.student_name?.toLowerCase().includes(s)
+      || a.full_name?.toLowerCase().includes(s)
       || a.parent_name?.toLowerCase().includes(s)
       || a.parent_email?.toLowerCase().includes(s)
       || a.parent_phone?.includes(s)
-      || a.grade_applying_for?.toLowerCase().includes(s);
+      || a.grade_applying_for?.toLowerCase().includes(s)
+      || a.reference_no?.toLowerCase().includes(s);
   });
 
   // Status change mutation
@@ -126,6 +128,11 @@ export default function ApplicationsScreen() {
           <View style={styles.cardHeader}>
             <View style={{ flex: 1 }}>
               <ThemedText style={{ fontWeight: '700', fontSize: 15 }}>{item.full_name ?? item.student_name}</ThemedText>
+              {item.reference_no ? (
+                <ThemedText variant="caption" color="muted" style={{ fontFamily: 'monospace' }}>
+                  {item.reference_no}
+                </ThemedText>
+              ) : null}
               <ThemedText variant="caption" color="muted">
                 {item.grade_applying_for ? `Applying for: ${item.grade_applying_for}` : 'Grade not specified'}
               </ThemedText>
@@ -192,7 +199,7 @@ export default function ApplicationsScreen() {
         <SearchBar
           value={search}
           onChangeText={setSearch}
-          placeholder="Search applicants..."
+          placeholder="Search name, ref, phone, email..."
           style={{ marginTop: Spacing.sm }}
         />
       </View>

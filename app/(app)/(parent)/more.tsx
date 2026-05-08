@@ -8,6 +8,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { ThemedText, Avatar } from '../../../components/ui';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
+import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -42,17 +43,23 @@ function MenuRow({ item, colors, last }: { item: MenuItem; colors: any; last: bo
 export default function ParentMore() {
   const { colors } = useTheme();
   const { user, school, signOut } = useAuthStore();
+  const ecaEnabled = useIsModuleEnabled('eca');
+
+  const academicItems: MenuItem[] = [
+    { icon: 'school-outline',          label: 'Marks',      sublabel: 'Per-subject scores', onPress: () => router.push('/(app)/(parent)/marks' as any) },
+    { icon: 'calendar-clear-outline',  label: 'Attendance', sublabel: 'Daily records',      onPress: () => router.push('/(app)/(parent)/attendance' as any) },
+    { icon: 'book-outline',            label: 'Homework',   sublabel: 'Assignments',        onPress: () => router.push('/(app)/(parent)/homework' as any) },
+    { icon: 'document-text-outline',   label: 'Reports',    sublabel: 'Term reports',       onPress: () => router.push('/(app)/(parent)/reports' as any) },
+    { icon: 'cash-outline',            label: 'Fees',       sublabel: 'Invoices & balance', onPress: () => router.push('/(app)/(parent)/fees' as any) },
+  ];
+  if (ecaEnabled) {
+    academicItems.push({ icon: 'football-outline', label: 'Extra-Curricular', sublabel: 'Sign-ups & assignments', onPress: () => router.push('/(app)/(parent)/eca' as any) });
+  }
 
   const sections: { title: string; items: MenuItem[] }[] = [
     {
       title: 'Academics',
-      items: [
-        { icon: 'school-outline',          label: 'Marks',      sublabel: 'Per-subject scores', onPress: () => router.push('/(app)/(parent)/marks' as any) },
-        { icon: 'calendar-clear-outline',  label: 'Attendance', sublabel: 'Daily records',      onPress: () => router.push('/(app)/(parent)/attendance' as any) },
-        { icon: 'book-outline',            label: 'Homework',   sublabel: 'Assignments',        onPress: () => router.push('/(app)/(parent)/homework' as any) },
-        { icon: 'document-text-outline',   label: 'Reports',    sublabel: 'Term reports',       onPress: () => router.push('/(app)/(parent)/reports' as any) },
-        { icon: 'cash-outline',            label: 'Fees',       sublabel: 'Invoices & balance', onPress: () => router.push('/(app)/(parent)/fees' as any) },
-      ],
+      items: academicItems,
     },
     {
       title: 'Communication',

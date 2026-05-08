@@ -86,6 +86,13 @@ export const ROLE_ACCESS: Record<string, AdminRole[]> = {
   library_transactions:  ['super_admin', 'school_super_admin', 'librarian'],
   library_patrons:       ['super_admin', 'school_super_admin', 'librarian'],
   library_settings:      ['super_admin', 'school_super_admin', 'librarian'],
+
+  // ── ECA ──────────────────────────────────────────────────────────────────
+  'eca':               ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator', 'st', 'hrt', 'parent', 'student'],
+  'eca.configure':     ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator'],
+  'eca.patron_attend': ['st', 'hrt', 'admin', 'principal', 'coordinator'],
+  'eca.parent_choose': ['parent'],
+  'eca.student_view':  ['student'],
 };
 
 /**

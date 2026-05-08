@@ -69,6 +69,9 @@ function MobileAdminLayout({ isSuper, colors }: { isSuper: boolean; colors: any 
       <Tabs.Screen name="backup-settings"     options={{ href: null }} />
       <Tabs.Screen name="student-credentials" options={{ href: null }} />
       <Tabs.Screen name="modules"             options={{ href: null }} />
+      <Tabs.Screen name="eca-config"          options={{ href: null }} />
+      <Tabs.Screen name="eca-overview"        options={{ href: null }} />
+      <Tabs.Screen name="eca-activity-detail" options={{ href: null }} />
     </Tabs>
   );
 }

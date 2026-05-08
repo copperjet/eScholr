@@ -31,8 +31,9 @@ Deno.serve(async (req) => {
     const callerRoles: string[] = (caller.app_metadata as any)?.roles ?? [];
     const isPlatformAdmin = callerRoles.includes("super_admin");
     const isSchoolSuperAdmin = callerRoles.includes("school_super_admin");
-    if (!isPlatformAdmin && !isSchoolSuperAdmin) {
-      return json({ error: "Forbidden — super_admin or school_super_admin role required" }, 403);
+    const isSchoolAdmin = callerRoles.includes("admin");
+    if (!isPlatformAdmin && !isSchoolSuperAdmin && !isSchoolAdmin) {
+      return json({ error: "Forbidden — admin, school_super_admin, or super_admin role required" }, 403);
     }
 
     const { school_id, ...patch } = await req.json() as {
@@ -44,22 +45,33 @@ Deno.serve(async (req) => {
       primary_color?: string;
       secondary_color?: string;
       renewal_date?: string;
+      admissions_required_docs?: string[];
+      public_admissions_documents_max_mb?: number;
     };
 
     if (!school_id) return json({ error: "school_id required" }, 400);
 
-    // school_super_admin must only update their own school
-    if (isSchoolSuperAdmin && !isPlatformAdmin) {
+    // School-scoped roles must only update their own school
+    if (!isPlatformAdmin) {
       const callerSchoolId = (caller.app_metadata as any)?.school_id;
       if (callerSchoolId !== school_id) {
         return json({ error: "Forbidden — can only update your own school" }, 403);
       }
     }
 
-    // school_super_admin can only edit branding fields — not subscription or billing
-    const ALLOWED = isPlatformAdmin
-      ? ['subscription_plan', 'subscription_status', 'name', 'logo_url', 'primary_color', 'secondary_color', 'renewal_date']
-      : ['name', 'logo_url', 'primary_color', 'secondary_color'];
+    // admin role: admissions config only (operational scope).
+    // school_super_admin: branding + admissions config.
+    // super_admin: all fields including billing.
+    const ADMISSIONS_FIELDS = ['admissions_required_docs', 'public_admissions_documents_max_mb'];
+    let ALLOWED: string[];
+    if (isPlatformAdmin) {
+      ALLOWED = ['subscription_plan', 'subscription_status', 'name', 'logo_url', 'primary_color', 'secondary_color', 'renewal_date', ...ADMISSIONS_FIELDS];
+    } else if (isSchoolSuperAdmin) {
+      ALLOWED = ['name', 'logo_url', 'primary_color', 'secondary_color', ...ADMISSIONS_FIELDS];
+    } else {
+      // admin
+      ALLOWED = [...ADMISSIONS_FIELDS];
+    }
     const safe: Record<string, any> = {};
     for (const key of ALLOWED) {
       if (patch[key as keyof typeof patch] !== undefined) safe[key] = patch[key as keyof typeof patch];

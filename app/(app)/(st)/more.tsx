@@ -8,6 +8,8 @@ import { useAuthStore } from '../../../stores/authStore';
 import { ThemedText, Avatar } from '../../../components/ui';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
+import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
+import { useECAPatronActivities } from '../../../hooks/useECA';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -40,17 +42,25 @@ function MenuRow({ item, colors, last }: { item: MenuItem; colors: any; last: bo
 export default function STMore() {
   const { colors } = useTheme();
   const { user, school, signOut } = useAuthStore();
+  const ecaEnabled = useIsModuleEnabled('eca');
+  const patronActivities = useECAPatronActivities(ecaEnabled ? (user?.staffId ?? '') : '');
+  const isPatron = (patronActivities.data?.length ?? 0) > 0;
+
+  const teachingItems: MenuItem[] = [
+    { icon: 'analytics-outline',    label: 'Class Analysis', sublabel: 'Subject performance breakdown', onPress: () => router.push('/(app)/(st)/analysis' as any) },
+    { icon: 'cloud-upload-outline', label: 'Import Marks',   sublabel: 'Bulk CSV import',               onPress: () => router.push('/(app)/(st)/marks-import' as any) },
+    { icon: 'people-outline',       label: 'My Students',    sublabel: 'View student list',             onPress: () => router.push('/(app)/(st)/students' as any) },
+    { icon: 'book-outline',         label: 'Day Book',       sublabel: 'Student notes',                 onPress: () => router.push('/(app)/(st)/daybook' as any) },
+    { icon: 'chatbubble-ellipses-outline', label: 'Parent Messages', sublabel: 'Message parents of your students', onPress: () => router.push('/(app)/(st)/messages' as any) },
+  ];
+  if (ecaEnabled && isPatron) {
+    teachingItems.push({ icon: 'football-outline', label: 'My ECA Activities', sublabel: 'Patron activities & attendance', onPress: () => router.push('/(app)/(st)/eca-my-activities' as any) });
+  }
 
   const sections: { title: string; items: MenuItem[] }[] = [
     {
       title: 'Teaching',
-      items: [
-        { icon: 'analytics-outline',    label: 'Class Analysis', sublabel: 'Subject performance breakdown', onPress: () => router.push('/(app)/(st)/analysis' as any) },
-        { icon: 'cloud-upload-outline', label: 'Import Marks',   sublabel: 'Bulk CSV import',               onPress: () => router.push('/(app)/(st)/marks-import' as any) },
-        { icon: 'people-outline',       label: 'My Students',    sublabel: 'View student list',             onPress: () => router.push('/(app)/(st)/students' as any) },
-        { icon: 'book-outline',         label: 'Day Book',       sublabel: 'Student notes',                 onPress: () => router.push('/(app)/(st)/daybook' as any) },
-        { icon: 'chatbubble-ellipses-outline', label: 'Parent Messages', sublabel: 'Message parents of your students', onPress: () => router.push('/(app)/(st)/messages' as any) },
-      ],
+      items: teachingItems,
     },
     {
       title: 'School',

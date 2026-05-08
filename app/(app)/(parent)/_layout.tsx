@@ -53,6 +53,7 @@ export default function ParentLayout() {
       <Tabs.Screen name="messages"   options={{ href: null }} />
       <Tabs.Screen name="attendance" options={{ href: null }} />
       <Tabs.Screen name="marks"      options={{ href: null }} />
+      <Tabs.Screen name="eca"        options={{ href: null }} />
     </Tabs>
   );
 }

@@ -8,6 +8,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { ThemedText, Avatar } from '../../../components/ui';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
+import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -42,14 +43,20 @@ function MenuRow({ item, colors, last }: { item: MenuItem; colors: any; last: bo
 export default function StudentMore() {
   const { colors } = useTheme();
   const { user, school, signOut } = useAuthStore();
+  const ecaEnabled = useIsModuleEnabled('eca');
+
+  const academicItems: MenuItem[] = [
+    { icon: 'calendar-clear-outline', label: 'Attendance', sublabel: 'My attendance record', onPress: () => router.push('/(app)/(student)/attendance' as any) },
+    { icon: 'cash-outline',           label: 'Fees',       sublabel: 'Invoices & balance',   onPress: () => router.push('/(app)/(student)/fees' as any) },
+  ];
+  if (ecaEnabled) {
+    academicItems.push({ icon: 'football-outline', label: 'My Activities', sublabel: 'Extra-curricular activities', onPress: () => router.push('/(app)/(student)/eca' as any) });
+  }
 
   const sections: { title: string; items: MenuItem[] }[] = [
     {
       title: 'Academics',
-      items: [
-        { icon: 'calendar-clear-outline', label: 'Attendance', sublabel: 'My attendance record', onPress: () => router.push('/(app)/(student)/attendance' as any) },
-        { icon: 'cash-outline',           label: 'Fees',       sublabel: 'Invoices & balance',   onPress: () => router.push('/(app)/(student)/fees' as any) },
-      ],
+      items: academicItems,
     },
     {
       title: 'My School',

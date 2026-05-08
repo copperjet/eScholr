@@ -54,6 +54,7 @@ export default function StudentLayout() {
       <Tabs.Screen name="attendance" options={{ href: null }} />
       <Tabs.Screen name="timetable" options={{ href: null }} />
       <Tabs.Screen name="announcements" options={{ href: null }} />
+      <Tabs.Screen name="eca" options={{ href: null }} />
     </Tabs>
   );
 }

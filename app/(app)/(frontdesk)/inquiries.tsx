@@ -33,11 +33,20 @@ function useInquiries(schoolId: string, status: string) {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('inquiries')
-        .select('id, name, contact_phone, contact_email, nature_of_inquiry, assigned_to, date, status, notes, created_at')
+        .select(`
+          id, name, contact_phone, contact_email, nature_of_inquiry, assigned_to,
+          date, status, notes, created_at,
+          staff:assigned_to ( full_name ),
+          inquiry_notes ( count )
+        `)
         .eq('school_id', schoolId).eq('status', status)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as any[];
+      return ((data ?? []) as any[]).map((r: any) => ({
+        ...r,
+        assigned_name: r.staff?.full_name ?? null,
+        note_count: Array.isArray(r.inquiry_notes) ? (r.inquiry_notes[0]?.count ?? 0) : 0,
+      }));
     },
   });
 }
@@ -157,6 +166,33 @@ export default function InquiriesScreen() {
                   setDetailSheet(true);
                 }}
               />
+              {(inq.assigned_name || inq.note_count > 0) && (
+                <View style={styles.rowMeta}>
+                  {inq.assigned_name ? (
+                    <View style={[styles.metaChip, { backgroundColor: colors.brand.primary + '14' }]}>
+                      <Ionicons name="person-outline" size={11} color={colors.brand.primary} />
+                      <ThemedText variant="caption" style={{ color: colors.brand.primary, marginLeft: 4 }}>
+                        {inq.assigned_name}
+                      </ThemedText>
+                    </View>
+                  ) : (
+                    <View style={[styles.metaChip, { backgroundColor: colors.surfaceSecondary }]}>
+                      <Ionicons name="person-outline" size={11} color={colors.textMuted} />
+                      <ThemedText variant="caption" color="muted" style={{ marginLeft: 4 }}>
+                        Unassigned
+                      </ThemedText>
+                    </View>
+                  )}
+                  {inq.note_count > 0 && (
+                    <View style={[styles.metaChip, { backgroundColor: colors.surfaceSecondary }]}>
+                      <Ionicons name="chatbubble-outline" size={11} color={colors.textMuted} />
+                      <ThemedText variant="caption" color="muted" style={{ marginLeft: 4 }}>
+                        {inq.note_count}
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
           )}
         />
@@ -247,6 +283,15 @@ const styles = StyleSheet.create({
   topBar:    { paddingHorizontal: Spacing.screen, paddingTop: Spacing.xl, paddingBottom: Spacing.sm },
   list:      { paddingHorizontal: Spacing.screen, paddingTop: Spacing.sm, paddingBottom: TAB_BAR_HEIGHT, gap: Spacing.sm },
   rowCard:   { borderRadius: Radius.lg, overflow: 'hidden' },
+  rowMeta:   {
+    flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs,
+    paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm,
+  },
+  metaChip:  {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: Radius.full,
+  },
   fieldLabel: { fontSize: 13, fontWeight: '600', marginBottom: Spacing.xs },
   chipRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   detailRow: { flexDirection: 'row', alignItems: 'center' },

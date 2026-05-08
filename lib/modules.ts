@@ -13,7 +13,8 @@ export type ModuleKey =
   | 'exams'
   | 'daybook'
   | 'character'
-  | 'announcements';
+  | 'announcements'
+  | 'eca';
 
 export type SubscriptionTier = 'starter' | 'growth' | 'scale' | 'enterprise';
 
@@ -155,6 +156,20 @@ export const MODULES: ModuleDefinition[] = [
     tierDefault: { starter: false, growth: false, scale: true, enterprise: true },
     configSchema: [
       { key: 'max_capacity', label: 'Max Hostel Capacity', description: 'Total bed capacity across all dorms', type: 'number', defaultValue: '100', min: 1, max: 10000 },
+    ],
+  },
+  {
+    key: 'eca',
+    label: 'Extra-Curricular Activities',
+    description: 'Clubs, sports, and activities with parent sign-up and FCFS allocation',
+    icon: 'football-outline',
+    category: 'admin',
+    affectedRoles: ['admin', 'principal', 'coordinator', 'st', 'hrt', 'parent', 'student'],
+    tierDefault: { starter: false, growth: true, scale: true, enterprise: true },
+    configSchema: [
+      { key: 'default_max_choices', label: 'Default Max Choices', description: 'Maximum ranked choices per category', type: 'number', defaultValue: '3', min: 1, max: 5 },
+      { key: 'allow_parent_withdraw', label: 'Allow Parent Withdrawal', description: 'Parents can withdraw their child from an assigned activity', type: 'boolean', defaultValue: 'false' },
+      { key: 'session_reminder_hour', label: 'Session Reminder Hour', description: 'Hour of day (0–23) to send session reminders', type: 'number', defaultValue: '18', min: 0, max: 23 },
     ],
   },
 ];

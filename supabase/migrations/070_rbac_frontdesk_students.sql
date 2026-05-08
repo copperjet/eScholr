@@ -1,99 +1,30 @@
--- Add converted_student_id to inquiries (used when inquiry is converted to enrollment)
-ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS converted_student_id uuid REFERENCES students(id);
+-- ============================================================
+-- 070_rbac_frontdesk_students.sql
+-- Front desk RBAC: rely on existing school-scoped policies
+-- (005 si_staff/si_parents, 006 si_students/si_student_parent_links,
+-- 016 si_inquiries, 035 staff_manage_applications) which already
+-- grant authenticated users in the same school full CRUD on these
+-- tables. The front_desk role is enforced at the application layer
+-- (route guards in (frontdesk)/_layout.tsx) and via JWT-driven
+-- school scoping at the DB layer.
+--
+-- This migration is intentionally minimal:
+--   1. Ensure inquiries.converted_student_id exists (it was added
+--      in 016 — IF NOT EXISTS makes this a safe no-op).
+--   2. Add a helpful index for converted-inquiry lookups.
+-- ============================================================
 
--- Add SELECT policy for front_desk on inquiries (they need to read inquiries, not just update them)
-CREATE POLICY "frontdesk_select_inquiries" ON inquiries
-  FOR SELECT
-  USING (
-    school_id IN (
-      SELECT school_id FROM profiles WHERE id = auth.uid() AND role = 'front_desk'
-    )
-  );
+ALTER TABLE inquiries
+  ADD COLUMN IF NOT EXISTS converted_student_id uuid REFERENCES students(id) ON DELETE SET NULL;
 
--- Add INSERT policy for front_desk on inquiries (they create inquiries)
-CREATE POLICY "frontdesk_insert_inquiries" ON inquiries
-  FOR INSERT
-  WITH CHECK (
-    school_id IN (
-      SELECT school_id FROM profiles WHERE id = auth.uid() AND role = 'front_desk'
-    )
-  );
+CREATE INDEX IF NOT EXISTS idx_inquiries_converted_student
+  ON inquiries(converted_student_id)
+  WHERE converted_student_id IS NOT NULL;
 
--- Add SELECT policy for front_desk on admissions_applications
-CREATE POLICY "frontdesk_select_applications" ON admissions_applications
-  FOR SELECT
-  USING (
-    school_id IN (
-      SELECT school_id FROM profiles WHERE id = auth.uid() AND role = 'front_desk'
-    )
-  );
-
--- Extend RLS on students to allow front_desk INSERT/UPDATE
-CREATE POLICY "frontdesk_manage_students" ON students
-  FOR ALL
-  USING (
-    school_id IN (
-      SELECT school_id FROM profiles WHERE id = auth.uid() AND role = 'front_desk'
-    )
-  )
-  WITH CHECK (
-    school_id IN (
-      SELECT school_id FROM profiles WHERE id = auth.uid() AND role = 'front_desk'
-    )
-  );
-
--- Extend RLS on parents to allow front_desk INSERT/UPDATE
-CREATE POLICY "frontdesk_manage_parents" ON parents
-  FOR ALL
-  USING (
-    school_id IN (
-      SELECT school_id FROM profiles WHERE id = auth.uid() AND role = 'front_desk'
-    )
-  )
-  WITH CHECK (
-    school_id IN (
-      SELECT school_id FROM profiles WHERE id = auth.uid() AND role = 'front_desk'
-    )
-  );
-
--- Extend RLS on student_parent_links to allow front_desk INSERT/UPDATE
-CREATE POLICY "frontdesk_manage_links" ON student_parent_links
-  FOR ALL
-  USING (
-    (SELECT school_id FROM students WHERE id = student_id) IN (
-      SELECT school_id FROM profiles WHERE id = auth.uid() AND role = 'front_desk'
-    )
-  )
-  WITH CHECK (
-    (SELECT school_id FROM students WHERE id = student_id) IN (
-      SELECT school_id FROM profiles WHERE id = auth.uid() AND role = 'front_desk'
-    )
-  );
-
--- Allow front_desk to UPDATE inquiries (assigned_to, status)
-CREATE POLICY "frontdesk_manage_inquiries" ON inquiries
-  FOR UPDATE
-  USING (
-    school_id IN (
-      SELECT school_id FROM profiles WHERE id = auth.uid() AND role = 'front_desk'
-    )
-  )
-  WITH CHECK (
-    school_id IN (
-      SELECT school_id FROM profiles WHERE id = auth.uid() AND role = 'front_desk'
-    )
-  );
-
--- Allow front_desk to UPDATE admissions_applications
-CREATE POLICY "frontdesk_manage_applications" ON admissions_applications
-  FOR UPDATE
-  USING (
-    school_id IN (
-      SELECT school_id FROM profiles WHERE id = auth.uid() AND role = 'front_desk'
-    )
-  )
-  WITH CHECK (
-    school_id IN (
-      SELECT school_id FROM profiles WHERE id = auth.uid() AND role = 'front_desk'
-    )
-  );
+-- Link inquiries to the application created from them (used by
+-- the "Create Application from Inquiry" flow in front desk UI).
+-- Already present in 035? No — admissions_applications.inquiry_id
+-- was created in 035, but no index. Add one.
+CREATE INDEX IF NOT EXISTS idx_admissions_apps_inquiry
+  ON admissions_applications(inquiry_id)
+  WHERE inquiry_id IS NOT NULL;
