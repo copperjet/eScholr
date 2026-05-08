@@ -4,7 +4,7 @@
  * Fail-open: missing row = module enabled (safe rollout).
  * Realtime: subscribes to school_configs changes — module toggles propagate live.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
@@ -54,12 +54,17 @@ export function useSchoolModules() {
   const schoolId = user?.schoolId ?? '';
   const qc = useQueryClient();
 
+  // Stable per-instance suffix so multiple hook callers don't collide on channel name.
+  // Supabase keys channels by name globally — same name twice = `.on()` after subscribe error.
+  const instanceIdRef = useRef<string>(Math.random().toString(36).slice(2, 10));
+
   // Realtime: invalidate cache on any school_configs change for this school.
   // Filters server-side to module.* row changes only.
   useEffect(() => {
     if (!schoolId) return;
+    const channelName = `school-modules-${schoolId}-${instanceIdRef.current}`;
     const channel = (supabase as any)
-      .channel(`school-modules-${schoolId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {

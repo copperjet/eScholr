@@ -5,11 +5,13 @@ import { Redirect } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
 import { AppTabBar, ResponsiveShell } from '../../../components/ui';
 import { useShouldShowSidebar } from '../../../lib/responsive';
+import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
 
 export default function StudentLayout() {
   const { user } = useAuthStore();
   const { colors } = useTheme();
   const showSidebar = useShouldShowSidebar();
+  const examsEnabled = useIsModuleEnabled('exams');
 
   if (user?.activeRole !== 'student') {
     return <Redirect href="/" />;
@@ -33,8 +35,18 @@ export default function StudentLayout() {
       }}
     >
       <Tabs.Screen name="home"     options={{ title: 'Home',     tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} /> }} />
-      <Tabs.Screen name="marks"    options={{ title: 'Marks',    tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'school' : 'school-outline'} size={22} color={color} /> }} />
-      <Tabs.Screen name="reports"  options={{ title: 'Reports',  tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'document-text' : 'document-text-outline'} size={22} color={color} /> }} />
+      <Tabs.Screen
+        name="marks"
+        options={examsEnabled
+          ? { title: 'Marks', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'school' : 'school-outline'} size={22} color={color} /> }
+          : { href: null }}
+      />
+      <Tabs.Screen
+        name="reports"
+        options={examsEnabled
+          ? { title: 'Reports', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'document-text' : 'document-text-outline'} size={22} color={color} /> }
+          : { href: null }}
+      />
       <Tabs.Screen name="homework" options={{ title: 'Homework', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'book' : 'book-outline'} size={22} color={color} /> }} />
       <Tabs.Screen name="more"     options={{ title: 'More',     tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} /> }} />
       {/* Hidden screens */}

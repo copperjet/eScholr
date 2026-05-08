@@ -12,6 +12,8 @@ import { ThemedText, Avatar } from '../../../components/ui';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
 import { ROLE_ACCESS, canAccess } from '../../../lib/roleScope';
+import { useModuleMap } from '../../../hooks/useSchoolModules';
+import { type ModuleKey } from '../../../lib/modules';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -22,6 +24,7 @@ type MenuItem = {
   onPress: () => void;
   danger?: boolean;
   badge?: string;
+  module?: ModuleKey;
 };
 
 const can = canAccess;
@@ -60,8 +63,9 @@ export default function AdminMore() {
   const { colors } = useTheme();
   const { user, school, signOut } = useAuthStore();
   const role = user?.activeRole;
+  const moduleMap = useModuleMap();
 
-  const sections: { title: string; items: MenuItem[] }[] = [
+  const rawSections: { title: string; items: MenuItem[] }[] = [
 
     // Platform — super_admin only
     ...(can(role, 'onboard_school') ? [{
@@ -84,8 +88,8 @@ export default function AdminMore() {
         ...(can(role, 'school_settings')  ? [{ icon: 'color-palette-outline' as IoniconsName,    label: 'School Settings',     sublabel: 'Name, logo, brand colours',           onPress: () => router.push('/(app)/(admin)/school-settings' as any) }] : []),
         ...(can(role, 'calendar_events')  ? [{ icon: 'calendar-outline' as IoniconsName,         label: 'Calendar & Events',   sublabel: 'Semesters, holidays, breaks, events', onPress: () => router.push('/(app)/(admin)/calendar-events' as any) }] : []),
         ...(can(role, 'promotion')        ? [{ icon: 'arrow-up-circle-outline' as IoniconsName,  label: 'Promotion Wizard',    sublabel: 'Year-end promote / graduate',         onPress: () => router.push('/(app)/(admin)/promotion-wizard' as any) }] : []),
-        ...(can(role, 'marks_windows')      ? [{ icon: 'create-outline' as IoniconsName,           label: 'Marks Windows',         sublabel: 'Open / close entry windows',             onPress: () => router.push('/(app)/(admin)/marks-windows' as any) }] : []),
-        ...(can(role, 'assessment_config')  ? [{ icon: 'options-outline' as IoniconsName,           label: 'Assessment Config',     sublabel: 'Types, weights, grades, report inclusion', onPress: () => router.push('/(app)/(admin)/assessment-config' as any) }] : []),
+        ...(can(role, 'marks_windows')      ? [{ icon: 'create-outline' as IoniconsName,           label: 'Marks Windows',         sublabel: 'Open / close entry windows',             onPress: () => router.push('/(app)/(admin)/marks-windows' as any), module: 'exams' as ModuleKey }] : []),
+        ...(can(role, 'assessment_config')  ? [{ icon: 'options-outline' as IoniconsName,           label: 'Assessment Config',     sublabel: 'Types, weights, grades, report inclusion', onPress: () => router.push('/(app)/(admin)/assessment-config' as any), module: 'exams' as ModuleKey }] : []),
         ...(can(role, 'audit')            ? [{ icon: 'shield-checkmark-outline' as IoniconsName, label: 'Audit Log',           sublabel: 'Filterable action history',           onPress: () => router.push('/(app)/(admin)/audit-log' as any) }] : []),
         ...(can(role, 'notification_log') ? [{ icon: 'notifications-outline' as IoniconsName,    label: 'Notification Log',    sublabel: 'All push & in-app notifications',     onPress: () => router.push('/(app)/(admin)/notification-log' as any) }] : []),
         ...(can(role, 'backup')           ? [{ icon: 'cloud-upload-outline' as IoniconsName,     label: 'Backup to Drive',     sublabel: 'Export data to Google Drive',         onPress: () => router.push('/(app)/(admin)/backup-settings' as any) }] : []),
@@ -97,12 +101,12 @@ export default function AdminMore() {
       title: 'Operations',
       items: [
         ...(can(role, 'assignments')   ? [{ icon: 'git-branch-outline' as IoniconsName,    label: 'HRT / ST Assignments', sublabel: 'Assign class teachers & subjects', onPress: () => router.push('/(app)/(admin)/assignments' as any) }] : []),
-        ...(can(role, 'daybook')       ? [{ icon: 'book-outline' as IoniconsName,          label: 'Day Book',             sublabel: 'School-wide student notes',        onPress: () => router.push('/(app)/(admin)/daybook' as any) }] : []),
-        ...(can(role, 'announcements') ? [{ icon: 'megaphone-outline' as IoniconsName,     label: 'Announcements',        sublabel: 'Compose & send to school/groups',  onPress: () => router.push('/(app)/(admin)/announcements' as any) }] : []),
+        ...(can(role, 'daybook')       ? [{ icon: 'book-outline' as IoniconsName,          label: 'Day Book',             sublabel: 'School-wide student notes',        onPress: () => router.push('/(app)/(admin)/daybook' as any), module: 'daybook' as ModuleKey }] : []),
+        ...(can(role, 'announcements') ? [{ icon: 'megaphone-outline' as IoniconsName,     label: 'Announcements',        sublabel: 'Compose & send to school/groups',  onPress: () => router.push('/(app)/(admin)/announcements' as any), module: 'announcements' as ModuleKey }] : []),
         ...(can(role, 'timetable')     ? [{ icon: 'grid-outline' as IoniconsName,          label: 'Timetable Upload',     sublabel: 'Class & teacher timetables',       onPress: () => router.push('/(app)/(admin)/timetable-upload' as any) }] : []),
-        ...(can(role, 'reports')       ? [{ icon: 'document-text-outline' as IoniconsName, label: 'Reports Approval',     sublabel: 'Pending & released reports',       onPress: () => router.push('/(app)/(admin)/reports' as any) }] : []),
-        ...(can(role, 'marking')        ? [{ icon: 'apps-outline' as IoniconsName,          label: 'Marking',              sublabel: 'Completion overview by class',     onPress: () => router.push('/(app)/(admin)/marks-matrix' as any) }] : []),
-        ...(can(role, 'marking')        ? [{ icon: 'bar-chart-outline' as IoniconsName,     label: 'Result Analysis',      sublabel: 'Performance analysis by role scope', onPress: () => router.push('/(app)/(admin)/analysis' as any) }] : []),
+        ...(can(role, 'reports')       ? [{ icon: 'document-text-outline' as IoniconsName, label: 'Reports Approval',     sublabel: 'Pending & released reports',       onPress: () => router.push('/(app)/(admin)/reports' as any), module: 'exams' as ModuleKey }] : []),
+        ...(can(role, 'marking')        ? [{ icon: 'apps-outline' as IoniconsName,          label: 'Marking',              sublabel: 'Completion overview by class',     onPress: () => router.push('/(app)/(admin)/marks-matrix' as any), module: 'exams' as ModuleKey }] : []),
+        ...(can(role, 'marking')        ? [{ icon: 'bar-chart-outline' as IoniconsName,     label: 'Result Analysis',      sublabel: 'Performance analysis by role scope', onPress: () => router.push('/(app)/(admin)/analysis' as any), module: 'exams' as ModuleKey }] : []),
       ],
     },
 
@@ -168,7 +172,15 @@ export default function AdminMore() {
         },
       ],
     },
-  ].filter((s) => s.items.length > 0);
+  ];
+
+  // Filter out items whose module is disabled, then drop empty sections
+  const sections = rawSections
+    .map((s) => ({
+      ...s,
+      items: s.items.filter((item) => !item.module || moduleMap[item.module] !== false),
+    }))
+    .filter((s) => s.items.length > 0);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.brand.primary }}>
