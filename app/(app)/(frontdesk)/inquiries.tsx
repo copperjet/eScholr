@@ -27,13 +27,13 @@ const NATURES = ['Admission', 'Re-Enrollment', 'Fee Query', 'General', 'Transfer
 
 function useInquiries(schoolId: string, status: string) {
   return useQuery({
-    queryKey: ['inquiries', schoolId, status],
+    queryKey: ['inquiries', 'list', { schoolId, status }],
     enabled: !!schoolId,
     staleTime: 1000 * 30,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('inquiries')
-        .select('id, name, contact_phone, contact_email, nature_of_inquiry, date, status, notes, created_at')
+        .select('id, name, contact_phone, contact_email, nature_of_inquiry, assigned_to, date, status, notes, created_at')
         .eq('school_id', schoolId).eq('status', status)
         .order('created_at', { ascending: false });
       if (error) throw error;

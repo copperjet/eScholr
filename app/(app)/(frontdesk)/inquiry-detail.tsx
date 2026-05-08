@@ -39,7 +39,7 @@ import { haptics } from '../../../lib/haptics';
 
 function useInquiryDetail(inquiryId: string, schoolId: string) {
   return useQuery<Inquiry | null>({
-    queryKey: ['inquiry-detail', inquiryId],
+    queryKey: ['inquiries', 'detail', inquiryId],
     enabled: !!inquiryId && !!schoolId,
     staleTime: 1000 * 30,
     queryFn: async () => {

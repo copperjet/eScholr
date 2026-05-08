@@ -47,7 +47,7 @@ export const INQUIRY_NATURES = [
 
 export function useInquiryList(schoolId: string, status?: InquiryStatus | 'all') {
   return useQuery<Inquiry[]>({
-    queryKey: ['inquiries', schoolId, status ?? 'all'],
+    queryKey: ['inquiries', 'list', { schoolId, status: status ?? 'all' }],
     enabled: !!schoolId,
     staleTime: 1000 * 30,
     queryFn: async () => {
@@ -84,22 +84,22 @@ export function useInquiryList(schoolId: string, status?: InquiryStatus | 'all')
 
 export function useInquiryNotes(inquiryId: string | null) {
   return useQuery<InquiryNote[]>({
-    queryKey: ['inquiry-notes', inquiryId],
+    queryKey: ['inquiries', 'activity', inquiryId],
     enabled: !!inquiryId,
     staleTime: 1000 * 30,
     queryFn: async () => {
       const db = supabase as any;
       const { data, error } = await db
         .from('inquiry_notes')
-        .select('id, inquiry_id, note, created_at, staff:staff_id ( full_name )')
+        .select('id, inquiry_id, body, created_at, author:author_id ( full_name )')
         .eq('inquiry_id', inquiryId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return ((data ?? []) as any[]).map((r: any): InquiryNote => ({
         id: r.id,
         inquiry_id: r.inquiry_id,
-        note: r.note,
-        staff_name: r.staff?.full_name ?? '—',
+        note: r.body,
+        staff_name: r.author?.full_name ?? '—',
         created_at: r.created_at,
       }));
     },
@@ -136,8 +136,7 @@ export function useCreateInquiry(schoolId: string) {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['inquiries'] }); // canonical — Phase A+
-      qc.invalidateQueries({ queryKey: ['inquiries', schoolId] });
+      qc.invalidateQueries({ queryKey: ['inquiries'] });
     },
   });
 }
@@ -155,8 +154,7 @@ export function useUpdateInquiryStatus(schoolId: string) {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['inquiries'] }); // canonical — Phase A+
-      qc.invalidateQueries({ queryKey: ['inquiries', schoolId] });
+      qc.invalidateQueries({ queryKey: ['inquiries'] });
     },
   });
 }
@@ -169,22 +167,15 @@ export function useAddInquiryNote(schoolId: string) {
       const { error } = await db.from('inquiry_notes').insert({
         inquiry_id: params.inquiryId,
         school_id: schoolId,
-        note: params.note,
-        staff_id: params.staffId,
-        created_at: new Date().toISOString(),
+        body: params.note,
+        author_id: params.staffId,
+        kind: 'note',
       });
       if (error) throw error;
-      // Bump inquiry updated_at
-      await db
-        .from('inquiries')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', params.inquiryId)
-        .eq('school_id', schoolId);
     },
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ['inquiries'] }); // canonical — Phase A+
-      qc.invalidateQueries({ queryKey: ['inquiry-notes', vars.inquiryId] });
-      qc.invalidateQueries({ queryKey: ['inquiries', schoolId] });
+      qc.invalidateQueries({ queryKey: ['inquiries'] }); // canonical
+      qc.invalidateQueries({ queryKey: ['inquiries', 'activity', vars.inquiryId] });
     },
   });
 }
@@ -257,9 +248,8 @@ export function useConvertToEnrollment(schoolId: string) {
       return { studentId: student.id };
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['inquiries'] }); // canonical — Phase A+
-      qc.invalidateQueries({ queryKey: ['inquiries', schoolId] });
-      qc.invalidateQueries({ queryKey: ['students'] }); // canonical — Phase A+
+      qc.invalidateQueries({ queryKey: ['inquiries'] });
+      qc.invalidateQueries({ queryKey: ['students'] });
     },
   });
 }
