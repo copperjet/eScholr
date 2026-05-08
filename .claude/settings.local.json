@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(npm --version)",
+      "Bash(npx create-expo-app@latest educore --template blank-typescript)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(ipconfig)",
+      "Bash(npx expo *)",
+      "Bash(npx expo-doctor *)",
+      "Bash(xargs grep *)",
+      "Bash(xargs wc *)",
+      "Bash(npx eas *)",
+      "PowerShell(npm list -g @anthropic-ai/claude-code)",
+      "Bash(git clone *)",
+      "Bash(python3 \"C:\\\\Users\\\\Denny\\\\.claude\\\\skills\\\\usage-limit-reducer\\\\scripts\\\\usage-report.py\" --days 7 --project EduCore)",
+      "Bash(python3 \"C:\\\\Users\\\\Denny\\\\.claude\\\\skills\\\\usage-limit-reducer\\\\scripts\\\\usage-report.py\" --days 7)"
+    ]
+  }
+}
