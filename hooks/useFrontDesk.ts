@@ -201,6 +201,8 @@ export function useConvertToEnrollment(schoolId: string) {
         .single();
       if (!sem) throw new Error('No active semester');
 
+      const today = new Date().toISOString().slice(0, 10);
+
       // Create the student record
       const { data: student, error: studentError } = await db
         .from('students')
@@ -208,8 +210,8 @@ export function useConvertToEnrollment(schoolId: string) {
           school_id: schoolId,
           full_name: params.studentName,
           stream_id: params.streamId,
-          is_active: true,
-          enrolled_at: new Date().toISOString().slice(0, 10),
+          status: 'active',
+          enrollment_date: today,
           created_at: new Date().toISOString(),
         })
         .select('id')
@@ -222,18 +224,31 @@ export function useConvertToEnrollment(schoolId: string) {
         student_id: student.id,
         semester_id: sem.id,
         stream_id: params.streamId,
+        enrollment_date: today,
+        effective_start_date: today,
         created_at: new Date().toISOString(),
       });
 
-      // Mark inquiry as enrolled
+      // Mark inquiry as enrolled and link converted student
       await db
         .from('inquiries')
         .update({
           status: 'enrolled',
+          converted_student_id: student.id,
           updated_at: new Date().toISOString(),
         })
         .eq('id', params.inquiryId)
         .eq('school_id', schoolId);
+
+      // Write conversion audit note
+      db.from('inquiry_notes').insert({
+        inquiry_id: params.inquiryId,
+        school_id: schoolId,
+        author_id: params.staffId,
+        body: `Converted to enrolled student. Student ID: ${student.id}`,
+        kind: 'conversion',
+        meta: { student_id: student.id },
+      }).then(() => {});
 
       // Audit log
       db.from('audit_logs').insert({

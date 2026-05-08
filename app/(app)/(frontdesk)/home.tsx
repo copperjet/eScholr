@@ -22,7 +22,7 @@ const STATUS_META = [
 
 function useFrontDeskDashboard(schoolId: string, todayDate: string) {
   return useQuery({
-    queryKey: ['frontdesk-dashboard', schoolId, todayDate],
+    queryKey: ['frontdesk', 'dashboard', schoolId, todayDate],
     enabled: !!schoolId,
     staleTime: 1000 * 30,
     queryFn: async () => {

@@ -85,10 +85,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Start advisory lock to ensure atomicity
-    await supabase.rpc('pg_advisory_xact_lock', {
-      key: BigInt(applicationId.substring(0, 8), 16), // Convert part of UUID to int
-    });
+    // Advisory lock for idempotency — prevent double-conversion races.
+    // Use the first 8 hex chars of the UUID as a bigint key.
+    const lockKey = BigInt('0x' + applicationId.replace(/-/g, '').substring(0, 15));
+    await supabase.rpc('pg_advisory_xact_lock', { key: lockKey.toString() });
 
     // 1. Create student record
     const { data: student, error: studentError } = await supabase

@@ -33,7 +33,8 @@ CREATE POLICY "staff_same_school_insert" ON inquiry_notes
     school_id IN (
       SELECT school_id FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'school_admin', 'front_desk', 'hr', 'principal', 'coordinator')
     )
-    AND author_id = auth.uid()
+    -- author_id must match caller for user notes; NULL allowed for trigger-generated system notes
+    AND (author_id = auth.uid() OR author_id IS NULL)
   );
 
 CREATE POLICY "author_update" ON inquiry_notes
@@ -45,33 +46,41 @@ CREATE POLICY "author_delete" ON inquiry_notes
   FOR DELETE
   USING (author_id = auth.uid() AND created_at > now() - interval '15 min');
 
--- AFTER UPDATE trigger on inquiries for audit trail
+-- AFTER UPDATE trigger on inquiries for audit trail.
+-- NOTE: auth.uid() is not available inside a trigger body (no JWT context).
+-- We record a sentinel system-user UUID via a DB setting or leave author_id
+-- nullable for system-generated events. Here we make author_id nullable for
+-- 'status_change' and 'assignment' kinds so the trigger never violates the
+-- NOT NULL. For notes added by real users (kind='note'), the application layer
+-- supplies author_id directly.
+ALTER TABLE inquiry_notes ALTER COLUMN author_id DROP NOT NULL;
+
 CREATE OR REPLACE FUNCTION inquiry_audit_trigger()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Log status changes
-  IF OLD.status != NEW.status THEN
+  -- Log status changes (IS DISTINCT FROM handles NULL comparisons correctly)
+  IF OLD.status IS DISTINCT FROM NEW.status THEN
     INSERT INTO inquiry_notes (inquiry_id, school_id, author_id, body, kind, meta)
     VALUES (
       NEW.id,
       NEW.school_id,
-      auth.uid(),
+      NULL,  -- system-generated; no JWT in trigger context
       'Status changed from ' || OLD.status || ' to ' || NEW.status,
       'status_change',
       jsonb_build_object('old_status', OLD.status, 'new_status', NEW.status)
     );
   END IF;
 
-  -- Log assignment changes
-  IF OLD.assigned_to != NEW.assigned_to THEN
+  -- IS DISTINCT FROM correctly handles NULL -> UUID and UUID -> NULL transitions
+  IF OLD.assigned_to IS DISTINCT FROM NEW.assigned_to THEN
     INSERT INTO inquiry_notes (inquiry_id, school_id, author_id, body, kind, meta)
     VALUES (
       NEW.id,
       NEW.school_id,
-      auth.uid(),
+      NULL,  -- system-generated
       CASE
         WHEN NEW.assigned_to IS NULL THEN 'Inquiry unassigned'
-        ELSE 'Inquiry assigned to ' || (SELECT full_name FROM profiles WHERE id = NEW.assigned_to)
+        ELSE 'Inquiry assigned to ' || COALESCE((SELECT full_name FROM profiles WHERE id = NEW.assigned_to), 'Unknown')
       END,
       'assignment',
       jsonb_build_object('old_assigned_to', OLD.assigned_to, 'new_assigned_to', NEW.assigned_to)

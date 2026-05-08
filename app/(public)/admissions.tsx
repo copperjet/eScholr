@@ -494,9 +494,12 @@ export default function PublicAdmissionsWizard() {
               )}
 
               <Button
-                title={submitting ? 'Submitting…' : 'Submit Application'}
-                onPress={handleSubmit}
+                label={submitting ? 'Submitting…' : 'Submit Application'}
+                variant="primary"
+                loading={submitting}
                 disabled={submitting}
+                fullWidth
+                onPress={handleSubmit}
                 style={{ backgroundColor: brandColor, marginTop: Spacing.xl }}
               />
               <ThemedText variant="caption" color="muted" style={{ textAlign: 'center', marginTop: Spacing.md }}>
@@ -510,14 +513,15 @@ export default function PublicAdmissionsWizard() {
             <View style={styles.navRow}>
               {step > 0 && (
                 <Button
-                  title="Back"
+                  label="Back"
                   variant="outline"
                   onPress={() => setStep(s => s - 1)}
                   style={{ flex: 1 }}
                 />
               )}
               <Button
-                title="Next"
+                label="Next"
+                variant="primary"
                 onPress={() => setStep(s => s + 1)}
                 disabled={!stepValid()}
                 style={[{ flex: 1 }, { backgroundColor: brandColor }]}

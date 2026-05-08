@@ -37,7 +37,7 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
   pending:   ['reviewing', 'accepted', 'rejected'],
   submitted: ['reviewing', 'accepted', 'rejected'],
   reviewing: ['accepted', 'waitlist', 'rejected'],
-  accepted:  ['enrolled', 'rejected'],
+  accepted:  ['rejected'],  // 'enrolled' only via Convert button → edge fn
   waitlist:  ['accepted', 'rejected'],
 };
 

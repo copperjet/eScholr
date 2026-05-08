@@ -8,6 +8,7 @@ import {
   Alert, TouchableOpacity, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
@@ -35,7 +36,7 @@ const STATUS_META: Record<string, { label: string; preset: any; color: string }>
 
 function useApplications(schoolId: string, status: string) {
   return useQuery({
-    queryKey: ['admissions-applications', schoolId, status],
+    queryKey: ['admissions', 'list', { schoolId, status }],
     enabled: !!schoolId,
     staleTime: 1000 * 30,
     queryFn: async () => {
@@ -94,7 +95,7 @@ export default function ApplicationsScreen() {
       haptics.success();
       setDetailVisible(false);
       setSelected(null);
-      queryClient.invalidateQueries({ queryKey: ['admissions-applications'] });
+      queryClient.invalidateQueries({ queryKey: ['admissions'] });
     },
     onError: (e: any) => { haptics.error(); Alert.alert('Error', e.message); },
   });
@@ -102,9 +103,9 @@ export default function ApplicationsScreen() {
   const getNextStatuses = (current: string): string[] => {
     switch (current) {
       case 'submitted': return ['reviewing', 'accepted', 'rejected'];
-      case 'reviewing': return ['accepted', 'waitlisted', 'rejected'];
-      case 'accepted': return ['enrolled', 'rejected'];
-      case 'waitlisted': return ['accepted', 'rejected'];
+      case 'reviewing': return ['accepted', 'waitlist', 'rejected'];
+      case 'accepted': return ['rejected'];  // 'enrolled' only via Convert in detail view
+      case 'waitlist': return ['accepted', 'rejected'];
       default: return [];
     }
   };
@@ -124,7 +125,7 @@ export default function ApplicationsScreen() {
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={{ flex: 1 }}>
-              <ThemedText style={{ fontWeight: '700', fontSize: 15 }}>{item.student_name}</ThemedText>
+              <ThemedText style={{ fontWeight: '700', fontSize: 15 }}>{item.full_name ?? item.student_name}</ThemedText>
               <ThemedText variant="caption" color="muted">
                 {item.grade_applying_for ? `Applying for: ${item.grade_applying_for}` : 'Grade not specified'}
               </ThemedText>
@@ -153,9 +154,11 @@ export default function ApplicationsScreen() {
             ) : null}
           </View>
 
-          <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.sm }}>
-            Submitted {format(parseISO(item.submitted_at), 'dd/MM/yy')}
-          </ThemedText>
+          {(item.submitted_at ?? item.created_at) && (
+            <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.sm }}>
+              Submitted {format(parseISO(item.submitted_at ?? item.created_at), 'dd/MM/yy')}
+            </ThemedText>
+          )}
         </Card>
       </TouchableOpacity>
     );
@@ -183,8 +186,8 @@ export default function ApplicationsScreen() {
       <View style={{ paddingHorizontal: Spacing.base, paddingTop: Spacing.sm }}>
         <TabBar
           tabs={STATUS_TABS.map((s) => ({ key: s, label: STATUS_META[s]?.label ?? s }))}
-          activeTab={activeTab}
-          onTabPress={setActiveTab}
+          activeKey={activeTab}
+          onChange={setActiveTab}
         />
         <SearchBar
           value={search}
@@ -214,7 +217,7 @@ export default function ApplicationsScreen() {
           <View style={{ gap: Spacing.md }}>
             {/* Student info */}
             <View>
-              <ThemedText style={{ fontWeight: '700', fontSize: 16 }}>{selected.student_name}</ThemedText>
+              <ThemedText style={{ fontWeight: '700', fontSize: 16 }}>{selected.full_name ?? selected.student_name}</ThemedText>
               <Badge label={STATUS_META[selected.status]?.label ?? selected.status} preset={STATUS_META[selected.status]?.preset ?? 'neutral'} style={{ alignSelf: 'flex-start', marginTop: 4 }} />
             </View>
 
@@ -262,7 +265,9 @@ export default function ApplicationsScreen() {
             ) : null}
 
             <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.sm }}>
-              Submitted {format(parseISO(selected.submitted_at), 'dd MMM yyyy \'at\' HH:mm')}
+              {(selected.submitted_at ?? selected.created_at)
+                ? `Submitted ${format(parseISO(selected.submitted_at ?? selected.created_at), 'dd MMM yyyy \'at\' HH:mm')}`
+                : ''}
               {selected.reviewed_at ? `\nReviewed ${format(parseISO(selected.reviewed_at), 'dd MMM yyyy \'at\' HH:mm')}` : ''}
             </ThemedText>
 
