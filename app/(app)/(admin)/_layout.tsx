@@ -4,6 +4,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { AppTabBar, ResponsiveShell } from '../../../components/ui';
 import { useShouldShowSidebar } from '../../../lib/responsive';
+import { useRealtimeStudents } from '../../../hooks/useRealtimeSync';
 
 const ADMIN_ROLES = ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator', 'hod'];
 const SUPER_ROLES = ['super_admin', 'school_super_admin'];
@@ -76,6 +77,9 @@ export default function AdminLayout() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const showSidebar = useShouldShowSidebar();
+
+  // Realtime: keep student cache fresh across all admin roles
+  useRealtimeStudents(user?.schoolId ?? '');
 
   if (user && !ADMIN_ROLES.includes(user.activeRole)) {
     return <Redirect href="/" />;

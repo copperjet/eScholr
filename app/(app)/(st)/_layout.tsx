@@ -5,12 +5,14 @@ import { useAuthStore } from '../../../stores/authStore';
 import { AppTabBar, ResponsiveShell } from '../../../components/ui';
 import { useShouldShowSidebar } from '../../../lib/responsive';
 import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
+import { useRealtimeStudents } from '../../../hooks/useRealtimeSync';
 
 export default function STLayout() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const showSidebar = useShouldShowSidebar();
   const examsEnabled = useIsModuleEnabled('exams');
+  useRealtimeStudents(user?.schoolId ?? '');
   if (user && user.activeRole !== 'st') {
     return <Redirect href="/" />;
   }

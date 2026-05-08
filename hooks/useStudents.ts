@@ -212,8 +212,8 @@ export function useCreateStudent(schoolId: string) {
       return data as { id: string };
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['students'] }); // canonical — Phase A+
       qc.invalidateQueries({ queryKey: ['all-students', schoolId] });
-      qc.invalidateQueries({ queryKey: ['students', schoolId] });
       qc.invalidateQueries({ queryKey: ['global-search', schoolId] });
     },
   });
@@ -252,8 +252,8 @@ export function useUpdateStudent(schoolId: string) {
       if (error) throw error;
     },
     onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['students'] }); // canonical — Phase A+
       qc.invalidateQueries({ queryKey: ['all-students', schoolId] });
-      qc.invalidateQueries({ queryKey: ['students', schoolId] });
       qc.invalidateQueries({ queryKey: ['student-detail', vars.studentId] });
       qc.invalidateQueries({ queryKey: ['student-profile', vars.studentId] });
       qc.invalidateQueries({ queryKey: ['global-search', schoolId] });
@@ -288,6 +288,7 @@ export function useUploadStudentPhoto(schoolId: string) {
       return publicUrl;
     },
     onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['students'] }); // canonical — Phase A+
       qc.invalidateQueries({ queryKey: ['student-detail', vars.studentId] });
       qc.invalidateQueries({ queryKey: ['all-students', schoolId] });
     },
@@ -424,8 +425,8 @@ export function useBulkImportStudents(schoolId: string) {
       return { count: inserted?.length ?? 0, linkedParents };
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['students'] }); // canonical — Phase A+
       qc.invalidateQueries({ queryKey: ['all-students', schoolId] });
-      qc.invalidateQueries({ queryKey: ['students', schoolId] });
     },
   });
 }

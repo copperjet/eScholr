@@ -5,12 +5,16 @@ import { useAuthStore } from '../../../stores/authStore';
 import { AppTabBar, ResponsiveShell } from '../../../components/ui';
 import { useShouldShowSidebar } from '../../../lib/responsive';
 import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
+import { useFrontDeskRealtime } from '../../../hooks/useRealtimeSync';
 
 export default function FrontDeskLayout() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const showSidebar = useShouldShowSidebar();
   const frontdeskEnabled = useIsModuleEnabled('frontdesk');
+
+  // Realtime: invalidate students/inquiries/admissions caches on DB change
+  useFrontDeskRealtime(user?.schoolId ?? '');
 
   if (user && user.activeRole !== 'front_desk') {
     return <Redirect href="/" />;

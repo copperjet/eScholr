@@ -135,7 +135,10 @@ export function useCreateInquiry(schoolId: string) {
       });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['inquiries', schoolId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inquiries'] }); // canonical — Phase A+
+      qc.invalidateQueries({ queryKey: ['inquiries', schoolId] });
+    },
   });
 }
 
@@ -151,7 +154,10 @@ export function useUpdateInquiryStatus(schoolId: string) {
         .eq('school_id', schoolId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['inquiries', schoolId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inquiries'] }); // canonical — Phase A+
+      qc.invalidateQueries({ queryKey: ['inquiries', schoolId] });
+    },
   });
 }
 
@@ -176,6 +182,7 @@ export function useAddInquiryNote(schoolId: string) {
         .eq('school_id', schoolId);
     },
     onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['inquiries'] }); // canonical — Phase A+
       qc.invalidateQueries({ queryKey: ['inquiry-notes', vars.inquiryId] });
       qc.invalidateQueries({ queryKey: ['inquiries', schoolId] });
     },
@@ -250,8 +257,9 @@ export function useConvertToEnrollment(schoolId: string) {
       return { studentId: student.id };
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inquiries'] }); // canonical — Phase A+
       qc.invalidateQueries({ queryKey: ['inquiries', schoolId] });
-      qc.invalidateQueries({ queryKey: ['students'] });
+      qc.invalidateQueries({ queryKey: ['students'] }); // canonical — Phase A+
     },
   });
 }
