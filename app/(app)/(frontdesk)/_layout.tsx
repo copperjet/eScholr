@@ -34,12 +34,16 @@ export default function FrontDeskLayout() {
         tabBarInactiveTintColor: colors.icon,
       }}
     >
-      <Tabs.Screen name="home"      options={{ title: 'Home',      tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} /> }} />
-      <Tabs.Screen name="inquiries" options={{ title: 'Inquiries', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'} size={22} color={color} /> }} />
-      <Tabs.Screen name="more"      options={{ title: 'More',      tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} /> }} />
-      <Tabs.Screen name="inquiry-detail" options={{ href: null }} />
-      <Tabs.Screen name="visitors"       options={{ href: null }} />
-      <Tabs.Screen name="applications"   options={{ href: null }} />
+      <Tabs.Screen name="home"         options={{ title: 'Home',         tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} /> }} />
+      <Tabs.Screen name="inquiries"    options={{ title: 'Inquiries',    tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'} size={22} color={color} /> }} />
+      <Tabs.Screen name="applications" options={{ title: 'Applications', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'document-text' : 'document-text-outline'} size={22} color={color} /> }} />
+      <Tabs.Screen name="students"     options={{ title: 'Students',     tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} /> }} />
+      <Tabs.Screen name="more"         options={{ title: 'More',         tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} /> }} />
+      <Tabs.Screen name="inquiry-detail"    options={{ href: null }} />
+      <Tabs.Screen name="application-detail" options={{ href: null }} />
+      <Tabs.Screen name="student-detail"    options={{ href: null }} />
+      <Tabs.Screen name="student-edit"      options={{ href: null }} />
+      <Tabs.Screen name="visitors"          options={{ href: null }} />
     </Tabs>
   );
 }

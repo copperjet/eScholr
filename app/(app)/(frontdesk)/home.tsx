@@ -80,9 +80,27 @@ export default function FrontDeskHome() {
           </Pressable>
         </View>
 
-        {/* ── Quick actions: Parents, Students, Applications ── */}
-        <SectionHeader title="Quick Actions" />
+        {/* ── Stats row — tappable filters ── */}
+        <SectionHeader title="Today's Overview" />
         <View style={styles.statRow}>
+          <Pressable onPress={() => router.push('/(app)/(frontdesk)/inquiries' as any)} style={{ flex: 1 }}>
+            <StatCard
+              label="New Inquiries"
+              value={isLoading ? '—' : String(data?.counts?.new ?? 0)}
+              icon="chatbubble-ellipses-outline"
+              iconBg={Colors.semantic.info + '18'}
+              iconColor={Colors.semantic.info}
+            />
+          </Pressable>
+          <Pressable onPress={() => router.push('/(app)/(frontdesk)/applications' as any)} style={{ flex: 1 }}>
+            <StatCard
+              label="Pending Apps"
+              value={isLoading ? '—' : String(data?.pendingApps ?? 0)}
+              icon="document-text-outline"
+              iconBg={Colors.semantic.warning + '18'}
+              iconColor={Colors.semantic.warning}
+            />
+          </Pressable>
           <Pressable onPress={() => router.push('/(app)/(frontdesk)/visitors' as any)} style={{ flex: 1 }}>
             <StatCard
               label="Visitors In"
@@ -92,39 +110,39 @@ export default function FrontDeskHome() {
               iconColor={Colors.semantic.success}
             />
           </Pressable>
-          <Pressable onPress={() => router.push('/(app)/(frontdesk)/inquiries' as any)} style={{ flex: 1 }}>
+        </View>
+
+        {/* ── Quick actions ── */}
+        <SectionHeader title="Quick Actions" />
+        <View style={styles.statRow}>
+          <Pressable onPress={() => router.push('/(app)/(frontdesk)/students' as any)} style={{ flex: 1 }}>
             <StatCard
-              label="Inquiries"
+              label="Students"
               value="View"
-              icon="chatbubble-ellipses-outline"
-              iconBg={Colors.semantic.info + '18'}
-              iconColor={Colors.semantic.info}
+              icon="school-outline"
+              iconBg={colors.brand.primary + '18'}
+              iconColor={colors.brand.primary}
             />
           </Pressable>
           <Pressable onPress={() => router.push('/(app)/(frontdesk)/applications' as any)} style={{ flex: 1 }}>
             <StatCard
               label="Applications"
-              value={isLoading ? '—' : String(data?.pendingApps ?? 0)}
-              icon="document-text-outline"
+              value="Review"
+              icon="clipboard-outline"
               iconBg={Colors.semantic.warning + '18'}
               iconColor={Colors.semantic.warning}
             />
           </Pressable>
-        </View>
-
-        {/* ── Quick tip ── */}
-        <Card variant="tinted" style={styles.tip}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm }}>
-            <IconChip
-              icon={<Ionicons name="bulb-outline" size={16} color={colors.brand.primary} />}
-              size={32}
-              radius={16}
+          <Pressable onPress={() => router.push('/(app)/(frontdesk)/visitors' as any)} style={{ flex: 1 }}>
+            <StatCard
+              label="Log Visitor"
+              value="+"
+              icon="person-add-outline"
+              iconBg={Colors.semantic.success + '18'}
+              iconColor={Colors.semantic.success}
             />
-            <ThemedText variant="bodySm" color="muted" style={{ flex: 1 }}>
-              Tap + to log a new inquiry. Name is the only required field.
-            </ThemedText>
-          </View>
-        </Card>
+          </Pressable>
+        </View>
 
         <View style={{ height: TAB_BAR_HEIGHT }} />
       </ScrollView>

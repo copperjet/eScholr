@@ -22,14 +22,15 @@ import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typo
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
-const STATUS_TABS = ['submitted', 'reviewing', 'accepted', 'waitlisted', 'rejected', 'enrolled'] as const;
+const STATUS_TABS = ['pending', 'submitted', 'reviewing', 'accepted', 'waitlist', 'rejected', 'enrolled'] as const;
 const STATUS_META: Record<string, { label: string; preset: any; color: string }> = {
-  submitted:  { label: 'Submitted',  preset: 'info',    color: Colors.semantic.info },
-  reviewing:  { label: 'Reviewing',  preset: 'warning', color: Colors.semantic.warning },
-  accepted:   { label: 'Accepted',   preset: 'success', color: Colors.semantic.success },
-  waitlisted: { label: 'Waitlisted', preset: 'warning', color: '#F59E0B' },
-  rejected:   { label: 'Rejected',   preset: 'danger',  color: Colors.semantic.error },
-  enrolled:   { label: 'Enrolled',   preset: 'success', color: Colors.semantic.success },
+  pending:   { label: 'Pending',    preset: 'neutral', color: '#9CA3AF' },
+  submitted: { label: 'Submitted',  preset: 'info',    color: Colors.semantic.info },
+  reviewing: { label: 'Reviewing',  preset: 'warning', color: Colors.semantic.warning },
+  accepted:  { label: 'Accepted',   preset: 'success', color: Colors.semantic.success },
+  waitlist:  { label: 'Waitlisted', preset: 'warning', color: '#F59E0B' },
+  rejected:  { label: 'Rejected',   preset: 'danger',  color: Colors.semantic.error },
+  enrolled:  { label: 'Enrolled',   preset: 'success', color: Colors.semantic.success },
 };
 
 function useApplications(schoolId: string, status: string) {
@@ -111,14 +112,13 @@ export default function ApplicationsScreen() {
   // ── Renderers ──
 
   const renderApplication = useCallback(({ item }: { item: any }) => {
-    const meta = STATUS_META[item.status] ?? STATUS_META.submitted;
+    const meta = STATUS_META[item.status] ?? STATUS_META.pending;
     return (
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => {
           haptics.selection();
-          setSelected(item);
-          setDetailVisible(true);
+          router.push({ pathname: '/(app)/(frontdesk)/application-detail' as any, params: { id: item.id } });
         }}
       >
         <Card style={styles.card}>

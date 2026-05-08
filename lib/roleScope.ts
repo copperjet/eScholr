@@ -54,6 +54,14 @@ export const ROLE_ACCESS: Record<string, AdminRole[]> = {
 
   // ── Admin (day-to-day operations) ───────────────────────────────────────
   students:          ['super_admin', 'school_super_admin', 'admin', 'front_desk'], // visible in Users hub for super; Students tab for admin
+  'students.create': ['super_admin', 'school_super_admin', 'admin', 'front_desk'],
+  'students.edit':   ['super_admin', 'school_super_admin', 'admin', 'front_desk'],
+  'students.import': ['super_admin', 'school_super_admin', 'admin', 'front_desk'],
+  'students.promote': ['super_admin', 'school_super_admin', 'admin', 'front_desk'],
+  'students.auth_invite': ['super_admin', 'school_super_admin', 'admin', 'front_desk'],
+  'students.delete': ['super_admin', 'school_super_admin', 'admin'], // FD cannot delete
+  'parents.create':  ['super_admin', 'school_super_admin', 'admin', 'front_desk'],
+  'parents.edit':    ['super_admin', 'school_super_admin', 'admin', 'front_desk'],
   assignments:       ['super_admin', 'school_super_admin', 'admin'],
   timetable:         ['super_admin', 'school_super_admin', 'admin'],
   reports:           ['super_admin', 'school_super_admin', 'admin', 'principal', 'coordinator', 'hod'],
@@ -61,6 +69,14 @@ export const ROLE_ACCESS: Record<string, AdminRole[]> = {
   daybook:           ['admin', 'principal', 'coordinator', 'hod'],
   announcements:     ['admin', 'principal', 'coordinator'],
   attendance:        ['admin', 'principal', 'coordinator'],
+
+  // ── Front Desk (admissions & inquiries) ──────────────────────────────────
+  admissions:        ['super_admin', 'school_super_admin', 'admin', 'front_desk'],
+  'admissions.review': ['super_admin', 'school_super_admin', 'admin', 'front_desk'],
+  'admissions.convert': ['super_admin', 'school_super_admin', 'admin', 'front_desk'],
+  inquiries:         ['super_admin', 'school_super_admin', 'admin', 'front_desk'],
+  'inquiries.assign': ['super_admin', 'school_super_admin', 'admin', 'front_desk'],
+  'inquiries.convert': ['super_admin', 'school_super_admin', 'admin', 'front_desk'],
 
   // ── Finance only ────────────────────────────────────────────────────────
   fee_structure:     ['super_admin'], // platform admin retains visibility; school finance has its own dashboard
