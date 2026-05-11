@@ -18,6 +18,7 @@ const ALL_MODULE_KEYS: ModuleKey[] = [
   'finance', 'hr', 'library', 'frontdesk',
   'transport', 'hostel', 'exams',
   'daybook', 'character', 'announcements',
+  'eca',
 ];
 
 // ── Fetcher ───────────────────────────────────────────────────

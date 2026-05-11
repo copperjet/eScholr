@@ -31,6 +31,12 @@ export default function LibrarianLayout() {
         qc.invalidateQueries({ queryKey: ['library-dashboard', schoolId] });
         qc.invalidateQueries({ queryKey: ['library-overdue', schoolId] });
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'library_collections', filter: `school_id=eq.${schoolId}` }, () => {
+        qc.invalidateQueries({ queryKey: ['library-collections', schoolId] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'library_settings', filter: `school_id=eq.${schoolId}` }, () => {
+        qc.invalidateQueries({ queryKey: ['library-settings', schoolId] });
+      })
       .subscribe();
     return () => { (supabase as any).removeChannel(channel); };
   }, [schoolId, qc]);

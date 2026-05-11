@@ -224,6 +224,7 @@ export interface LibraryCollection {
   description: string | null;
   color: string;
   icon: string;
+  collection_type: 'collection' | 'genre';
   created_at: string;
   updated_at: string;
 }
@@ -238,6 +239,7 @@ export interface LibraryBook {
   publish_year: number | null;
   cover_url: string | null;
   collection_id: string | null;
+  genre_id: string | null;
   added_by: string | null;
   notes: string | null;
   created_at: string;
@@ -288,6 +290,7 @@ export interface LibrarySettings {
   max_books_per_student: number;
   max_books_per_staff: number;
   overdue_notification_days: number;
+  accession_mode: 'auto' | 'manual';
   created_at: string;
   updated_at: string;
 }

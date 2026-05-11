@@ -14,6 +14,7 @@ import {
 import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { useCanAccess } from '../../../lib/roleScope';
+import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
 import { StreamPicker } from '../../../components/modules/StreamPicker';
 
 /**
@@ -97,6 +98,8 @@ export default function AdminHome() {
   const canDaybook = useCanAccess('daybook');
   const canSchoolStructure = useCanAccess('school_structure');
   const canCalendar = useCanAccess('calendar_events');
+  const examsEnabled = useIsModuleEnabled('exams');
+  const daybookEnabled = useIsModuleEnabled('daybook');
 
   const TODAY = useMemo(() => format(new Date(), 'EEEE, d MMM'), []);
   const attPct = data?.totalAttToday
@@ -206,21 +209,32 @@ export default function AdminHome() {
                 iconColor={Colors.semantic.success}
                 style={styles.statCell}
               />
-              <StatCard
-                label="Analysis"
-                value="›"
-                icon="bar-chart"
-                iconBg={Colors.semantic.warningLight}
-                iconColor={Colors.semantic.warning}
-                style={styles.statCell}
-                onPress={() => router.push('/(app)/(admin)/analysis' as any)}
-              />
+              {examsEnabled ? (
+                <StatCard
+                  label="Analysis"
+                  value="›"
+                  icon="bar-chart"
+                  iconBg={Colors.semantic.warningLight}
+                  iconColor={Colors.semantic.warning}
+                  style={styles.statCell}
+                  onPress={() => router.push('/(app)/(admin)/analysis' as any)}
+                />
+              ) : (
+                <StatCard
+                  label="Attendance"
+                  value={attPct != null ? `${attPct}%` : '—'}
+                  icon="checkmark-circle"
+                  iconBg={Colors.semantic.successLight}
+                  iconColor={Colors.semantic.success}
+                  style={styles.statCell}
+                />
+              )}
             </View>
           )}
         </FadeIn>
 
         {/* ── Pending reports alert ── */}
-        {!isLoading && (data?.pendingReports ?? 0) > 0 && (
+        {!isLoading && examsEnabled && (data?.pendingReports ?? 0) > 0 && (
           <Pressable
             onPress={() => router.push('/(app)/(admin)/reports' as any)}
             style={({ pressed }) => [
@@ -267,7 +281,7 @@ export default function AdminHome() {
                   style={styles.qaCard}
                 />
               )}
-              {canReports && (
+              {canReports && examsEnabled && (
                 <QuickActionCard
                   title="Reports"
                   subtitle="View reports"
@@ -287,7 +301,7 @@ export default function AdminHome() {
                   style={styles.qaCard}
                 />
               )}
-              {canMarksMatrix && (
+              {canMarksMatrix && examsEnabled && (
                 <QuickActionCard
                   title="Marking"
                   subtitle="View marks matrix"
@@ -351,7 +365,7 @@ export default function AdminHome() {
                   style={styles.qaCard}
                 />
               )}
-              {canReports && (
+              {canReports && examsEnabled && (
                 <QuickActionCard
                   title="Reports"
                   subtitle="View reports"
@@ -371,7 +385,7 @@ export default function AdminHome() {
                   style={styles.qaCard}
                 />
               )}
-              {canMarksMatrix && (
+              {canMarksMatrix && examsEnabled && (
                 <QuickActionCard
                   title="Marking"
                   subtitle="View marks matrix"
@@ -381,7 +395,7 @@ export default function AdminHome() {
                   style={styles.qaCard}
                 />
               )}
-              {canDaybook && (
+              {canDaybook && daybookEnabled && (
                 <QuickActionCard
                   title="Daybook"
                   subtitle="View entries"
@@ -391,14 +405,16 @@ export default function AdminHome() {
                   style={styles.qaCard}
                 />
               )}
-              <QuickActionCard
-                title="Analysis"
-                subtitle="Results by class & subject"
-                icon="bar-chart-outline"
-                variant="surface"
-                onPress={() => router.push('/(app)/(admin)/analysis' as any)}
-                style={styles.qaCard}
-              />
+              {examsEnabled && (
+                <QuickActionCard
+                  title="Analysis"
+                  subtitle="Results by class & subject"
+                  icon="bar-chart-outline"
+                  variant="surface"
+                  onPress={() => router.push('/(app)/(admin)/analysis' as any)}
+                  style={styles.qaCard}
+                />
+              )}
             </>
           )}
         </View>

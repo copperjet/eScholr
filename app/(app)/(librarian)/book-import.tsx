@@ -22,13 +22,16 @@ interface ParsedRow {
   publishYear: string;
   copies: string;
   collection: string;
+  accessionNumbers: string;
   _row: number;
   _error?: string;
+  _accessionList?: string[];
 }
 
-const TEMPLATE = `title,author,isbn,publisher,year,copies,collection
-"To Kill a Mockingbird","Harper Lee","9780061120084","HarperCollins","1960","2","Fiction"
-"A Brief History of Time","Stephen Hawking","9780553380163","Bantam","1988","1","Science"
+const TEMPLATE = `title,author,isbn,publisher,year,copies,collection,accession_numbers
+"To Kill a Mockingbird","Harper Lee","9780061120084","HarperCollins","1960","2","Fiction",""
+"A Brief History of Time","Stephen Hawking","9780553380163","Bantam","1988","1","Science",""
+"Example Manual","Some Author","","","2024","","Reference","2024-001;2024-002"
 `;
 
 // RFC 4180 minimal CSV parser — handles quoted fields, embedded commas, escaped quotes, CRLF.
@@ -75,11 +78,16 @@ function parseCSV(raw: string): { rows: ParsedRow[]; missingTitle: boolean } {
   const yearIdx      = idxOf(['year', 'publish_year', 'publishyear', 'publish year']);
   const copiesIdx    = idxOf(['copies', 'total_copies', 'totalcopies', 'quantity', 'qty']);
   const collectionIdx= idxOf(['collection', 'category']);
+  const accessionIdx = idxOf(['accession_numbers', 'accessions', 'accession_number', 'accession']);
 
   if (titleIdx < 0) return { rows: [], missingTitle: true };
 
   const rows: ParsedRow[] = matrix.slice(1).map((cols, i) => {
     const get = (idx: number) => (idx >= 0 ? (cols[idx] ?? '').trim() : '');
+    const accRaw = get(accessionIdx);
+    const accList = accRaw
+      ? accRaw.split(/[,;|]/).map((s) => s.trim()).filter(Boolean)
+      : [];
     const r: ParsedRow = {
       title:       get(titleIdx),
       author:      get(authorIdx),
@@ -88,11 +96,19 @@ function parseCSV(raw: string): { rows: ParsedRow[]; missingTitle: boolean } {
       publishYear: get(yearIdx),
       copies:      get(copiesIdx),
       collection:  get(collectionIdx),
+      accessionNumbers: accRaw,
+      _accessionList: accList,
       _row: i + 2,
     };
     if (!r.title) r._error = 'Missing title';
     if (r.publishYear && !/^\d{1,4}$/.test(r.publishYear)) r._error = 'Invalid year';
     if (r.copies && (!/^\d+$/.test(r.copies) || parseInt(r.copies, 10) < 1)) r._error = 'Invalid copies';
+    if (accList.length > 0) {
+      const counts = new Map<string, number>();
+      accList.forEach((v) => counts.set(v, (counts.get(v) ?? 0) + 1));
+      const dup = [...counts.entries()].find(([, n]) => n > 1)?.[0];
+      if (dup) r._error = `Duplicate accession in row: "${dup}"`;
+    }
     return r;
   });
   return { rows, missingTitle: false };
@@ -177,13 +193,15 @@ export default function BookImportScreen() {
     let success = 0;
     for (const r of validRows) {
       try {
+        const accList = r._accessionList ?? [];
         await importMut.mutateAsync([{
           title: r.title,
           author: r.author || undefined,
           isbn: r.isbn || undefined,
           publisher: r.publisher || undefined,
           publishYear: r.publishYear ? parseInt(r.publishYear, 10) : undefined,
-          totalCopies: r.copies ? parseInt(r.copies, 10) : 1,
+          totalCopies: accList.length > 0 ? accList.length : (r.copies ? parseInt(r.copies, 10) : 1),
+          accessionNumbers: accList.length > 0 ? accList : undefined,
           collectionId: collectionIdByName(r.collection),
           staffId: user?.staffId ?? '',
         }]);

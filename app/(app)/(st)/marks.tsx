@@ -19,6 +19,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, ProgressBar, Badge, Skeleton, EmptyState, ErrorState, ScreenHeader, AcademicPeriodPicker,
+  ModuleGate, ModuleDisabledScreen,
 } from '../../../components/ui';
 import { MarksWindowBanner } from '../../../components/modules/MarksWindowBanner';
 import { Spacing, Radius, Shadow } from '../../../constants/Typography';
@@ -94,7 +95,7 @@ function useSTAssignmentsOverview(staffId: string | null, schoolId: string) {
   });
 }
 
-export default function STMarksOverview() {
+function STMarksOverviewContent() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null);
@@ -276,6 +277,14 @@ function AssignmentCard({
 
       <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ alignSelf: 'center', marginLeft: 4 }} />
     </TouchableOpacity>
+  );
+}
+
+export default function STMarksOverview() {
+  return (
+    <ModuleGate module="exams" fallback={<ModuleDisabledScreen module="exams" />}>
+      <STMarksOverviewContent />
+    </ModuleGate>
   );
 }
 

@@ -13,6 +13,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
   ThemedText, ScreenHeader, Skeleton, EmptyState, ErrorState,
+  ModuleGate, ModuleDisabledScreen,
 } from '../../../components/ui';
 import { Spacing, Radius, Shadow } from '../../../constants/Typography';
 import { haptics } from '../../../lib/haptics';
@@ -429,7 +430,7 @@ function EditSheet({
 
 // ── Main screen ───────────────────────────────────────────────
 
-export default function AssessmentConfigScreen() {
+function AssessmentConfigContent() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const schoolId = user?.schoolId ?? '';
@@ -596,6 +597,14 @@ export default function AssessmentConfigScreen() {
         onClose={() => setSheetVisible(false)}
       />
     </SafeAreaView>
+  );
+}
+
+export default function AssessmentConfigScreen() {
+  return (
+    <ModuleGate module="exams" fallback={<ModuleDisabledScreen module="exams" />}>
+      <AssessmentConfigContent />
+    </ModuleGate>
   );
 }
 

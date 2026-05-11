@@ -21,9 +21,15 @@ export default function ScanScreen() {
   const [detectedCode, setDetectedCode] = useState<string | null>(null);
   const [cameraKey, setCameraKey] = useState(0);
   const processingRef = useRef(false);
+  const webInputRef = useRef<TextInput>(null);
   const barcodeMut = useBookByBarcode(schoolId);
-  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
-  const isIsbnMode = returnTo === 'book-form';
+  const { returnTo, scanTarget, accessionCopyIndex } = useLocalSearchParams<{
+    returnTo?: string;
+    scanTarget?: string;
+    accessionCopyIndex?: string;
+  }>();
+  const isIsbnMode = returnTo === 'book-form' && scanTarget !== 'accession';
+  const isAccessionMode = returnTo === 'book-form' && scanTarget === 'accession';
   const flashAnim = useRef(new Animated.Value(0)).current;
 
   // Reset scanner each time screen focuses (fix re-scan after navigation)
@@ -32,7 +38,19 @@ export default function ScanScreen() {
       processingRef.current = false;
       setDetectedCode(null);
       setCameraKey((k) => k + 1);
+      setManualCode('');
+
+      // Web: explicit focus — autoFocus unreliable across client-side nav.
+      // USB barcode scanners need a focused input to deliver keystrokes.
+      let focusTimer: ReturnType<typeof setTimeout> | undefined;
+      if (IS_WEB) {
+        focusTimer = setTimeout(() => {
+          webInputRef.current?.focus();
+        }, 150);
+      }
+
       return () => {
+        if (focusTimer) clearTimeout(focusTimer);
         processingRef.current = true; // block stray callbacks during unmount
       };
     }, [])
@@ -49,6 +67,14 @@ export default function ScanScreen() {
     processingRef.current = true;
     setDetectedCode(code);
     flashGreen();
+
+    if (isAccessionMode) {
+      router.replace({
+        pathname: '/(app)/(librarian)/book-form' as any,
+        params: { scannedAccession: code, accessionCopyIndex: accessionCopyIndex ?? '0', scanNonce: String(Date.now()) },
+      });
+      return;
+    }
 
     if (isIsbnMode) {
       router.replace({
@@ -90,22 +116,25 @@ export default function ScanScreen() {
   if (IS_WEB) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-        <ScreenHeader title={isIsbnMode ? 'Enter ISBN' : 'Enter Barcode'} showBack />
+        <ScreenHeader title={isIsbnMode ? 'Enter ISBN' : isAccessionMode ? 'Enter Accession Number' : 'Enter Barcode'} showBack />
         <View style={styles.webContainer}>
           <Card style={styles.webCard}>
             <ThemedText variant="h3" style={{ marginBottom: Spacing.sm }}>
-              {isIsbnMode ? 'Enter ISBN' : 'Enter Barcode'}
+              {isIsbnMode ? 'Enter ISBN' : isAccessionMode ? 'Enter Accession Number' : 'Enter Barcode'}
             </ThemedText>
             <ThemedText variant="body" color="muted" style={{ marginBottom: Spacing.lg }}>
               {isIsbnMode
                 ? 'Camera scanning only works in the mobile app. Type the ISBN below or use a USB barcode scanner.'
-                : 'Camera scanning only works in the mobile app. Type the barcode below or use a USB barcode scanner.'}
+                : isAccessionMode
+                  ? 'Camera scanning only works in the mobile app. Type or scan the accession number printed on the book.'
+                  : 'Camera scanning only works in the mobile app. Type the barcode below or use a USB barcode scanner.'}
             </ThemedText>
 
             <TextInput
+              ref={webInputRef}
               value={manualCode}
               onChangeText={setManualCode}
-              placeholder={isIsbnMode ? 'e.g. 9780134685991' : 'e.g. ACC-00001'}
+              placeholder={isIsbnMode ? 'e.g. 9780134685991' : isAccessionMode ? 'e.g. 2024-001' : 'e.g. ACC-00001'}
               placeholderTextColor={colors.textMuted}
               style={{
                 backgroundColor: colors.surface,
@@ -194,7 +223,7 @@ export default function ScanScreen() {
             <View style={[styles.corner, styles.cornerBR]} />
           </View>
           <ThemedText variant="body" style={{ color: '#fff', textAlign: 'center', marginTop: Spacing.base, fontWeight: '600' }}>
-            {isIsbnMode ? 'Scan ISBN on book cover' : 'Scan accession barcode'}
+            {isIsbnMode ? 'Scan ISBN on book cover' : isAccessionMode ? 'Scan accession number label' : 'Scan accession barcode'}
           </ThemedText>
         </View>
       </View>

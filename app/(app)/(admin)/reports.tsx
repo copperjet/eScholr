@@ -18,6 +18,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
   ThemedText, Avatar, Badge, BottomSheet, Skeleton, EmptyState, ErrorState, ScreenHeader, FastList, AcademicPeriodPicker,
+  ModuleGate, ModuleDisabledScreen,
 } from '../../../components/ui';
 import {
   useAdminReports, useAdminReportCounts, useAdminApproveReport, useReleaseReports,
@@ -39,7 +40,7 @@ const FILTER_LABELS: Record<string, string> = {
   released: 'Released',
 };
 
-export default function AdminReportsScreen() {
+function AdminReportsContent() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const schoolId = user?.schoolId ?? '';
@@ -361,6 +362,14 @@ export default function AdminReportsScreen() {
         )}
       </BottomSheet>
     </SafeAreaView>
+  );
+}
+
+export default function AdminReportsScreen() {
+  return (
+    <ModuleGate module="exams" fallback={<ModuleDisabledScreen module="exams" />}>
+      <AdminReportsContent />
+    </ModuleGate>
   );
 }
 

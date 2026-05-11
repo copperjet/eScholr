@@ -3,7 +3,7 @@ import { View, StyleSheet, SafeAreaView, Alert, Platform, TextInput } from 'reac
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
-import { useBookByBarcode } from '../../../hooks/useLibrary';
+import { useBookByBarcode, useBookByAccession } from '../../../hooks/useLibrary';
 import { ThemedText, ScreenHeader, Button, Card } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
 
@@ -18,6 +18,7 @@ export default function QuickCheckinScreen() {
   const processingRef = useRef(false);
   const lastHandledScan = useRef<string | null>(null);
   const barcodeMut = useBookByBarcode(schoolId);
+  const accessionMut = useBookByAccession(schoolId);
 
   const processBarcode = useCallback(async (code: string) => {
     if (!code || processingRef.current) return;
@@ -25,12 +26,15 @@ export default function QuickCheckinScreen() {
     setProcessing(true);
 
     try {
-      const bookId = await barcodeMut.mutateAsync(code);
+      let bookId = await barcodeMut.mutateAsync(code);
+      if (!bookId) {
+        bookId = await accessionMut.mutateAsync(code);
+      }
       if (!bookId) {
         if (Platform.OS === 'web') {
-          window.alert(`No book found with barcode "${code}"`);
+          window.alert(`No book found for "${code}"`);
         } else {
-          Alert.alert('Not Found', `No book found with barcode "${code}"`);
+          Alert.alert('Not Found', `No book found for "${code}"`);
         }
         processingRef.current = false;
         setProcessing(false);
@@ -52,7 +56,7 @@ export default function QuickCheckinScreen() {
       processingRef.current = false;
       setProcessing(false);
     }
-  }, [barcodeMut]);
+  }, [barcodeMut, accessionMut]);
 
   useEffect(() => {
     if (scannedBarcode && lastHandledScan.current !== scannedBarcode) {

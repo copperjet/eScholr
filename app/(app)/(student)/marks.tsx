@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
-import { ThemedText, Card, Badge, EmptyState, ErrorState, SectionHeader, ScreenHeader } from '../../../components/ui';
+import { ThemedText, Card, Badge, EmptyState, ErrorState, SectionHeader, ScreenHeader, ModuleGate, ModuleDisabledScreen } from '../../../components/ui';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 
 function useStudentMarks(studentId: string | null, schoolId: string) {
@@ -41,7 +41,7 @@ const TYPE_LABELS: Record<string, string> = {
   biweekly: 'Biweekly',
 };
 
-export default function StudentMarks() {
+function StudentMarksContent() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const studentId = user?.studentId ?? null;
@@ -138,6 +138,14 @@ export default function StudentMarks() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+export default function StudentMarks() {
+  return (
+    <ModuleGate module="exams" fallback={<ModuleDisabledScreen module="exams" />}>
+      <StudentMarksContent />
+    </ModuleGate>
   );
 }
 

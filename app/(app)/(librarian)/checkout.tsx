@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, SafeAreaView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { format, addDays, parseISO, isValid } from 'date-fns';
+import { format, addDays, parseISO, isValid, startOfDay } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
@@ -18,7 +18,7 @@ import { Colors } from '../../../constants/Colors';
 export default function CheckoutScreen() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
-  const { bookId } = useLocalSearchParams<{ bookId: string }>();
+  const { bookId, scannedCode } = useLocalSearchParams<{ bookId: string; scannedCode?: string }>();
   const schoolId = user?.schoolId ?? '';
 
   const { data: book } = useLibraryBook(bookId ?? null);
@@ -35,7 +35,9 @@ export default function CheckoutScreen() {
   const dueDate = useMemo(() => format(addDays(new Date(), defaultDays), 'yyyy-MM-dd'), [defaultDays]);
   const [customDueDate, setCustomDueDate] = useState('');
   const parsedCustom = customDueDate ? parseISO(customDueDate) : null;
-  const isCustomValid = parsedCustom && isValid(parsedCustom);
+  const isCustomValid = parsedCustom
+    && isValid(parsedCustom)
+    && startOfDay(parsedCustom) >= startOfDay(new Date());
   const effectiveDueDate = isCustomValid ? customDueDate : dueDate;
 
   // Sort by accession_number — matches RPC ORDER BY for determinism
@@ -49,12 +51,21 @@ export default function CheckoutScreen() {
   const bookUnavailable = availableCopies.length < 1;
   const needsCopySelect = availableCopies.length > 1;
 
-  // Auto-select first available copy when book loads (or copies change)
+  // Auto-select copy: prefer the scanned one if present, else first available
   useEffect(() => {
     if (availableCopies.length > 0 && !selectedCopyId) {
+      if (scannedCode) {
+        const matched = availableCopies.find(
+          (c) => c.accession_number === scannedCode || c.barcode === scannedCode
+        );
+        if (matched) {
+          setSelectedCopyId(matched.id);
+          return;
+        }
+      }
       setSelectedCopyId(availableCopies[0].id);
     }
-  }, [availableCopies]);
+  }, [availableCopies, scannedCode]);
 
   const selectedCopy = availableCopies.find((c) => c.id === selectedCopyId) ?? availableCopies[0] ?? null;
 
@@ -220,7 +231,7 @@ export default function CheckoutScreen() {
           </View>
           {customDueDate !== '' && !isCustomValid && (
             <ThemedText variant="caption" style={{ color: Colors.semantic.error, marginTop: Spacing.xs }}>
-              Invalid date — use YYYY-MM-DD.
+              Invalid date or date is in the past — use YYYY-MM-DD.
             </ThemedText>
           )}
           <ThemedText variant="caption" color="muted" style={{ marginTop: Spacing.xs }}>
@@ -256,7 +267,7 @@ export default function CheckoutScreen() {
             label="Confirm Check Out"
             onPress={handleCheckout}
             loading={checkOutMut.isPending}
-            disabled={!selectedPatron || checkOutMut.isPending || bookUnavailable || (needsCopySelect && !selectedCopyId)}
+            disabled={!selectedPatron || checkOutMut.isPending || bookUnavailable || (needsCopySelect && !selectedCopyId) || (customDueDate !== '' && !isCustomValid)}
             fullWidth
           />
         </View>

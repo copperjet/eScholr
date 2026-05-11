@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, Alert, Platform } from 'react-native';
+import { View, ScrollView, StyleSheet, SafeAreaView, Alert, Platform, Switch } from 'react-native';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { useLibrarySettings, useUpsertLibrarySettings } from '../../../hooks/useLibrary';
@@ -20,6 +20,7 @@ export default function SettingsScreen() {
   const [maxStudent, setMaxStudent] = useState('3');
   const [maxStaff, setMaxStaff] = useState('5');
   const [overdueDays, setOverdueDays] = useState('3');
+  const [accessionMode, setAccessionMode] = useState<'auto' | 'manual'>('auto');
 
   useEffect(() => {
     if (settings) {
@@ -27,6 +28,7 @@ export default function SettingsScreen() {
       setMaxStudent(String(settings.max_books_per_student));
       setMaxStaff(String(settings.max_books_per_staff));
       setOverdueDays(String(settings.overdue_notification_days));
+      setAccessionMode(settings.accession_mode ?? 'auto');
     }
   }, [settings]);
 
@@ -37,6 +39,7 @@ export default function SettingsScreen() {
         maxBooksPerStudent: parseInt(maxStudent, 10) || 3,
         maxBooksPerStaff: parseInt(maxStaff, 10) || 5,
         overdueNotificationDays: parseInt(overdueDays, 10) || 3,
+        accessionMode,
       });
       if (Platform.OS === 'web') {
         window.alert('Library settings updated.');
@@ -86,6 +89,23 @@ export default function SettingsScreen() {
             keyboardType="numeric"
             placeholder="3"
           />
+        </Card>
+
+        <Card style={styles.card}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={{ flex: 1, marginRight: Spacing.base }}>
+              <ThemedText variant="label">Manual Accession Numbers</ThemedText>
+              <ThemedText variant="caption" color="muted" style={{ marginTop: 2 }}>
+                {accessionMode === 'manual'
+                  ? 'Enter or scan the number printed on each book when cataloguing.'
+                  : 'Accession numbers are auto-generated (ACC-00001, ACC-00002…).'}
+              </ThemedText>
+            </View>
+            <Switch
+              value={accessionMode === 'manual'}
+              onValueChange={(v) => setAccessionMode(v ? 'manual' : 'auto')}
+            />
+          </View>
         </Card>
 
         <View style={{ paddingHorizontal: Spacing.screen, marginTop: Spacing.lg }}>

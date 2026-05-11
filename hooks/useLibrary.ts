@@ -13,6 +13,7 @@ import type {
 export interface BookFilters {
   search?: string;
   collectionId?: string;
+  genreId?: string;
 }
 
 export interface TransactionFilters {
@@ -92,7 +93,7 @@ export function useLibraryBooks(schoolId: string, filters?: BookFilters) {
         .from('library_books')
         .select(`
           id, school_id, title, author, isbn, publisher, publish_year,
-          cover_url, collection_id, added_by, notes, created_at, updated_at,
+          cover_url, collection_id, genre_id, added_by, notes, created_at, updated_at,
           collection:collection_id ( name ),
           copies:library_book_copies ( id, accession_number, barcode, status )
         `)
@@ -100,6 +101,9 @@ export function useLibraryBooks(schoolId: string, filters?: BookFilters) {
 
       if (filters?.collectionId) {
         q = q.eq('collection_id', filters.collectionId);
+      }
+      if (filters?.genreId) {
+        q = q.eq('genre_id', filters.genreId);
       }
       if (filters?.search) {
         const s = filters.search;
@@ -166,6 +170,20 @@ export function useBookByBarcode(schoolId: string) {
   });
 }
 
+export function useBookByAccession(schoolId: string) {
+  return useMutation<string | null, Error, string>({
+    mutationFn: async (accessionNumber: string) => {
+      const db = supabase as any;
+      const { data, error } = await db.rpc('library_find_by_accession', {
+        p_school_id: schoolId,
+        p_accession_number: accessionNumber,
+      });
+      if (error) throw error;
+      return data as string | null;
+    },
+  });
+}
+
 export function useCreateBook(schoolId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -182,6 +200,7 @@ export function useCreateBook(schoolId: string) {
       notes?: string;
       staffId: string;
       barcodePrefix?: string;
+      accessionNumbers?: string[];
     }) => {
       const db = supabase as any;
       const { data, error } = await db.rpc('library_create_book', {
@@ -195,9 +214,10 @@ export function useCreateBook(schoolId: string) {
         p_collection_id: params.collectionId ?? null,
         p_genre_id: params.genreId ?? null,
         p_notes: params.notes ?? null,
-        p_total_copies: params.totalCopies ?? 1,
+        p_total_copies: params.accessionNumbers ? params.accessionNumbers.length : (params.totalCopies ?? 1),
         p_staff_id: params.staffId,
         p_barcode_prefix: params.barcodePrefix ?? null,
+        p_accession_numbers: params.accessionNumbers ?? null,
       });
       if (error) throw error;
       return data as string;
@@ -275,6 +295,7 @@ export function useImportBooks(schoolId: string) {
       publishYear?: number;
       collectionId?: string;
       totalCopies?: number;
+      accessionNumbers?: string[];
       staffId: string;
     }>) => {
       const db = supabase as any;
@@ -288,8 +309,9 @@ export function useImportBooks(schoolId: string) {
           p_publisher: b.publisher ?? null,
           p_publish_year: b.publishYear ?? null,
           p_collection_id: b.collectionId ?? null,
-          p_total_copies: b.totalCopies ?? 1,
+          p_total_copies: b.accessionNumbers?.length ?? b.totalCopies ?? 1,
           p_staff_id: b.staffId,
+          p_accession_numbers: b.accessionNumbers ?? null,
         });
         if (error) throw error;
         count++;
@@ -557,6 +579,7 @@ export function useUpsertLibrarySettings(schoolId: string) {
       maxBooksPerStudent?: number;
       maxBooksPerStaff?: number;
       overdueNotificationDays?: number;
+      accessionMode?: 'auto' | 'manual';
     }) => {
       const db = supabase as any;
       const { error } = await db
@@ -567,6 +590,7 @@ export function useUpsertLibrarySettings(schoolId: string) {
           max_books_per_student: params.maxBooksPerStudent ?? 3,
           max_books_per_staff: params.maxBooksPerStaff ?? 5,
           overdue_notification_days: params.overdueNotificationDays ?? 3,
+          accession_mode: params.accessionMode ?? 'auto',
           updated_at: new Date().toISOString(),
         }, { onConflict: 'school_id' });
       if (error) throw error;

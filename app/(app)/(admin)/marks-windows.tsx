@@ -19,6 +19,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
   ThemedText, Skeleton, EmptyState, ErrorState, ScreenHeader,
+  ModuleGate, ModuleDisabledScreen,
 } from '../../../components/ui';
 import {
   useMarksWindows,
@@ -38,7 +39,7 @@ const ASSESSMENT_COLORS: Record<string, string> = {
   Summative: Colors.semantic.error,
 };
 
-export default function MarksWindowsScreen() {
+function MarksWindowsContent() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const schoolId = user?.schoolId ?? '';
@@ -244,6 +245,14 @@ export default function MarksWindowsScreen() {
         />
       )}
     </SafeAreaView>
+  );
+}
+
+export default function MarksWindowsScreen() {
+  return (
+    <ModuleGate module="exams" fallback={<ModuleDisabledScreen module="exams" />}>
+      <MarksWindowsContent />
+    </ModuleGate>
   );
 }
 

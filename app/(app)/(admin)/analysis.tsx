@@ -17,6 +17,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
   ThemedText, Skeleton, EmptyState, ErrorState, ScreenHeader, AcademicPeriodPicker, Chip,
+  ModuleGate, ModuleDisabledScreen,
 } from '../../../components/ui';
 import { useHODDeptAnalysis, usePrincipalAnalysis } from '../../../hooks/useAnalysis';
 import type { SubjectSummary } from '../../../hooks/useAnalysis';
@@ -26,7 +27,7 @@ import { Spacing, Radius } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
-export default function AdminAnalysisScreen() {
+function AdminAnalysisContent() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const role = user?.activeRole ?? '';
@@ -243,6 +244,14 @@ function SubjectRow({ subject, colors, semesterId }: {
       </View>
       <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginLeft: 4 }} />
     </TouchableOpacity>
+  );
+}
+
+export default function AdminAnalysisScreen() {
+  return (
+    <ModuleGate module="exams" fallback={<ModuleDisabledScreen module="exams" />}>
+      <AdminAnalysisContent />
+    </ModuleGate>
   );
 }
 

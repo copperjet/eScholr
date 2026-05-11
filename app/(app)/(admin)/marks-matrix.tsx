@@ -19,6 +19,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, BottomSheet, Skeleton, EmptyState, ErrorState, ScreenHeader, AcademicPeriodPicker,
+  ModuleGate, ModuleDisabledScreen,
 } from '../../../components/ui';
 import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -176,7 +177,7 @@ function cellBg(cell: MatrixCell | undefined): string {
 
 // ─── component ────────────────────────────────────────────────────────────────
 
-export default function MarksMatrixScreen() {
+function MarksMatrixContent() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null);
@@ -400,6 +401,14 @@ export default function MarksMatrixScreen() {
 const STREAM_LABEL_W = 110;
 const CELL_W = 52;
 const CELL_H = 44;
+
+export default function MarksMatrixScreen() {
+  return (
+    <ModuleGate module="exams" fallback={<ModuleDisabledScreen module="exams" />}>
+      <MarksMatrixContent />
+    </ModuleGate>
+  );
+}
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },

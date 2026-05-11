@@ -16,6 +16,7 @@ import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
   ThemedText, SearchBar, Skeleton, EmptyState, ErrorState, ScreenHeader, FastList,
+  ModuleGate, ModuleDisabledScreen,
 } from '../../../components/ui';
 import { DayBookEntryCard } from '../../../components/modules/DayBookEntryCard';
 import { useAdminDayBook, useArchiveDayBookEntry } from '../../../hooks/useDayBook';
@@ -25,7 +26,7 @@ import { haptics } from '../../../lib/haptics';
 
 type ViewMode = 'active' | 'archived';
 
-export default function AdminDayBookScreen() {
+function AdminDayBookContent() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const schoolId = user?.schoolId ?? '';
@@ -136,6 +137,14 @@ export default function AdminDayBookScreen() {
         />
       )}
     </SafeAreaView>
+  );
+}
+
+export default function AdminDayBookScreen() {
+  return (
+    <ModuleGate module="daybook" fallback={<ModuleDisabledScreen module="daybook" />}>
+      <AdminDayBookContent />
+    </ModuleGate>
   );
 }
 

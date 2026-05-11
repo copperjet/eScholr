@@ -13,7 +13,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
-import { ThemedText, Card, Skeleton, EmptyState, ErrorState, ProgressBar, FastList, ScreenHeader } from '../../../components/ui';
+import { ThemedText, Card, Skeleton, EmptyState, ErrorState, ProgressBar, FastList, ScreenHeader, ModuleGate, ModuleDisabledScreen } from '../../../components/ui';
 import { Spacing, Radius, Typography } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
@@ -115,7 +115,7 @@ function useAssignments(staffId: string | null, schoolId: string) {
   });
 }
 
-export default function MarksScreen() {
+function MarksContent() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
@@ -483,6 +483,14 @@ function ClassAvgBanner({ students, getStoredMark, colors }: { students: any[]; 
         {'  '}High: {max}{'  '}Low: {min}
       </ThemedText>
     </View>
+  );
+}
+
+export default function MarksScreen() {
+  return (
+    <ModuleGate module="exams" fallback={<ModuleDisabledScreen module="exams" />}>
+      <MarksContent />
+    </ModuleGate>
   );
 }
 

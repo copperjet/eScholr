@@ -26,6 +26,7 @@ const VALID_MODULE_KEYS = new Set([
   "module.daybook",
   "module.character",
   "module.announcements",
+  "module.eca",
 ]);
 
 // Module dependencies: disabling a "parent" cascades disabling its dependents.
@@ -145,6 +146,24 @@ Deno.serve(async (req) => {
 
     if (upsertErr) return json({ error: upsertErr.message }, 500);
 
+    // When finance is disabled, unblock reports stuck at finance_pending
+    let reportsCleared = 0;
+    if (!enabled && normalised === "module.finance") {
+      const { data: stuck } = await adminClient
+        .from("reports")
+        .select("id")
+        .eq("school_id", school_id)
+        .eq("status", "finance_pending");
+      if (stuck && stuck.length > 0) {
+        await adminClient
+          .from("reports")
+          .update({ status: "approved", updated_at: new Date().toISOString() })
+          .eq("school_id", school_id)
+          .eq("status", "finance_pending");
+        reportsCleared = stuck.length;
+      }
+    }
+
     // Audit log (fire-and-forget; actor_id omitted — super_admin not in staff table)
     adminClient.from("audit_logs").insert({
       school_id,
@@ -155,6 +174,7 @@ Deno.serve(async (req) => {
         module_key: normalised,
         enabled,
         cascade_disabled: cascadeKeys,
+        reports_cleared: reportsCleared,
         school_name: school.name,
         performed_by: caller.id,
       },
@@ -166,6 +186,7 @@ Deno.serve(async (req) => {
       enabled,
       school_id,
       cascade_disabled: cascadeKeys,
+      reports_cleared: reportsCleared,
     });
 
   } catch (err: any) {

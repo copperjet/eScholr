@@ -7,6 +7,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Card, Avatar, Badge, EmptyState, ErrorState, ScreenHeader,
+  ModuleGate, ModuleDisabledScreen,
 } from '../../../components/ui';
 import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 
@@ -57,7 +58,7 @@ const TYPE_LABELS: Record<string, string> = {
   fa1: 'FA1', fa2: 'FA2', summative: 'Summative', biweekly: 'Biweekly',
 };
 
-export default function ParentMarks() {
+function ParentMarksContent() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const params = useLocalSearchParams<{ studentId?: string }>();
@@ -199,6 +200,14 @@ export default function ParentMarks() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+export default function ParentMarks() {
+  return (
+    <ModuleGate module="exams" fallback={<ModuleDisabledScreen module="exams" />}>
+      <ParentMarksContent />
+    </ModuleGate>
   );
 }
 

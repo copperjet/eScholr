@@ -27,6 +27,7 @@ const VALID_MODULE_KEYS = new Set([
   "module.daybook",
   "module.character",
   "module.announcements",
+  "module.eca",
 ]);
 
 const MODULE_DEPENDENCIES: Record<string, string[]> = {
@@ -141,6 +142,24 @@ Deno.serve(async (req) => {
 
     if (upsertErr) return json({ error: upsertErr.message }, 500);
 
+    // When finance is disabled, unblock reports stuck at finance_pending
+    let reportsCleared = 0;
+    if (normalised["module.finance"] === false) {
+      const { data: stuck } = await adminClient
+        .from("reports")
+        .select("id")
+        .eq("school_id", school_id)
+        .eq("status", "finance_pending");
+      if (stuck && stuck.length > 0) {
+        await adminClient
+          .from("reports")
+          .update({ status: "approved", updated_at: now })
+          .eq("school_id", school_id)
+          .eq("status", "finance_pending");
+        reportsCleared = stuck.length;
+      }
+    }
+
     // Audit log — single entry for whole batch (fire-and-forget)
     adminClient.from("audit_logs").insert({
       school_id,
@@ -150,11 +169,12 @@ Deno.serve(async (req) => {
       data: {
         modules: normalised,
         count: rows.length,
+        reports_cleared: reportsCleared,
         performed_by: caller.id,
       },
     }).then(() => {});
 
-    return json({ success: true, applied: normalised, count: rows.length });
+    return json({ success: true, applied: normalised, count: rows.length, reports_cleared: reportsCleared });
 
   } catch (err: any) {
     console.error("set-school-modules-bulk error:", err);

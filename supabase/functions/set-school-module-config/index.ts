@@ -23,6 +23,7 @@ const MODULE_CONFIG_FIELDS: Record<string, Set<string>> = {
   "library":      new Set(["max_loan_days", "max_loans_per_patron"]),
   "transport":    new Set(["max_routes"]),
   "hostel":       new Set(["max_capacity"]),
+  "eca":          new Set(["default_max_choices", "allow_parent_withdraw", "session_reminder_hour"]),
 };
 
 Deno.serve(async (req) => {
