@@ -49,6 +49,8 @@ export default function STLayout() {
       <Tabs.Screen name="analysis"           options={{ href: null }} />
       <Tabs.Screen name="eca-my-activities"  options={{ href: null }} />
       <Tabs.Screen name="eca-attendance"     options={{ href: null }} />
+      <Tabs.Screen name="absence-report"     options={{ href: null }} />
+      <Tabs.Screen name="swap-request"       options={{ href: null }} />
     </Tabs>
   );
 }

@@ -37,3 +37,15 @@ export { DatePickerField } from './DatePickerField';
 export { ModuleGate, type ModuleGateProps } from './ModuleGate';
 export { ToggleRow, type ToggleRowProps } from './ToggleRow';
 export { ModuleDisabledScreen, type ModuleDisabledScreenProps } from './ModuleDisabledScreen';
+// Timetable visualization (M9)
+export { ConflictBadge } from './ConflictBadge';
+export { OverrideBadge, type OverrideType } from './OverrideBadge';
+export { LockBadge } from './LockBadge';
+export { SlotCell, type SlotCellData, type SlotCellType, type ColorBlindMode } from './SlotCell';
+export { WorkloadBar } from './WorkloadBar';
+export { ColorSwatchPicker, PALETTE_PRESETS } from './ColorSwatchPicker';
+export { HeatmapOverlay, type HeatCell, type HeatmapMode } from './HeatmapOverlay';
+export {
+  TimetableGrid, CELL_W, CELL_H, LABEL_W, HEADER_H,
+  type GridPeriod, type GridDay, type GridStream, type SlotMap, type TeacherWorkload,
+} from './TimetableGrid';

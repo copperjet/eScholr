@@ -14,7 +14,9 @@ export type ModuleKey =
   | 'daybook'
   | 'character'
   | 'announcements'
-  | 'eca';
+  | 'eca'
+  | 'timetable_builder'
+  | 'timetable_live_adjust';
 
 export type SubscriptionTier = 'starter' | 'growth' | 'scale' | 'enterprise';
 
@@ -171,6 +173,24 @@ export const MODULES: ModuleDefinition[] = [
       { key: 'allow_parent_withdraw', label: 'Allow Parent Withdrawal', description: 'Parents can withdraw their child from an assigned activity', type: 'boolean', defaultValue: 'false' },
       { key: 'session_reminder_hour', label: 'Session Reminder Hour', description: 'Hour of day (0–23) to send session reminders', type: 'number', defaultValue: '18', min: 0, max: 23 },
     ],
+  },
+  {
+    key: 'timetable_builder',
+    label: 'Timetable Builder',
+    description: 'Structured timetable generator with room, period, and teacher constraint management',
+    icon: 'calendar-outline',
+    category: 'admin',
+    affectedRoles: ['admin', 'principal', 'coordinator'],
+    tierDefault: { starter: false, growth: true, scale: true, enterprise: true },
+  },
+  {
+    key: 'timetable_live_adjust',
+    label: 'Timetable Live Adjustments',
+    description: 'Teacher absence cover, slot overrides, and substitute management',
+    icon: 'swap-horizontal-outline',
+    category: 'extended',
+    affectedRoles: ['admin', 'principal', 'st', 'hrt'],
+    tierDefault: { starter: false, growth: false, scale: true, enterprise: true },
   },
 ];
 

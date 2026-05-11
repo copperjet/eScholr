@@ -48,6 +48,7 @@ export default function ParentMore() {
   const academicItems: MenuItem[] = [
     { icon: 'school-outline',          label: 'Marks',      sublabel: 'Per-subject scores', onPress: () => router.push('/(app)/(parent)/marks' as any) },
     { icon: 'calendar-clear-outline',  label: 'Attendance', sublabel: 'Daily records',      onPress: () => router.push('/(app)/(parent)/attendance' as any) },
+    { icon: 'time-outline',            label: 'Timetable',  sublabel: 'Class schedule',     onPress: () => router.push('/(app)/(parent)/timetable' as any) },
     { icon: 'book-outline',            label: 'Homework',   sublabel: 'Assignments',        onPress: () => router.push('/(app)/(parent)/homework' as any) },
     { icon: 'document-text-outline',   label: 'Reports',    sublabel: 'Term reports',       onPress: () => router.push('/(app)/(parent)/reports' as any) },
     { icon: 'cash-outline',            label: 'Fees',       sublabel: 'Invoices & balance', onPress: () => router.push('/(app)/(parent)/fees' as any) },

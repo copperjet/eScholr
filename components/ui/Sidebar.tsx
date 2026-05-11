@@ -39,6 +39,7 @@ const ROLE_NAV_ITEMS: Record<string, NavItem[]> = {
     { path: '/(app)/(admin)/reports', label: 'Reports', icon: 'document-text-outline', module: 'exams' as ModuleKey },
     { path: '/(app)/(admin)/attendance-overview', label: 'Attendance', icon: 'calendar-outline' },
     { path: '/(app)/(admin)/eca-overview', label: 'ECA', icon: 'football-outline', module: 'eca' as ModuleKey },
+    { path: '/(app)/(admin)/timetable', label: 'Timetable Builder', icon: 'calendar-outline', module: 'timetable_builder' as ModuleKey },
     { path: '/(app)/announcements', label: 'Announcements', icon: 'megaphone-outline', module: 'announcements' as ModuleKey },
     { path: '/(app)/(admin)/more', label: 'More', icon: 'menu-outline' },
   ],
