@@ -16,7 +16,11 @@
       "PowerShell(npm list -g @anthropic-ai/claude-code)",
       "Bash(git clone *)",
       "Bash(python3 \"C:\\\\Users\\\\Denny\\\\.claude\\\\skills\\\\usage-limit-reducer\\\\scripts\\\\usage-report.py\" --days 7 --project EduCore)",
-      "Bash(python3 \"C:\\\\Users\\\\Denny\\\\.claude\\\\skills\\\\usage-limit-reducer\\\\scripts\\\\usage-report.py\" --days 7)"
+      "Bash(python3 \"C:\\\\Users\\\\Denny\\\\.claude\\\\skills\\\\usage-limit-reducer\\\\scripts\\\\usage-report.py\" --days 7)",
+      "Bash(^07\" | Select-Object -First 10)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Denny\\\\3D Objects\\\\APPS\\\\eScholr\\\\eScholr\\\\supabase\\\\migrations\" -Filter \"*report*\")",
+      "Bash(Select-Object Name)",
+      "Bash(findstr /i \"expo-file-system\\\\|expo-sharing\\\\|expo-document\" \"C:\\\\Users\\\\Denny\\\\3D Objects\\\\APPS\\\\eScholr\\\\eScholr\\\\package.json\")"
     ]
   }
 }

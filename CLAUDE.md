@@ -24,8 +24,8 @@ eScholr/
   supabase/migrations/   45 SQL migrations
   supabase/functions/    22 Deno edge functions
 
-## Roles (13)
-super_admin, school_super_admin, admin, principal, coordinator, hod, hrt, st, finance, front_desk, hr, parent, student
+## Roles (14)
+super_admin, school_super_admin, admin, principal, coordinator, hod, hrt, st, finance, front_desk, hr, librarian, parent, student
 
 ## Dev Commands
 cd "C:\Users\Denny\3D Objects\APPS\EduCore\eScholr"
