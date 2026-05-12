@@ -253,7 +253,7 @@ export default function RoomViewScreen() {
                 ))}
               </ScrollView>
             </ScrollView>
-          )}
+          ) : null}
         </View>
       </View>
     </SafeAreaView>
