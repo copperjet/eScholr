@@ -85,18 +85,18 @@ export default function LibrarianHome() {
 
         {/* ── Quick actions ── */}
         <SectionHeader title="Quick Actions" />
-        <View style={styles.actionGrid}>
+        <View style={styles.actionRow}>
           {([
-            { icon: 'arrow-undo-circle-outline' as const, label: 'Check In',   color: Colors.semantic.warning, route: '/(app)/(librarian)/quick-checkin' },
+            { icon: 'arrow-undo-circle-outline' as const, label: 'Check In',  color: Colors.semantic.warning, route: '/(app)/(librarian)/quick-checkin' },
             { icon: 'arrow-forward-circle-outline' as const, label: 'Check Out', color: Colors.semantic.success, route: '/(app)/(librarian)/quick-checkout' },
-            { icon: 'add-circle-outline' as const, label: 'Add Book',  color: Colors.semantic.info,    route: '/(app)/(librarian)/book-form' },
-            { icon: 'people-outline' as const, label: 'Patrons',   color: '#8B5CF6',               route: '/(app)/(librarian)/patrons' },
+            { icon: 'add-circle-outline' as const, label: 'Add Book', color: Colors.semantic.info,    route: '/(app)/(librarian)/book-form' },
+            { icon: 'people-outline' as const, label: 'Patrons',  color: '#8B5CF6',               route: '/(app)/(librarian)/patrons' },
           ] as const).map((a) => (
             <Pressable key={a.label} onPress={() => router.push(a.route as any)} style={styles.actionItem}>
               <View style={[styles.actionIcon, { backgroundColor: a.color + '18' }]}>
                 <Ionicons name={a.icon} size={22} color={a.color} />
               </View>
-              <ThemedText variant="caption" style={{ marginTop: 6, textAlign: 'center' }}>{a.label}</ThemedText>
+              <ThemedText variant="caption" style={{ marginTop: 6 }}>{a.label}</ThemedText>
             </Pressable>
           ))}
         </View>
@@ -149,8 +149,8 @@ const styles = StyleSheet.create({
   safe:    { flex: 1 },
   topBar:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.screen, paddingTop: Spacing.xl, paddingBottom: Spacing.base, gap: Spacing.sm },
   statRow:    { flexDirection: 'row', paddingHorizontal: Spacing.screen, gap: Spacing.sm },
-  actionGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: Spacing.screen, rowGap: Spacing.base },
-  actionItem: { width: '33.33%', alignItems: 'center', paddingVertical: Spacing.xs },
+  actionRow:  { flexDirection: 'row', paddingHorizontal: Spacing.screen, gap: Spacing.base, justifyContent: 'space-between' },
+  actionItem: { alignItems: 'center', flex: 1 },
   actionIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   tip:         { marginHorizontal: Spacing.screen, marginTop: Spacing.lg, padding: Spacing.md },
 });
