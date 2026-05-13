@@ -527,12 +527,6 @@ function ByGradeTab({ rows, colors }: { rows: ByGradeRow[]; colors: any }) {
   );
 }
 
-function fmtK(v: number) {
-  if (v >= 1000000) return `K${(v/1000000).toFixed(1)}M`;
-  if (v >= 1000)    return `K${(v/1000).toFixed(1)}k`;
-  return `K${v.toFixed(2)}`;
-}
-
 const styles = StyleSheet.create({
   safe:        { flex: 1 },
   semesterRow: { paddingHorizontal: Spacing.screen, gap: Spacing.sm, alignItems: 'center', paddingVertical: 6 },
