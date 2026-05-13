@@ -641,6 +641,96 @@ export function usePatronSearch(schoolId: string, query: string, type: 'staff' |
   });
 }
 
+export function useAccessionCopyLookup(schoolId: string) {
+  return useMutation<{
+    copyId: string;
+    bookId: string;
+    accessionNumber: string;
+    title: string;
+    status: string;
+  } | null, Error, string>({
+    mutationFn: async (accessionNumber: string) => {
+      const { data, error } = await (supabase as any)
+        .from('library_book_copies')
+        .select('id, accession_number, status, book:book_id(id, title)')
+        .eq('school_id', schoolId)
+        .eq('accession_number', accessionNumber.trim())
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        copyId: data.id,
+        bookId: data.book.id,
+        accessionNumber: data.accession_number,
+        title: data.book.title,
+        status: data.status,
+      };
+    },
+  });
+}
+
+export function useBatchCheckOut(schoolId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      items: Array<{ bookId: string; copyId: string }>;
+      borrowerType: 'staff' | 'student';
+      borrowerId: string;
+      dueDate: string;
+      staffId: string;
+      notes?: string;
+    }) => {
+      const succeeded: string[] = [];
+      const failed: string[] = [];
+      for (const item of params.items) {
+        const { data, error } = await (supabase as any).rpc('library_check_out_copy', {
+          p_school_id: schoolId,
+          p_book_id: item.bookId,
+          p_copy_id: item.copyId,
+          p_borrower_type: params.borrowerType,
+          p_borrower_id: params.borrowerId,
+          p_due_date: params.dueDate,
+          p_staff_id: params.staffId,
+          p_notes: params.notes ?? null,
+        });
+        if (error) {
+          failed.push(item.copyId);
+        } else {
+          succeeded.push(data as string);
+        }
+      }
+      if (failed.length > 0 && succeeded.length === 0) {
+        throw new Error('All checkouts failed.');
+      }
+      return { succeeded, failed };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['library-books', schoolId] });
+      qc.invalidateQueries({ queryKey: ['library-book'] });
+      qc.invalidateQueries({ queryKey: ['library-transactions', schoolId] });
+      qc.invalidateQueries({ queryKey: ['library-dashboard', schoolId] });
+    },
+  });
+}
+
+export function useUpdateCopyAccession(schoolId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { copyId: string; bookId: string; accessionNumber: string }) => {
+      const { error } = await (supabase as any)
+        .from('library_book_copies')
+        .update({ accession_number: params.accessionNumber, updated_at: new Date().toISOString() })
+        .eq('id', params.copyId)
+        .eq('school_id', schoolId);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['library-book', vars.bookId] });
+      qc.invalidateQueries({ queryKey: ['library-books', schoolId] });
+    },
+  });
+}
+
 // ─── Patron loan history ─────────────────────────────────────────────────────
 
 export function usePatronLoans(patronId: string | null, patronType: 'staff' | 'student', schoolId?: string) {

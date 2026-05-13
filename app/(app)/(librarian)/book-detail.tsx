@@ -5,10 +5,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { format } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
-import { useLibraryBook, useBookTransactions, useDeleteBook, useCheckInBook } from '../../../hooks/useLibrary';
+import { useLibraryBook, useBookTransactions, useDeleteBook, useCheckInBook, useUpdateCopyAccession } from '../../../hooks/useLibrary';
 import {
   ThemedText, ScreenHeader, Card, Badge, ListItem, EmptyState,
-  ErrorState, Button, SectionHeader, Skeleton,
+  ErrorState, Button, SectionHeader, Skeleton, BottomSheet, FormField,
 } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
@@ -31,6 +31,28 @@ export default function BookDetailScreen() {
   const { data: transactions } = useBookTransactions(bookId ?? null, schoolId);
   const deleteMut = useDeleteBook(schoolId);
   const checkInMut = useCheckInBook(schoolId);
+  const updateAccessionMut = useUpdateCopyAccession(schoolId);
+
+  const [editingCopy, setEditingCopy] = useState<{ copyId: string; bookId: string; current: string } | null>(null);
+  const [newAccession, setNewAccession] = useState('');
+  const [accessionError, setAccessionError] = useState('');
+
+  const handleSaveAccession = async () => {
+    const val = newAccession.trim();
+    if (!val || !editingCopy) return;
+    setAccessionError('');
+    try {
+      await updateAccessionMut.mutateAsync({ copyId: editingCopy.copyId, bookId: editingCopy.bookId, accessionNumber: val });
+      setEditingCopy(null);
+    } catch (e: any) {
+      const msg = e.message ?? '';
+      if (msg.includes('23505') || msg.toLowerCase().includes('unique') || msg.toLowerCase().includes('duplicate')) {
+        setAccessionError('Accession number already in use.');
+      } else {
+        setAccessionError(msg || 'Save failed.');
+      }
+    }
+  };
 
   const doDelete = async () => {
     try {
@@ -147,6 +169,18 @@ export default function BookDetailScreen() {
                     label: copy.status.replace('_', ' '),
                     preset: copy.status === 'available' ? 'success' : copy.status === 'checked_out' ? 'warning' : 'error',
                   }}
+                  trailing={
+                    <Pressable
+                      hitSlop={8}
+                      onPress={() => {
+                        setAccessionError('');
+                        setNewAccession(copy.accession_number);
+                        setEditingCopy({ copyId: copy.id, bookId: book.id, current: copy.accession_number });
+                      }}
+                    >
+                      <Ionicons name="create-outline" size={18} color={colors.textMuted} />
+                    </Pressable>
+                  }
                 />
               ))
             )}
@@ -205,6 +239,41 @@ export default function BookDetailScreen() {
           </>
         ) : null}
       </ScrollView>
+
+      {/* ── Edit accession ── */}
+      <BottomSheet
+        visible={!!editingCopy}
+        onClose={() => setEditingCopy(null)}
+        title="Edit Accession Number"
+      >
+        <View style={{ padding: Spacing.base }}>
+          <ThemedText variant="caption" color="muted" style={{ marginBottom: Spacing.sm }}>
+            Current: {editingCopy?.current}
+          </ThemedText>
+          <FormField
+            label="New Accession Number"
+            value={newAccession}
+            onChangeText={(v) => { setNewAccession(v); setAccessionError(''); }}
+            placeholder="e.g. ACC-00042"
+            autoCapitalize="characters"
+          />
+          {accessionError ? (
+            <ThemedText variant="caption" style={{ color: Colors.semantic.error, marginTop: Spacing.xs }}>
+              {accessionError}
+            </ThemedText>
+          ) : null}
+          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.base }}>
+            <Button label="Cancel" variant="secondary" onPress={() => setEditingCopy(null)} style={{ flex: 1 }} />
+            <Button
+              label="Save"
+              onPress={handleSaveAccession}
+              loading={updateAccessionMut.isPending}
+              disabled={!newAccession.trim() || newAccession.trim() === editingCopy?.current || updateAccessionMut.isPending}
+              style={{ flex: 1 }}
+            />
+          </View>
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
