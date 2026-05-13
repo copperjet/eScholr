@@ -6,7 +6,7 @@ import { format, addDays, parseISO, isValid, startOfDay } from 'date-fns';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  useLibraryBook, useCheckOutBook, usePatronSearch, useLibrarySettings,
+  useLibraryBook, useBatchCheckOut, usePatronSearch, useLibrarySettings,
 } from '../../../hooks/useLibrary';
 import type { PatronResult } from '../../../hooks/useLibrary';
 import {
@@ -23,12 +23,12 @@ export default function CheckoutScreen() {
 
   const { data: book } = useLibraryBook(bookId ?? null);
   const { data: settings } = useLibrarySettings(schoolId);
-  const checkOutMut = useCheckOutBook(schoolId);
+  const batchCheckOut = useBatchCheckOut(schoolId);
 
   const [patronQuery, setPatronQuery] = useState('');
   const [patronType, setPatronType] = useState<'all' | 'staff' | 'student'>('all');
   const [selectedPatron, setSelectedPatron] = useState<PatronResult | null>(null);
-  const [selectedCopyId, setSelectedCopyId] = useState<string | null>(null);
+  const [selectedCopyIds, setSelectedCopyIds] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState('');
 
   const defaultDays = settings?.default_loan_days ?? 14;
@@ -40,7 +40,6 @@ export default function CheckoutScreen() {
     && startOfDay(parsedCustom) >= startOfDay(new Date());
   const effectiveDueDate = isCustomValid ? customDueDate : dueDate;
 
-  // Sort by accession_number — matches RPC ORDER BY for determinism
   const availableCopies = useMemo(
     () => (book?.copies ?? [])
       .filter((c) => c.status === 'available')
@@ -48,70 +47,71 @@ export default function CheckoutScreen() {
     [book]
   );
   const totalCount = book?.copies?.length ?? 0;
-  const bookUnavailable = availableCopies.length < 1;
-  const needsCopySelect = availableCopies.length > 1;
+  const bookUnavailable = availableCopies.length === 0;
 
-  // Auto-select copy: prefer the scanned one if present, else first available
+  // Auto-select: prefer scanned copy, else first available
   useEffect(() => {
-    if (availableCopies.length > 0 && !selectedCopyId) {
+    if (availableCopies.length > 0 && selectedCopyIds.size === 0) {
       if (scannedCode) {
         const matched = availableCopies.find(
           (c) => c.accession_number === scannedCode || c.barcode === scannedCode
         );
         if (matched) {
-          setSelectedCopyId(matched.id);
+          setSelectedCopyIds(new Set([matched.id]));
           return;
         }
       }
-      setSelectedCopyId(availableCopies[0].id);
+      setSelectedCopyIds(new Set([availableCopies[0].id]));
     }
-  }, [availableCopies, scannedCode]);
+  }, [availableCopies]);
 
-  const selectedCopy = availableCopies.find((c) => c.id === selectedCopyId) ?? availableCopies[0] ?? null;
+  const toggleCopy = (id: string) => {
+    setSelectedCopyIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const { data: patrons } = usePatronSearch(schoolId, patronQuery, patronType);
 
   const handleCheckout = async () => {
     if (!selectedPatron) {
-      if (Platform.OS === 'web') {
-        window.alert('Please select a borrower.');
-      } else {
-        Alert.alert('Required', 'Please select a borrower.');
-      }
+      if (Platform.OS === 'web') window.alert('Please select a borrower.');
+      else Alert.alert('Required', 'Please select a borrower.');
       return;
     }
-    if (needsCopySelect && !selectedCopyId) {
-      if (Platform.OS === 'web') {
-        window.alert('Multiple copies available — select a copy by accession number.');
-      } else {
-        Alert.alert('Required', 'Multiple copies available — select a copy by accession number.');
-      }
+    if (selectedCopyIds.size === 0) {
+      if (Platform.OS === 'web') window.alert('Select at least one copy.');
+      else Alert.alert('Required', 'Select at least one copy.');
       return;
     }
     try {
-      await checkOutMut.mutateAsync({
-        bookId: bookId!,
-        copyId: selectedCopy?.id ?? undefined,
+      const result = await batchCheckOut.mutateAsync({
+        items: [...selectedCopyIds].map((copyId) => ({ bookId: bookId!, copyId })),
         borrowerType: selectedPatron.type,
         borrowerId: selectedPatron.id,
         dueDate: effectiveDueDate,
         staffId: user?.staffId ?? '',
         notes: notes.trim() || undefined,
       });
+
+      const ok = result.succeeded.length;
+      const fail = result.failed.length;
+      const msg = fail > 0
+        ? `${ok} of ${selectedCopyIds.size} copies checked out. ${fail} failed.`
+        : `${ok} cop${ok !== 1 ? 'ies' : 'y'} of "${book?.title}" checked out to ${selectedPatron.full_name}.`;
+
       if (Platform.OS === 'web') {
-        window.alert(`"${book?.title}" checked out to ${selectedPatron.full_name}.`);
+        window.alert(msg);
         router.back();
       } else {
-        Alert.alert('Checked Out', `"${book?.title}" checked out to ${selectedPatron.full_name}.`, [
-          { text: 'OK', onPress: () => router.back() },
-        ]);
+        Alert.alert('Checked Out', msg, [{ text: 'OK', onPress: () => router.back() }]);
       }
     } catch (e: any) {
-      if (Platform.OS === 'web') {
-        window.alert(e.message ?? 'Checkout failed');
-      } else {
-        Alert.alert('Error', e.message ?? 'Checkout failed');
-      }
+      if (Platform.OS === 'web') window.alert(e.message ?? 'Checkout failed');
+      else Alert.alert('Error', e.message ?? 'Checkout failed');
     }
   };
 
@@ -129,8 +129,10 @@ export default function CheckoutScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.sm, gap: Spacing.sm }}>
               <Ionicons name="barcode-outline" size={16} color={colors.brand.primary} />
               <ThemedText variant="bodySm">
-                {selectedCopy
-                  ? selectedCopy.accession_number
+                {selectedCopyIds.size > 0
+                  ? selectedCopyIds.size === 1
+                    ? availableCopies.find((c) => selectedCopyIds.has(c.id))?.accession_number ?? '—'
+                    : `${selectedCopyIds.size} copies selected`
                   : 'No copies available'}
               </ThemedText>
               {availableCopies.length > 0 && (
@@ -142,24 +144,40 @@ export default function CheckoutScreen() {
           </Card>
         )}
 
-        {/* Copy selection — only shown when multiple copies available */}
-        {!bookUnavailable && needsCopySelect && (
+        {/* Copy selection */}
+        {!bookUnavailable && (
           <View style={{ paddingHorizontal: Spacing.screen, marginTop: Spacing.base }}>
-            <ThemedText variant="h4" style={{ marginBottom: Spacing.sm }}>Select Copy</ThemedText>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
+              <ThemedText variant="h4">Select Copies</ThemedText>
+              {availableCopies.length > 1 && (
+                <Button
+                  label={selectedCopyIds.size === availableCopies.length ? 'Deselect All' : 'Select All'}
+                  variant="ghost"
+                  size="sm"
+                  onPress={() =>
+                    setSelectedCopyIds(
+                      selectedCopyIds.size === availableCopies.length
+                        ? new Set()
+                        : new Set(availableCopies.map((c) => c.id))
+                    )
+                  }
+                />
+              )}
+            </View>
             {availableCopies.map((copy) => (
               <ListItem
                 key={copy.id}
                 title={copy.accession_number}
                 subtitle={copy.barcode && copy.barcode !== copy.accession_number ? `Barcode: ${copy.barcode}` : undefined}
-                badge={selectedCopyId === copy.id ? { label: 'Selected', preset: 'success' } : undefined}
+                badge={selectedCopyIds.has(copy.id) ? { label: 'Selected', preset: 'success' } : undefined}
                 leading={
                   <Ionicons
-                    name={selectedCopyId === copy.id ? 'checkmark-circle' : 'ellipse-outline'}
+                    name={selectedCopyIds.has(copy.id) ? 'checkmark-circle' : 'ellipse-outline'}
                     size={22}
-                    color={selectedCopyId === copy.id ? Colors.semantic.success : colors.textMuted}
+                    color={selectedCopyIds.has(copy.id) ? Colors.semantic.success : colors.textMuted}
                   />
                 }
-                onPress={() => setSelectedCopyId(copy.id)}
+                onPress={() => toggleCopy(copy.id)}
               />
             ))}
           </View>
@@ -264,10 +282,10 @@ export default function CheckoutScreen() {
             </ThemedText>
           )}
           <Button
-            label="Confirm Check Out"
+            label={selectedCopyIds.size > 1 ? `Confirm Check Out (${selectedCopyIds.size} copies)` : 'Confirm Check Out'}
             onPress={handleCheckout}
-            loading={checkOutMut.isPending}
-            disabled={!selectedPatron || checkOutMut.isPending || bookUnavailable || (needsCopySelect && !selectedCopyId) || (customDueDate !== '' && !isCustomValid)}
+            loading={batchCheckOut.isPending}
+            disabled={!selectedPatron || batchCheckOut.isPending || bookUnavailable || selectedCopyIds.size === 0 || (customDueDate !== '' && !isCustomValid)}
             fullWidth
           />
         </View>
