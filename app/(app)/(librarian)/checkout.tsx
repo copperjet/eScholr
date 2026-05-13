@@ -89,7 +89,7 @@ export default function CheckoutScreen() {
     }
     try {
       const result = await batchCheckOut.mutateAsync({
-        items: [...selectedCopyIds].map((copyId) => ({ bookId: bookId!, copyId })),
+        items: Array.from({ length: selectedCopyIds.size }, () => ({ bookId: bookId! })),
         borrowerType: selectedPatron.type,
         borrowerId: selectedPatron.id,
         dueDate: effectiveDueDate,

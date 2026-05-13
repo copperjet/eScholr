@@ -673,7 +673,7 @@ export function useBatchCheckOut(schoolId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (params: {
-      items: Array<{ bookId: string; copyId: string }>;
+      items: Array<{ bookId: string; copyId?: string }>;
       borrowerType: 'staff' | 'student';
       borrowerId: string;
       dueDate: string;
@@ -681,26 +681,28 @@ export function useBatchCheckOut(schoolId: string) {
       notes?: string;
     }) => {
       const succeeded: string[] = [];
-      const failed: string[] = [];
-      for (const item of params.items) {
-        const { data, error } = await (supabase as any).rpc('library_check_out_copy', {
+      const failed: Array<{ index: number; error: string }> = [];
+      for (let i = 0; i < params.items.length; i++) {
+        const item = params.items[i];
+        const rpcParams: Record<string, unknown> = {
           p_school_id: schoolId,
           p_book_id: item.bookId,
-          p_copy_id: item.copyId,
           p_borrower_type: params.borrowerType,
           p_borrower_id: params.borrowerId,
           p_due_date: params.dueDate,
           p_staff_id: params.staffId,
           p_notes: params.notes ?? null,
-        });
+        };
+        if (item.copyId) rpcParams.p_copy_id = item.copyId;
+        const { data, error } = await (supabase as any).rpc('library_check_out_copy', rpcParams);
         if (error) {
-          failed.push(item.copyId);
+          failed.push({ index: i, error: error.message ?? 'failed' });
         } else {
           succeeded.push(data as string);
         }
       }
       if (failed.length > 0 && succeeded.length === 0) {
-        throw new Error('All checkouts failed.');
+        throw new Error(failed[0]?.error ?? 'All checkouts failed.');
       }
       return { succeeded, failed };
     },
