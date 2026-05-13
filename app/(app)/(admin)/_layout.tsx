@@ -73,6 +73,7 @@ function MobileAdminLayout({ isSuper, colors }: { isSuper: boolean; colors: any 
       <Tabs.Screen name="eca-config"          options={{ href: null }} />
       <Tabs.Screen name="eca-overview"        options={{ href: null }} />
       <Tabs.Screen name="eca-activity-detail" options={{ href: null }} />
+      <Tabs.Screen name="compliance-notice"   options={{ href: null }} />
     </Tabs>
   );
 }

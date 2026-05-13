@@ -75,8 +75,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   signOut: async () => {
     await supabase.auth.signOut();
-    set({ user: null });
-    // Keep persisted school so next launch goes to login, not school-code
+    set({ user: null, school: null });
+    // SecureStore entry intentionally kept — next launch skips school-code screen, goes to login
   },
   clearSchool: () => {
     set({ school: null });

@@ -8,7 +8,7 @@ import { useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
-import { type ModuleKey, moduleConfigKey, parseModuleEnabled } from '../lib/modules';
+import { type ModuleKey, moduleConfigKey, moduleSubConfigKey, parseModuleEnabled } from '../lib/modules';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -106,6 +106,43 @@ export function useIsModuleEnabled(key: ModuleKey): boolean {
   const { data, isLoading } = useSchoolModules();
   if (isLoading || !data) return true; // fail-open during load
   return data[key] ?? true;
+}
+
+/**
+ * Read a specific key from school_configs.
+ * Returns `undefined` while loading, `null` if key not found.
+ */
+export function useSchoolConfig(key: string): string | null | undefined {
+  const { user } = useAuthStore();
+  const schoolId = user?.schoolId ?? '';
+  const { data } = useQuery<string | null>({
+    queryKey: ['school-config', schoolId, key],
+    enabled: !!schoolId && !!key,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('school_configs')
+        .select('config_value')
+        .eq('school_id', schoolId)
+        .eq('config_key', key)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data?.config_value ?? null;
+    },
+  });
+  return data;
+}
+
+/**
+ * Check a sub-module boolean flag: e.g. useIsSubModuleEnabled('finance', 'sage_api').
+ * Stored as module.<moduleKey>.<subKey> in school_configs.
+ * Returns the defaultValue while loading or when key not set.
+ */
+export function useIsSubModuleEnabled(moduleKey: ModuleKey, subKey: string, defaultEnabled = true): boolean {
+  const configKey = moduleSubConfigKey(moduleKey, subKey);
+  const value = useSchoolConfig(configKey);
+  if (value === undefined || value === null) return defaultEnabled;
+  return value === 'true';
 }
 
 /**

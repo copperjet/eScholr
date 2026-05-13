@@ -81,6 +81,8 @@ export default function HRLayout() {
       <Tabs.Screen name="staff-edit"      options={{ href: null }} />
       <Tabs.Screen name="certifications"  options={{ href: null }} />
       <Tabs.Screen name="documents"       options={{ href: null }} />
+      <Tabs.Screen name="pay-periods"     options={{ href: null }} />
+      <Tabs.Screen name="pay-period"      options={{ href: null }} />
     </Tabs>
   );
 }

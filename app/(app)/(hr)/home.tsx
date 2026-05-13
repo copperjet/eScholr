@@ -139,6 +139,13 @@ export default function HRHome() {
             onPress={() => router.push('/(app)/(hr)/certifications' as any)}
             style={styles.qaCard}
           />
+          <QuickActionCard
+            title="Payroll"
+            subtitle="Pay periods"
+            icon="cash-outline"
+            onPress={() => router.push('/(app)/(hr)/pay-periods' as any)}
+            style={styles.qaCard}
+          />
         </View>
 
         {/* Recent Leave Requests */}

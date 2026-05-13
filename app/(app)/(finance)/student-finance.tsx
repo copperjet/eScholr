@@ -12,6 +12,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   RefreshControl,
   Alert,
   Share,
@@ -31,6 +32,7 @@ import {
 import { Spacing, Radius, Typography } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
+import { usePaymentMethods } from '../../../hooks/useInvoices';
 
 function useStudentFinance(financeRecordId: string, schoolId: string) {
   return useQuery({
@@ -77,6 +79,9 @@ export default function StudentFinanceScreen() {
   const [amountInput, setAmountInput] = useState('');
   const [noteInput, setNoteInput] = useState('');
   const [amountError, setAmountError] = useState('');
+  const [selectedMethodCode, setSelectedMethodCode] = useState<string>('cash');
+
+  const { data: paymentMethods } = usePaymentMethods(user?.schoolId ?? '');
 
   const { data, isLoading, isError, refetch, isRefetching } = useStudentFinance(
     finance_record_id ?? '', user?.schoolId ?? ''
@@ -126,6 +131,7 @@ export default function StudentFinanceScreen() {
           recorded_by: user?.staffId,
           note: note.trim() || null,
           paid_at: new Date().toISOString(),
+          payment_method_code: selectedMethodCode || null,
         } as any);
       if (txErr) throw txErr;
 
@@ -152,6 +158,7 @@ export default function StudentFinanceScreen() {
       setAmountInput('');
       setNoteInput('');
       setAmountError('');
+      setSelectedMethodCode('cash');
       queryClient.invalidateQueries({ queryKey: ['student-finance', finance_record_id] });
       queryClient.invalidateQueries({ queryKey: ['finance-records'] });
     },
@@ -347,9 +354,9 @@ export default function StudentFinanceScreen() {
       {/* Record Payment Sheet */}
       <BottomSheet
         visible={paymentSheetVisible}
-        onClose={() => { setPaymentSheetVisible(false); setAmountInput(''); setNoteInput(''); setAmountError(''); }}
+        onClose={() => { setPaymentSheetVisible(false); setAmountInput(''); setNoteInput(''); setAmountError(''); setSelectedMethodCode('cash'); }}
         title="Record Payment"
-        snapHeight={400}
+        snapHeight={480}
       >
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={{ gap: Spacing.md }}>
@@ -379,6 +386,41 @@ export default function StudentFinanceScreen() {
                 </ThemedText>
               ) : null}
             </View>
+
+            {/* Payment method chips */}
+            {paymentMethods && paymentMethods.filter((m) => m.is_active).length > 0 && (
+              <View>
+                <ThemedText variant="label" color="muted" style={{ marginBottom: Spacing.sm }}>PAYMENT METHOD</ThemedText>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -Spacing.base }}>
+                  <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.base }}>
+                    {paymentMethods.filter((m) => m.is_active).map((m) => {
+                      const active = selectedMethodCode === m.code;
+                      return (
+                        <Pressable
+                          key={m.code}
+                          onPress={() => { haptics.selection(); setSelectedMethodCode(m.code); }}
+                          style={{
+                            paddingHorizontal: Spacing.md,
+                            paddingVertical: Spacing.sm,
+                            borderRadius: Radius.full,
+                            borderWidth: 1.5,
+                            borderColor: active ? colors.brand.primary : colors.border,
+                            backgroundColor: active ? colors.brand.primarySoft : colors.surface,
+                          }}
+                        >
+                          <ThemedText
+                            variant="bodySm"
+                            style={{ fontWeight: active ? '700' : '400', color: active ? colors.brand.primary : colors.textSecondary }}
+                          >
+                            {m.label}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+              </View>
+            )}
 
             <View>
               <ThemedText variant="label" color="muted" style={{ marginBottom: Spacing.sm }}>NOTE (OPTIONAL)</ThemedText>

@@ -56,10 +56,10 @@ describe('authStore', () => {
     expect(useAuthStore.getState().user?.activeRole).toBe('hrt');
   });
 
-  it('switchRole to invalid role still sets it (store has no guard — validated upstream)', () => {
+  it('switchRole to invalid role is rejected by guard', () => {
     act(() => useAuthStore.getState().setUser(USER));
     act(() => useAuthStore.getState().switchRole('finance' as UserRole));
-    expect(useAuthStore.getState().user?.activeRole).toBe('finance');
+    expect(useAuthStore.getState().user?.activeRole).toBe('admin');
   });
 
   it('signOut clears user and school', async () => {

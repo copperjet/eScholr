@@ -47,7 +47,23 @@ export default function FinanceMore() {
     {
       title: 'Finance',
       items: [
-        { icon: 'document-text-outline', label: 'Finance Reports', sublabel: 'Revenue & collection reports', onPress: () => router.push('/(app)/(finance)/finance-reports' as any) },
+        { icon: 'receipt-outline', label: 'Generate Invoices', sublabel: 'Batch-create invoices by grade/stream', onPress: () => router.push('/(app)/(finance)/invoice-batch' as any) },
+        { icon: 'bar-chart-outline', label: 'Finance Reports', sublabel: 'Collections, aging, by category & grade', onPress: () => router.push('/(app)/(finance)/reports' as any) },
+      ],
+    },
+    {
+      title: 'Sage Integration',
+      items: [
+        { icon: 'cloud-upload-outline', label: 'Sage Sync', sublabel: 'Queue status, export CSV, retry failed', onPress: () => router.push('/(app)/(finance)/sage-sync' as any) },
+        { icon: 'link-outline', label: 'Account Mappings', sublabel: 'Map eScholr keys to Sage GL codes', onPress: () => router.push('/(app)/(finance)/sage-mappings' as any) },
+        { icon: 'card-outline', label: 'Payment Methods', sublabel: 'Methods and bank GL account mapping', onPress: () => router.push('/(app)/(finance)/payment-methods' as any) },
+      ],
+    },
+    {
+      title: 'Configuration',
+      items: [
+        { icon: 'pricetag-outline', label: 'Fee Categories', sublabel: 'Tuition, Transport, Uniform…', onPress: () => router.push('/(app)/(finance)/fee-categories' as any) },
+        { icon: 'calculator-outline', label: 'Fee Schedules', sublabel: 'Amounts per grade & semester', onPress: () => router.push('/(app)/(finance)/fee-schedules' as any) },
       ],
     },
     {

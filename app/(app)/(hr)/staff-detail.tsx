@@ -20,9 +20,10 @@ import {
 import { useStaffCertifications } from '../../../hooks/useCertifications';
 import { useStaffDocuments } from '../../../hooks/useStaffDocuments';
 import { useLeaveBalances, useStaffLeaveRequests } from '../../../hooks/useLeave';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 
-const TABS = ['Profile', 'Certifications', 'Documents', 'Roles', 'Leave'] as const;
+const TABS = ['Profile', 'Certifications', 'Documents', 'Roles', 'Leave', 'Pay History'] as const;
 type Tab = typeof TABS[number];
 
 const CERT_PRESET: Record<string, string> = {
@@ -224,6 +225,9 @@ export default function HRStaffDetail() {
             )}
             {activeTab === 'Leave' && (
               <LeaveTab balances={leaveBalances as any[]} history={leaveHistory as any[]} colors={colors} />
+            )}
+            {activeTab === 'Pay History' && (
+              <PayHistoryTab staffId={staffId ?? ''} schoolId={schoolId} colors={colors} />
             )}
 
             <View style={{ height: 48 }} />
@@ -623,6 +627,102 @@ function LoadingSkeleton() {
         </View>
       </View>
       {[1, 2, 3].map((i) => <Skeleton key={i} height={80} radius={Radius.lg} />)}
+    </View>
+  );
+}
+
+// ─── Pay History tab ──────────────────────────────────────────────────────────
+
+function useStaffPayHistory(schoolId: string, staffId: string) {
+  return useQuery<{ period_label: string; gross_pay: number; status: string; exported_at: string | null }[]>({
+    queryKey: ['staff-pay-history', schoolId, staffId],
+    enabled: !!schoolId && !!staffId,
+    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      // Fetch pay periods where this staff appeared (had timesheet or adjustments)
+      const [tsRes, adjRes] = await Promise.all([
+        (supabase as any).from('staff_timesheets')
+          .select('pay_period_id, hours_worked, overtime_hours')
+          .eq('school_id', schoolId).eq('staff_id', staffId),
+        (supabase as any).from('staff_pay_adjustments')
+          .select('pay_period_id, kind, amount')
+          .eq('school_id', schoolId).eq('staff_id', staffId),
+      ]);
+
+      const periodIds = new Set<string>([
+        ...((tsRes.data ?? []) as any[]).map((r: any) => r.pay_period_id),
+        ...((adjRes.data ?? []) as any[]).map((r: any) => r.pay_period_id),
+      ]);
+
+      if (periodIds.size === 0) return [];
+
+      const { data: periods, error } = await (supabase as any)
+        .from('pay_periods').select('id, period_label, status, exported_at')
+        .eq('school_id', schoolId).in('id', Array.from(periodIds))
+        .order('start_date', { ascending: false });
+      if (error) throw error;
+
+      const staffRes = await (supabase as any).from('staff')
+        .select('pay_type, base_salary, hourly_rate').eq('id', staffId).single();
+      const payType    = staffRes.data?.pay_type ?? 'salary';
+      const baseSalary = Number(staffRes.data?.base_salary ?? 0);
+      const hourlyRate = Number(staffRes.data?.hourly_rate ?? 0);
+
+      const tsMap: Record<string, { hours: number; ot: number }> = {};
+      for (const t of (tsRes.data ?? []) as any[]) tsMap[t.pay_period_id] = { hours: Number(t.hours_worked), ot: Number(t.overtime_hours) };
+
+      const adjMap: Record<string, number> = {};
+      for (const a of (adjRes.data ?? []) as any[]) {
+        if (!adjMap[a.pay_period_id]) adjMap[a.pay_period_id] = 0;
+        const amt = Number(a.amount);
+        adjMap[a.pay_period_id] += (a.kind === 'deduction' || a.kind === 'advance') ? -amt : amt;
+      }
+
+      return ((periods ?? []) as any[]).map((p: any) => {
+        const ts   = tsMap[p.id]  ?? { hours: 0, ot: 0 };
+        const adj  = adjMap[p.id] ?? 0;
+        const base = payType === 'hourly' ? hourlyRate * (ts.hours + ts.ot * 1.5) : baseSalary;
+        return { period_label: p.period_label, gross_pay: Math.max(0, base + adj), status: p.status, exported_at: p.exported_at };
+      });
+    },
+  });
+}
+
+function PayHistoryTab({ staffId, schoolId, colors }: { staffId: string; schoolId: string; colors: any }) {
+  const { data: history = [], isLoading } = useStaffPayHistory(schoolId, staffId);
+
+  if (isLoading) {
+    return (
+      <View style={{ padding: Spacing.screen, gap: Spacing.sm }}>
+        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} height={60} radius={Radius.lg} />)}
+      </View>
+    );
+  }
+
+  if (history.length === 0) {
+    return <EmptyState title="No pay history" description="Staff has not appeared in any exported pay period." icon="cash-outline" />;
+  }
+
+  return (
+    <View style={{ paddingHorizontal: Spacing.screen, paddingBottom: Spacing.xl, gap: Spacing.sm }}>
+      {history.map((row, i) => (
+        <View key={i} style={[{ flexDirection: 'row', alignItems: 'center', padding: Spacing.md, borderRadius: Radius.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, backgroundColor: colors.surface }]}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <ThemedText variant="bodySm" style={{ fontWeight: '600' }}>{row.period_label}</ThemedText>
+            {row.exported_at && (
+              <ThemedText variant="caption" color="muted">
+                Exported {format(new Date(row.exported_at), 'dd/MM/yyyy')}
+              </ThemedText>
+            )}
+          </View>
+          <View style={{ alignItems: 'flex-end', gap: 4 }}>
+            <ThemedText variant="bodySm" style={{ fontWeight: '700', color: colors.brand.primary }}>
+              K{row.gross_pay.toFixed(2)}
+            </ThemedText>
+            <Badge label={row.status} preset={row.status === 'exported' ? 'success' : row.status === 'locked' ? 'warning' : 'info'} size="sm" />
+          </View>
+        </View>
+      ))}
     </View>
   );
 }

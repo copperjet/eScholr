@@ -58,8 +58,13 @@ export const MODULES: ModuleDefinition[] = [
     affectedRoles: ['finance'],
     tierDefault: { starter: true, growth: true, scale: true, enterprise: true },
     configSchema: [
-      { key: 'late_fee_grace_days', label: 'Late Fee Grace Days', description: 'Days after due date before late fee applies', type: 'number', defaultValue: '0', min: 0, max: 30 },
-      { key: 'receipt_prefix', label: 'Receipt Prefix', description: 'Prefix for receipt numbers (e.g. RCT)', type: 'string', defaultValue: 'RCT' },
+      { key: 'late_fee_grace_days',  label: 'Late Fee Grace Days',   description: 'Days after due date before late fee applies', type: 'number',  defaultValue: '0',     min: 0, max: 30 },
+      { key: 'receipt_prefix',       label: 'Receipt Prefix',         description: 'Prefix for receipt numbers (e.g. RCT)',       type: 'string',  defaultValue: 'RCT'   },
+      { key: 'invoicing',            label: 'Invoice Generation',     description: 'Enable batch invoice generation UI',           type: 'boolean', defaultValue: 'true'  },
+      { key: 'sage_api',             label: 'Sage API Sync (opt-in)', description: 'Enable live push to Sage Business Cloud REST API (requires OAuth setup)', type: 'boolean', defaultValue: 'false' },
+      { key: 'sage_csv_format',      label: 'Sage CSV Format',        description: 'CSV format: cloud, pastel, or evolution',     type: 'string',  defaultValue: 'cloud', options: ['cloud', 'pastel', 'evolution'] },
+      { key: 'sage_api_company_id',  label: 'Sage Company ID',        description: 'Sage Business Cloud company GUID',            type: 'string',  defaultValue: ''      },
+      { key: 'sage_api_oauth_token', label: 'Sage OAuth Token',       description: 'Access token for Sage Business Cloud API',    type: 'string',  defaultValue: ''      },
     ],
   },
   {
@@ -100,7 +105,10 @@ export const MODULES: ModuleDefinition[] = [
     affectedRoles: ['hr'],
     tierDefault: { starter: false, growth: true, scale: true, enterprise: true },
     configSchema: [
-      { key: 'max_leave_days_annual', label: 'Annual Leave Days', description: 'Default annual leave entitlement per staff', type: 'number', defaultValue: '21', min: 0, max: 365 },
+      { key: 'max_leave_days_annual',       label: 'Annual Leave Days',      description: 'Default annual leave entitlement per staff', type: 'number',  defaultValue: '21',    min: 0, max: 365 },
+      { key: 'payroll_export',              label: 'Payroll Export',          description: 'Enable pay period management and CSV export', type: 'boolean', defaultValue: 'true'  },
+      { key: 'sage_payroll_api_token',      label: 'Sage Payroll API Token',  description: 'Bearer token for Sage Payroll API',           type: 'string',  defaultValue: ''      },
+      { key: 'sage_payroll_company_id',     label: 'Sage Payroll Company ID', description: 'Company ID for Sage Payroll API',             type: 'string',  defaultValue: ''      },
     ],
   },
   {

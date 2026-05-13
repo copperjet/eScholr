@@ -52,6 +52,12 @@ export default function HRMore() {
       ],
     },
     {
+      title: 'Payroll',
+      items: [
+        { icon: 'cash-outline', label: 'Pay Periods', sublabel: 'Manage payroll input periods', onPress: () => router.push('/(app)/(hr)/pay-periods' as any) },
+      ],
+    },
+    {
       title: 'School',
       items: [
         { icon: 'megaphone-outline', label: 'Announcements', sublabel: 'School announcements', onPress: () => router.push('/(app)/announcements' as any) },

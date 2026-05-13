@@ -122,13 +122,15 @@ export default function FinanceHome() {
             <ThemedText style={{ color: '#fff', fontWeight: '700', fontSize: 13, marginLeft: 4 }}>Clear {selected.size}</ThemedText>
           </Pressable>
         ) : (
-          <Pressable
-            onPress={() => router.push('/(app)/(finance)/finance-reports' as any)}
-            style={[styles.actionBtn, { backgroundColor: colors.brand.primary }]}
-          >
-            <Ionicons name="document-text-outline" size={16} color="#fff" />
-            <ThemedText style={{ color: '#fff', fontWeight: '700', fontSize: 13, marginLeft: 4 }}>Reports</ThemedText>
-          </Pressable>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            <Pressable
+              onPress={() => router.push('/(app)/(finance)/invoice-batch' as any)}
+              style={[styles.actionBtn, { backgroundColor: colors.brand.primary }]}
+            >
+              <Ionicons name="receipt-outline" size={16} color="#fff" />
+              <ThemedText style={{ color: '#fff', fontWeight: '700', fontSize: 13, marginLeft: 4 }}>Invoices</ThemedText>
+            </Pressable>
+          </View>
         )}
         <Pressable onPress={() => router.push('/(app)/switch-role' as any)}>
           <Avatar name={user?.fullName ?? 'F'} photoUrl={school?.logo_url} size={40} />
