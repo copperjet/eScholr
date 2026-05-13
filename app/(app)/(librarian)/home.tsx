@@ -91,7 +91,6 @@ export default function LibrarianHome() {
             { icon: 'arrow-forward-circle-outline' as const, label: 'Check Out', color: Colors.semantic.success, route: '/(app)/(librarian)/quick-checkout' },
             { icon: 'add-circle-outline' as const, label: 'Add Book',  color: Colors.semantic.info,    route: '/(app)/(librarian)/book-form' },
             { icon: 'people-outline' as const, label: 'Patrons',   color: '#8B5CF6',               route: '/(app)/(librarian)/patrons' },
-            { icon: 'albums-outline' as const, label: 'Batch Out',  color: '#10B981',               route: '/(app)/(librarian)/batch-checkout' },
           ] as const).map((a) => (
             <Pressable key={a.label} onPress={() => router.push(a.route as any)} style={styles.actionItem}>
               <View style={[styles.actionIcon, { backgroundColor: a.color + '18' }]}>
