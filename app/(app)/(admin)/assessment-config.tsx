@@ -8,6 +8,7 @@ import {
   Alert, Switch, Modal, FlatList, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
@@ -109,6 +110,11 @@ function TemplateCard({
                 {template.weight_percent}%
               </ThemedText>
             </View>
+            <View style={[styles.pill, { backgroundColor: colors.surfaceSecondary }]}>
+              <ThemedText style={{ fontSize: 11, color: colors.textSecondary }}>
+                /{template.max_marks ?? 100}
+              </ThemedText>
+            </View>
             <View style={[styles.pill, {
               backgroundColor: template.is_on_report ? '#d1fae5' : colors.border,
             }]}>
@@ -119,6 +125,16 @@ function TemplateCard({
           </View>
         </View>
         <View style={styles.cardActions}>
+          <TouchableOpacity
+            onPress={() => {
+              haptics.light();
+              router.push({ pathname: '/(app)/(admin)/assessment-stream-weights', params: { templateId: template.id } } as any);
+            }}
+            style={styles.iconBtn}
+            accessibilityLabel="Per-stream weight overrides"
+          >
+            <Ionicons name="git-branch-outline" size={18} color={colors.brand.primary} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => { haptics.light(); onEdit(); }} style={styles.iconBtn}>
             <Ionicons name="pencil-outline" size={18} color={colors.brand.primary} />
           </TouchableOpacity>
@@ -203,6 +219,7 @@ interface SheetState {
   name: string;
   code: string;
   weight: string;
+  max_marks: string;
   is_on_report: boolean;
   is_active: boolean;
   grade_ids: string[];
@@ -210,7 +227,7 @@ interface SheetState {
 }
 
 const EMPTY_SHEET: SheetState = {
-  name: '', code: '', weight: '', is_on_report: true, is_active: true, grade_ids: [], order_index: 99,
+  name: '', code: '', weight: '', max_marks: '100', is_on_report: true, is_active: true, grade_ids: [], order_index: 99,
 };
 
 function EditSheet({
@@ -239,10 +256,12 @@ function EditSheet({
   const remaining = 100 - activeWeight;
 
   const handleSave = useCallback(async () => {
-    const w = parseFloat(form.weight);
+    const w  = parseFloat(form.weight);
+    const mx = parseFloat(form.max_marks);
     if (!form.name.trim()) { Alert.alert('Name required'); return; }
     if (!form.code.trim()) { Alert.alert('Code required'); return; }
-    if (isNaN(w) || w <= 0 || w > 100) { Alert.alert('Weight must be between 1 and 100'); return; }
+    if (isNaN(w) || w < 0 || w > 100) { Alert.alert('Weight must be between 0 and 100'); return; }
+    if (isNaN(mx) || mx <= 0 || mx > 1000) { Alert.alert('Max marks must be between 1 and 1000'); return; }
 
     const activeAfter = activeWeight + (form.is_active ? w : 0);
     if (form.is_active && Math.abs(activeAfter - 100) > 0.01 && activeAfter > 100) {
@@ -253,14 +272,15 @@ function EditSheet({
     try {
       haptics.medium();
       const input: UpsertTemplateInput = {
-        id:           form.id,
-        name:         form.name.trim(),
-        code:         slugify(form.code),
+        id:             form.id,
+        name:           form.name.trim(),
+        code:           slugify(form.code),
         weight_percent: w,
-        is_on_report: form.is_on_report,
-        is_active:    form.is_active,
-        order_index:  form.order_index,
-        grade_ids:    form.grade_ids,
+        max_marks:      mx,
+        is_on_report:   form.is_on_report,
+        is_active:      form.is_active,
+        order_index:    form.order_index,
+        grade_ids:      form.grade_ids,
       };
       await upsert.mutateAsync(input);
       haptics.success();
@@ -355,6 +375,24 @@ function EditSheet({
                   </ThemedText>
                 </TouchableOpacity>
               </View>
+            </View>
+
+            {/* Max marks */}
+            <View style={styles.field}>
+              <ThemedText style={styles.label}>
+                Max Marks{'  '}
+                <ThemedText style={{ color: colors.textMuted, fontWeight: '400' }}>
+                  (raw mark out of)
+                </ThemedText>
+              </ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.surface, color: colors.textPrimary, borderColor: colors.border }]}
+                value={form.max_marks}
+                onChangeText={(v) => setForm((f) => ({ ...f, max_marks: v }))}
+                placeholder="100"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="decimal-pad"
+              />
             </View>
 
             {/* Toggles */}
@@ -456,6 +494,7 @@ function AssessmentConfigContent() {
       name:         t.name,
       code:         t.code,
       weight:       String(t.weight_percent),
+      max_marks:    String(t.max_marks ?? 100),
       is_on_report: t.is_on_report,
       is_active:    t.is_active,
       grade_ids:    t.grade_ids,

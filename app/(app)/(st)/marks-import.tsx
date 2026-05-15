@@ -30,6 +30,7 @@ import {
 import {
   useGradingScale, getGradeLabel, computeTotal,
 } from '../../../hooks/useMarks';
+import { useAssessmentTemplates } from '../../../hooks/useAssessmentConfig';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
@@ -96,10 +97,13 @@ function parseNumber(raw: string | undefined): number | null {
   return isNaN(n) ? null : n;
 }
 
+interface MaxByCode { fa1: number; fa2: number; summative: number; }
+
 function validateRow(
   row: Record<string, string>,
   studentMap: Record<string, Student>,
   isIGCSE: boolean,
+  maxBy: MaxByCode,
 ): ParsedRow {
   const sn = row['student_number'] ?? '';
   const student = studentMap[sn.toLowerCase()];
@@ -113,10 +117,10 @@ function validateRow(
   const sum = parseNumber(row['summative']);
 
   if (!isIGCSE) {
-    if (fa1 !== null && (fa1 < 0 || fa1 > 100)) errors.push('FA1 out of range (0–100)');
-    if (fa2 !== null && (fa2 < 0 || fa2 > 100)) errors.push('FA2 out of range (0–100)');
+    if (fa1 !== null && (fa1 < 0 || fa1 > maxBy.fa1)) errors.push(`FA1 out of range (0–${maxBy.fa1})`);
+    if (fa2 !== null && (fa2 < 0 || fa2 > maxBy.fa2)) errors.push(`FA2 out of range (0–${maxBy.fa2})`);
   }
-  if (sum !== null && (sum < 0 || sum > 100)) errors.push('Summative out of range (0–100)');
+  if (sum !== null && (sum < 0 || sum > maxBy.summative)) errors.push(`Summative out of range (0–${maxBy.summative})`);
 
   return {
     studentNumber: sn,
@@ -209,6 +213,16 @@ export default function MarksImportScreen() {
     useStreamStudents(selectedStreamId, schoolId);
 
   const { data: scales = [] } = useGradingScale(schoolId);
+  const { data: templates = [] } = useAssessmentTemplates(schoolId);
+  const maxBy = useMemo<MaxByCode>(() => {
+    const m: MaxByCode = { fa1: 100, fa2: 100, summative: 100 };
+    templates.forEach((t) => {
+      if (t.code === 'fa1') m.fa1 = t.max_marks;
+      else if (t.code === 'fa2') m.fa2 = t.max_marks;
+      else if (t.code === 'summative') m.summative = t.max_marks;
+    });
+    return m;
+  }, [templates]);
 
   // Prefill from params
   React.useEffect(() => {
@@ -280,7 +294,7 @@ export default function MarksImportScreen() {
         Alert.alert('Invalid CSV', 'No data rows found. Check the file format.');
         return;
       }
-      const rows = rawRows.map((r) => validateRow(r, studentMap, selectedAssignment.isIGCSE));
+      const rows = rawRows.map((r) => validateRow(r, studentMap, selectedAssignment.isIGCSE, maxBy));
       setParsedRows(rows);
       setStep(3);
     } catch {

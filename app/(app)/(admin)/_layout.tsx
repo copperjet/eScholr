@@ -40,6 +40,10 @@ function MobileAdminLayout({ isSuper, colors }: { isSuper: boolean; colors: any 
       {/* Hidden screens */}
       <Tabs.Screen name="analysis"          options={{ href: null }} />
       <Tabs.Screen name="assessment-config" options={{ href: null }} />
+      <Tabs.Screen name="assessment-stream-weights" options={{ href: null }} />
+      <Tabs.Screen name="character-framework" options={{ href: null }} />
+      <Tabs.Screen name="grading-scales" options={{ href: null }} />
+      <Tabs.Screen name="student-overrides" options={{ href: null }} />
       <Tabs.Screen name="attendance-overview" options={{ href: null }} />
       <Tabs.Screen name="attendance-correct"  options={{ href: null }} />
       <Tabs.Screen name="assignments"         options={{ href: null }} />

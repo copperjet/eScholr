@@ -259,6 +259,7 @@ export function useUpdatePaymentStatus(schoolId: string) {
       status: 'paid' | 'unpaid';
       balance?: number;
       staffId: string;
+      studentId?: string;
     }) => {
       const db = supabase as any;
       const { error } = await db
@@ -273,10 +274,14 @@ export function useUpdatePaymentStatus(schoolId: string) {
         .eq('school_id', schoolId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['finance-list'] });
-      qc.invalidateQueries({ queryKey: ['finance-summary'] });
-      qc.invalidateQueries({ queryKey: ['student-finance-detail'] });
+      qc.invalidateQueries({ queryKey: ['finance-summary', schoolId] });
+      if (vars.studentId) {
+        qc.invalidateQueries({ queryKey: ['student-finance-detail', vars.studentId, schoolId] });
+      } else {
+        qc.invalidateQueries({ queryKey: ['student-finance-detail'] });
+      }
     },
   });
 }
@@ -305,7 +310,7 @@ export function useAddPaymentTransaction(schoolId: string) {
       });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['student-finance-detail'] }),
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['student-finance-detail', vars.studentId, schoolId] }),
   });
 }
 
@@ -336,7 +341,7 @@ export function useBulkClearPayments(schoolId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['finance-list'] });
-      qc.invalidateQueries({ queryKey: ['finance-summary'] });
+      qc.invalidateQueries({ queryKey: ['finance-summary', schoolId] });
     },
   });
 }
@@ -344,18 +349,26 @@ export function useBulkClearPayments(schoolId: string) {
 export function useClearFinanceReport(schoolId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (reportId: string) => {
+    mutationFn: async (params: { reportId: string; staffId: string }) => {
       const db = supabase as any;
+      const now = new Date().toISOString();
       const { error } = await db
         .from('reports')
-        .update({ status: 'approved', updated_at: new Date().toISOString() })
-        .eq('id', reportId)
+        .update({
+          status:             'approved',
+          finance_cleared_by: params.staffId,
+          finance_cleared_at: now,
+          updated_at:         now,
+        })
+        .eq('id', params.reportId)
         .eq('school_id', schoolId);
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['finance-pending-reports'] });
-      qc.invalidateQueries({ queryKey: ['finance-summary'] });
+      qc.invalidateQueries({ queryKey: ['finance-pending-reports', schoolId] });
+      qc.invalidateQueries({ queryKey: ['finance-summary', schoolId] });
+      qc.invalidateQueries({ queryKey: ['admin-reports'] });
+      qc.invalidateQueries({ queryKey: ['admin-report-counts'] });
     },
   });
 }

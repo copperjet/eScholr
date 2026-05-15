@@ -89,6 +89,7 @@ export default function BookDetailScreen() {
       await checkInMut.mutateAsync({
         transactionId: txId,
         staffId: user?.staffId ?? '',
+        bookId: bookId ?? undefined,
       });
     } catch (e: any) {
       Alert.alert('Error', e.message ?? 'Check-in failed');

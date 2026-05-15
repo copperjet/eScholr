@@ -73,24 +73,21 @@ CREATE INDEX IF NOT EXISTS idx_spa_period ON staff_pay_adjustments(pay_period_id
 CREATE INDEX IF NOT EXISTS idx_spa_staff  ON staff_pay_adjustments(staff_id);
 
 -- ── 4. staff_leave_unpaid_days (view) ─────────────────────────
--- Computes unpaid leave days approved within a pay period per staff.
--- Joins leave_requests where leave_type.is_paid = false (or no pay type → treat as unpaid if status=approved and days counted).
+-- Computes unpaid leave days approved per staff.
+-- Schema (migration 024): leave_requests.leave_type is TEXT enum.
+-- Only 'unpaid' is treated as deductible; days_requested is a
+-- generated column (end_date - start_date + 1).
 CREATE OR REPLACE VIEW staff_leave_unpaid_days AS
 SELECT
   lr.school_id,
   lr.staff_id,
   lr.approved_at,
-  COALESCE(
-    EXTRACT(DAY FROM (lr.end_date::date - lr.start_date::date)) + 1,
-    0
-  )::INT AS unpaid_days,
+  lr.days_requested::INT AS unpaid_days,
   lr.start_date,
   lr.end_date
 FROM leave_requests lr
 WHERE lr.status = 'approved'
-  AND lr.leave_type_id IN (
-    SELECT id FROM leave_types WHERE is_paid = false
-  );
+  AND lr.leave_type = 'unpaid';
 
 -- ── 5. payroll_export_log ─────────────────────────────────────
 -- Tracks each payroll CSV export per pay period.

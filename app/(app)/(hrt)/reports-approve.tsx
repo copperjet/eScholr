@@ -41,20 +41,22 @@ function useReportDetail(reportId: string, schoolId: string) {
       const db = supabase as any;
       const { data } = await db
         .from('reports')
-        .select(`id, status, hrt_comment, overall_percentage, class_position, pdf_url, released_at, updated_at,
+        .select(`id, status, hrt_comment, overall_percentage, class_position, pdf_url, pdf_status, pdf_error, released_at, updated_at,
                  students ( id, full_name, student_number, photo_url ),
                  semesters ( id, name )`)
         .eq('id', reportId)
         .eq('school_id', schoolId)
         .single();
       if (!data) return null;
-      return {
+      const out: ReportSummary = {
         id: data.id,
         status: data.status,
         hrt_comment: data.hrt_comment ?? null,
         overall_percentage: data.overall_percentage ?? null,
         class_position: data.class_position ?? null,
         pdf_url: data.pdf_url ?? null,
+        pdf_status: data.pdf_status ?? null,
+        pdf_error: data.pdf_error ?? null,
         released_at: data.released_at ?? null,
         updated_at: data.updated_at,
         student: {
@@ -65,6 +67,7 @@ function useReportDetail(reportId: string, schoolId: string) {
         },
         semester: data.semesters ? { id: data.semesters.id, name: data.semesters.name } : null,
       };
+      return out;
     },
   });
 }

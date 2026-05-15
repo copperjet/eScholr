@@ -32,10 +32,6 @@ export default function ReportViewerScreen() {
 
   const isDraft = is_draft === 'true';
 
-  const viewerUri = pdf_url
-    ? `https://docs.google.com/viewer?embedded=true&url=${encodeURIComponent(pdf_url)}`
-    : null;
-
   const handleShare = useCallback(async () => {
     if (!pdf_url || sharing) return;
     haptics.medium();
@@ -114,7 +110,7 @@ export default function ReportViewerScreen() {
           </View>
         ) : (
           <PDFViewer
-            uri={viewerUri!}
+            uri={pdf_url}
             style={styles.webview}
             onLoad={() => setLoading(false)}
             onError={() => { setLoading(false); setError(true); }}

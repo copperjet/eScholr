@@ -110,7 +110,7 @@ export function useECACategories() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('eca_categories')
-        .select('*')
+        .select('id, school_id, name, description, max_choices, allow_paid, created_at')
         .eq('school_id', sid)
         .order('name');
       if (error) throw error;
@@ -129,7 +129,7 @@ export function useECAActivities(categoryId?: string) {
     queryFn: async () => {
       let q = (supabase as any)
         .from('eca_activities')
-        .select('*')
+        .select('id, school_id, category_id, name, description, capacity, day_of_week, start_time, end_time, location, fee_amount, status, choice_window_start, choice_window_end, created_at')
         .eq('school_id', sid)
         .order('name');
       if (categoryId) q = q.eq('category_id', categoryId);
@@ -194,7 +194,7 @@ export function useECAEligibleActivities(studentId: string | undefined) {
 
       const { data, error } = await (supabase as any)
         .from('eca_activities')
-        .select('*')
+        .select('id, school_id, category_id, name, description, capacity, day_of_week, start_time, end_time, location, fee_amount, status, choice_window_start, choice_window_end, created_at')
         .in('id', ids)
         .eq('status', 'published')
         .order('name');
@@ -214,7 +214,7 @@ export function useECAStudentChoices(studentId: string | undefined, categoryId: 
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('eca_choices')
-        .select('*')
+        .select('id, student_id, category_id, choice_rank, activity_id, submitted_at')
         .eq('student_id', studentId!)
         .eq('category_id', categoryId!)
         .eq('school_id', sid)
@@ -292,7 +292,7 @@ export function useECAPatronActivities(staffId: string | undefined) {
       if (!ids.length) return [];
       const { data, error } = await (supabase as any)
         .from('eca_activities')
-        .select('*')
+        .select('id, school_id, category_id, name, description, capacity, day_of_week, start_time, end_time, location, fee_amount, status, choice_window_start, choice_window_end, created_at')
         .in('id', ids)
         .order('day_of_week');
       if (error) throw error;
@@ -311,7 +311,7 @@ export function useECAAttendance(activityId: string | undefined, date: string) {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('eca_attendance')
-        .select('*')
+        .select('id, activity_id, student_id, session_date, status, note')
         .eq('activity_id', activityId!)
         .eq('session_date', date)
         .eq('school_id', sid);
@@ -509,8 +509,14 @@ export function useWithdrawAssignment() {
       }
       return result;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['eca', sid] });
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: K.overview(sid) });
+      if (result.promoted_activity_id) {
+        qc.invalidateQueries({ queryKey: K.assignmentsByActivity(sid, result.promoted_activity_id) });
+      }
+      if (result.promoted_student_id) {
+        qc.invalidateQueries({ queryKey: K.studentAssignments(sid, result.promoted_student_id) });
+      }
     },
   });
 }
@@ -525,7 +531,11 @@ export function useRunAllocation() {
       if (error) throw error;
       return data as number;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['eca', sid] }); },
+    onSuccess: (_, categoryId) => {
+      qc.invalidateQueries({ queryKey: K.activities(sid, categoryId) });
+      qc.invalidateQueries({ queryKey: K.activities(sid) });
+      qc.invalidateQueries({ queryKey: K.overview(sid) });
+    },
   });
 }
 
@@ -554,6 +564,10 @@ export function useManualReassign() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['eca', sid] }); },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: K.studentAssignments(sid, vars.studentId) });
+      qc.invalidateQueries({ queryKey: K.assignmentsByActivity(sid, vars.activityId) });
+      qc.invalidateQueries({ queryKey: K.overview(sid) });
+    },
   });
 }

@@ -1,262 +1,304 @@
 /**
- * generate-invoice-pdf
+ * generate-invoice-pdf (v2 — pdf-lib edition)
+ *
  * POST /functions/v1/generate-invoice-pdf
- * Authorization: Bearer <user_jwt>
+ * Auth:  Bearer <SERVICE_ROLE_KEY>  (called by pdf-job-runner only)
+ * Body:  { invoice_id: string }
  *
- * Body: { invoice_id: string }
- *
- * Returns: { pdf_url: string, format: "pdf" | "html" }
- *
- * Generates an invoice PDF, uploads to receipts bucket, stores URL on invoice.
- * Allowed roles: finance, admin, super_admin, school_super_admin
+ * Renders an invoice PDF in-process with pdf-lib, uploads via the
+ * shared helper, records a pdf_versions row, mirrors pdf_url onto
+ * the invoices row.
  */
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { rgb } from "npm:pdf-lib@1.17.1";
+import { serviceClient, uploadPdf } from "../_shared/pdfUpload.ts";
+import {
+  insertVersion,
+  markParentFailed,
+  markParentGenerating,
+  markParentSuccess,
+  nextVersionNumber,
+} from "../_shared/pdfVersions.ts";
+import { A4, Cursor, Fonts, Margins, newDoc, parseHex } from "../_shared/pdf/layout.ts";
+import { drawFooterOnAllPages, drawHeader, drawSectionTitle, SchoolBrand } from "../_shared/pdf/branding.ts";
+import { Column, drawInfoStrip, drawTable } from "../_shared/pdf/tables.ts";
 
 const CORS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin":  "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
     status,
     headers: { ...CORS, "Content-Type": "application/json" },
   });
 }
 
+interface Item {
+  id:          string;
+  description: string | null;
+  amount:      number;
+  fee_categories: { name: string | null } | null;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) return json({ error: "Unauthorized" }, 401);
-
-  const callerClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } },
-  );
-  const { data: { user: caller } } = await callerClient.auth.getUser();
-  if (!caller) return json({ error: "Unauthorized" }, 401);
-
-  const callerRoles: string[] = (caller.app_metadata as any)?.roles ?? [];
-  const allowed = ["finance", "admin", "super_admin", "school_super_admin"];
-  if (!callerRoles.some((r) => allowed.includes(r))) {
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const token      = authHeader.replace(/^Bearer\s+/i, "");
+  if (token !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
     return json({ error: "Forbidden" }, 403);
   }
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  let invoice_id = "";
+  const admin = serviceClient();
+
+  try {
+    const body = await req.json() as { invoice_id?: string };
+    invoice_id = body?.invoice_id ?? "";
+    if (!invoice_id) return json({ error: "invoice_id required" }, 400);
+
+    await markParentGenerating(admin, "invoice", invoice_id);
+
+    const { data: invoice, error: invErr } = await admin
+      .from("invoices")
+      .select(`
+        id, school_id, invoice_number, issue_date, due_date,
+        total_amount, paid_amount, balance, status, notes, currency,
+        students ( id, full_name, student_number,
+          streams ( name, grades ( name ) ) ),
+        semesters ( name, academic_years ( name ) ),
+        schools ( id, name, primary_color, secondary_color, logo_url,
+                  currency, address, phone, email, footer_text ),
+        invoice_items (
+          id, description, amount,
+          fee_categories ( name )
+        )
+      `)
+      .eq("id", invoice_id)
+      .single();
+    if (invErr || !invoice) throw new Error("Invoice not found");
+
+    const schoolId = (invoice as any).school_id;
+    if (!schoolId) throw new Error("school_id missing on invoice");
+
+    const bytes = await renderInvoice(invoice as any);
+
+    const versionNumber = await nextVersionNumber(admin, "invoice", invoice_id);
+    const { pdfUrl }    = await uploadPdf(admin, {
+      docType:       "invoice",
+      schoolId,
+      docId:         invoice_id,
+      versionNumber,
+      bytes,
+    });
+    await insertVersion(admin, {
+      docType:       "invoice",
+      docId:         invoice_id,
+      schoolId,
+      versionNumber,
+      pdfUrl,
+    });
+    await markParentSuccess(admin, "invoice", invoice_id, pdfUrl);
+
+    return json({ pdf_url: pdfUrl, version: versionNumber });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("generate-invoice-pdf error:", msg);
+    if (invoice_id) {
+      try { await markParentFailed(admin, "invoice", invoice_id, msg); }
+      catch (_) { /* ignore */ }
+    }
+    return json({ error: msg }, 500);
+  }
+});
+
+async function renderInvoice(invoice: any): Promise<Uint8Array> {
+  const school   = invoice.schools;
+  const student  = invoice.students;
+  const semester = invoice.semesters;
+  const items    = (invoice.invoice_items ?? []) as Item[];
+
+  const currency    = invoice.currency ?? school?.currency ?? "ZMW";
+  const totalAmount = Number(invoice.total_amount) || 0;
+  const paidAmount  = Number(invoice.paid_amount)  || 0;
+  const balance     = Number(invoice.balance)      || 0;
+
+  const fmtDate = (d: string | null | undefined): string =>
+    d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }) : "—";
+
+  const issuedAt = fmtDate(invoice.issue_date ?? new Date().toISOString());
+  const dueDate  = invoice.due_date ? fmtDate(invoice.due_date) : null;
+  const status   = (invoice.status ?? "unpaid") as string;
+  const statusLabel = status.toUpperCase();
+
+  const brand: SchoolBrand = {
+    name:           school?.name           ?? "School",
+    logoUrl:        school?.logo_url       ?? null,
+    primaryColor:   school?.primary_color  ?? "#1B2A4A",
+    secondaryColor: school?.secondary_color ?? "#E8A020",
+    address:        school?.address        ?? null,
+    phone:          school?.phone          ?? null,
+    email:          school?.email          ?? null,
+    footerText:     school?.footer_text    ?? "Fee Invoice",
+  };
+
+  const ctx = await newDoc();
+  const cur = new Cursor(ctx);
+  const primary   = parseHex(brand.primaryColor,   rgb(0.105, 0.165, 0.290));
+  const secondary = parseHex(brand.secondaryColor, rgb(0.910, 0.627, 0.125));
+  const softBg    = rgb(0.973, 0.976, 0.984);
+  const warning   = rgb(0.706, 0.325, 0.035);
+  const success   = rgb(0.024, 0.373, 0.275);
+  const danger    = rgb(0.600, 0.106, 0.106);
+
+  await drawHeader(ctx, cur, brand, "Fee Invoice");
+
+  // Invoice meta strip
+  cur.ensure(40);
+  cur.page.drawText(`INVOICE #${invoice.invoice_number}`, {
+    x: Margins.left, y: cur.y - 14,
+    font: ctx.bold, size: Fonts.subheadSize, color: primary,
+  });
+  const metaLine2 = dueDate ? `Issued: ${issuedAt}    Due: ${dueDate}` : `Issued: ${issuedAt}`;
+  cur.page.drawText(metaLine2, {
+    x: Margins.left, y: cur.y - 30,
+    font: ctx.regular, size: Fonts.smallSize, color: rgb(0.4, 0.4, 0.45),
+  });
+  const badgeW = ctx.bold.widthOfTextAtSize(statusLabel, Fonts.smallSize);
+  const badgeBg = status === "paid"    ? rgb(0.82,  0.96, 0.89)
+                : status === "partial" ? rgb(0.996, 0.953, 0.78)
+                                       : rgb(0.996, 0.886, 0.886);
+  const badgeFg = status === "paid"    ? success
+                : status === "partial" ? warning
+                                       : danger;
+  cur.page.drawRectangle({
+    x: A4.width - Margins.right - badgeW - 14, y: cur.y - 30,
+    width: badgeW + 14, height: 18,
+    color: badgeBg,
+  });
+  cur.page.drawText(statusLabel, {
+    x: A4.width - Margins.right - badgeW - 7, y: cur.y - 26,
+    font: ctx.bold, size: Fonts.smallSize, color: badgeFg,
+  });
+  cur.advance(40);
+
+  drawInfoStrip(
+    ctx, cur,
+    [
+      ["Student",        student?.full_name ?? "—"],
+      ["Student ID",     student?.student_number ?? "—"],
+      ["Grade / Stream", `${student?.streams?.grades?.name ?? "—"} · ${student?.streams?.name ?? "—"}`],
+      ["Term",           `${semester?.name ?? "—"}${semester?.academic_years ? " · " + semester.academic_years.name : ""}`],
+    ],
+    softBg, primary,
   );
 
-  let invoice_id: string;
-  try {
-    const body = await req.json();
-    invoice_id = body.invoice_id;
-    if (!invoice_id) throw new Error("invoice_id required");
-  } catch (e: any) {
-    return json({ error: e.message }, 400);
-  }
+  drawSectionTitle(ctx, cur, "Fee Breakdown", primary, secondary);
 
-  // Fetch invoice with related data
-  const { data: invoice, error: invErr } = await supabase
-    .from("invoices")
-    .select(`
-      id, invoice_number, issue_date, due_date, total_amount, paid_amount,
-      balance, status, notes, currency,
-      students ( id, full_name, student_number,
-        streams ( name, grades ( name ) ) ),
-      semesters ( name, academic_years ( name ) ),
-      schools ( id, name, primary_color, secondary_color, logo_url, currency ),
-      invoice_items (
-        id, description, amount,
-        fee_categories ( name )
-      )
-    `)
-    .eq("id", invoice_id)
-    .single();
-
-  if (invErr || !invoice) return json({ error: "Invoice not found" }, 404);
-
-  const school: any    = invoice.schools as any;
-  const student: any   = invoice.students as any;
-  const semester: any  = invoice.semesters as any;
-  const items: any[]   = (invoice.invoice_items ?? []) as any[];
-
-  const primaryColor   = school?.primary_color ?? "#1B2A4A";
-  const secondaryColor = school?.secondary_color ?? "#E8A020";
-  const currency       = invoice.currency ?? school?.currency ?? "ZMW";
-  const totalAmount    = Number(invoice.total_amount) || 0;
-  const paidAmount     = Number(invoice.paid_amount) || 0;
-  const balance        = Number(invoice.balance) || 0;
-  const issuedAt       = invoice.issue_date
-    ? new Date(invoice.issue_date).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })
-    : new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
-  const dueDate        = invoice.due_date
-    ? new Date(invoice.due_date).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })
-    : null;
-  const statusLabel    = (invoice.status ?? "unpaid").toUpperCase();
-  const statusBg       = invoice.status === "paid" ? "#D1FAE5" : invoice.status === "partial" ? "#FEF3C7" : "#FEE2E2";
-  const statusColor    = invoice.status === "paid" ? "#065F46" : invoice.status === "partial" ? "#92400E" : "#991B1B";
-
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8" />
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 13px; color: #1F2937; background: #fff; padding: 40px; }
-  .accent-bar { height: 4px; background: ${secondaryColor}; border-radius: 2px; margin-bottom: 24px; }
-  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 3px solid ${primaryColor}; }
-  .school-info h1 { font-size: 22px; font-weight: 800; color: ${primaryColor}; }
-  .school-info p  { font-size: 12px; color: #6B7280; margin-top: 4px; }
-  .inv-meta { text-align: right; }
-  .inv-meta h2 { font-size: 18px; font-weight: 700; color: ${primaryColor}; letter-spacing: 1px; }
-  .inv-meta .inv-no { font-size: 13px; color: #6B7280; margin-top: 4px; }
-  .inv-meta .issued { font-size: 12px; color: #9CA3AF; margin-top: 2px; }
-  .status-badge { display: inline-block; padding: 4px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-top: 8px; background: ${statusBg}; color: ${statusColor}; }
-  .student-section { background: #F9FAFB; border-radius: 10px; padding: 18px; margin-bottom: 24px; display: flex; gap: 32px; flex-wrap: wrap; }
-  .field label { font-size: 10px; font-weight: 700; color: #9CA3AF; letter-spacing: 0.5px; text-transform: uppercase; display: block; margin-bottom: 4px; }
-  .field .value { font-size: 14px; font-weight: 600; color: #111827; }
-  .section-title { font-size: 11px; font-weight: 700; color: #9CA3AF; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 10px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-  thead tr { background: ${primaryColor}; color: #fff; }
-  thead th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; }
-  tbody tr:nth-child(even) { background: #F9FAFB; }
-  tbody td { padding: 10px 14px; font-size: 12px; border-bottom: 1px solid #F3F4F6; }
-  .amount-col { text-align: right; font-variant-numeric: tabular-nums; }
-  .summary { margin-left: auto; width: 260px; }
-  .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F3F4F6; font-size: 13px; }
-  .summary-row.total { font-weight: 800; font-size: 16px; color: ${primaryColor}; border-bottom: none; padding-top: 12px; }
-  .summary-row.balance-row { color: ${balance > 0 ? "#B45309" : "#065F46"}; font-weight: 700; }
-  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: flex-end; }
-  .footer .note { font-size: 11px; color: #9CA3AF; max-width: 300px; line-height: 1.5; }
-  .footer .sig { text-align: right; }
-  .footer .sig .sig-line { border-top: 1px solid #9CA3AF; width: 160px; margin-left: auto; margin-bottom: 4px; margin-top: 40px; }
-  .footer .sig .sig-label { font-size: 11px; color: #6B7280; }
-</style>
-</head>
-<body>
-<div class="accent-bar"></div>
-<div class="header">
-  <div class="school-info">
-    ${school?.logo_url ? `<img src="${school.logo_url}" style="height:48px;margin-bottom:8px;" />` : ""}
-    <h1>${school?.name ?? "School"}</h1>
-    <p>Fee Invoice</p>
-  </div>
-  <div class="inv-meta">
-    <h2>INVOICE</h2>
-    <div class="inv-no">${invoice.invoice_number}</div>
-    <div class="issued">Issued: ${issuedAt}</div>
-    ${dueDate ? `<div class="issued">Due: ${dueDate}</div>` : ""}
-    <div class="status-badge">${statusLabel}</div>
-  </div>
-</div>
-
-<div class="student-section">
-  <div class="field">
-    <label>Student Name</label>
-    <div class="value">${student?.full_name ?? "—"}</div>
-  </div>
-  <div class="field">
-    <label>Student ID</label>
-    <div class="value">${student?.student_number ?? "—"}</div>
-  </div>
-  <div class="field">
-    <label>Grade / Stream</label>
-    <div class="value">${(student?.streams?.grades as any)?.name ?? "—"} · ${(student?.streams as any)?.name ?? "—"}</div>
-  </div>
-  <div class="field">
-    <label>Term / Semester</label>
-    <div class="value">${semester?.name ?? "—"}${semester?.academic_years ? " · " + (semester.academic_years as any).name : ""}</div>
-  </div>
-</div>
-
-<div class="section-title">Fee Breakdown</div>
-<table>
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>Description</th>
-      <th class="amount-col">Amount (${currency})</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${items.map((it: any, i: number) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${(it.fee_categories as any)?.name ?? it.description ?? "Fee"}</td>
-      <td class="amount-col">${Number(it.amount).toLocaleString("en", { minimumFractionDigits: 2 })}</td>
-    </tr>`).join("")}
-  </tbody>
-</table>
-
-<div class="summary">
-  <div class="summary-row total">
-    <span>Total Due</span>
-    <span>${currency} ${totalAmount.toLocaleString("en", { minimumFractionDigits: 2 })}</span>
-  </div>
-  ${paidAmount > 0 ? `
-  <div class="summary-row">
-    <span>Paid</span>
-    <span>${currency} ${paidAmount.toLocaleString("en", { minimumFractionDigits: 2 })}</span>
-  </div>` : ""}
-  ${balance > 0 ? `
-  <div class="summary-row balance-row">
-    <span>Outstanding Balance</span>
-    <span>${currency} ${balance.toLocaleString("en", { minimumFractionDigits: 2 })}</span>
-  </div>` : ""}
-</div>
-
-${invoice.notes ? `<div style="margin-top:24px;padding:14px;background:#F9FAFB;border-radius:8px;font-size:12px;color:#4B5563;"><strong>Notes:</strong> ${invoice.notes}</div>` : ""}
-
-<div class="footer">
-  <div class="note">
-    Please pay by ${dueDate ?? "the due date"} to avoid late fees.<br/>
-    Quote your student number and invoice number at the bank.<br/>
-    Invoice #${invoice.invoice_number} · ${school?.name ?? ""}
-  </div>
-  <div class="sig">
-    <div class="sig-line"></div>
-    <div class="sig-label">Authorised by Finance Office</div>
-  </div>
-</div>
-</body>
-</html>`;
-
-  // Generate PDF via Puppeteer
-  let pdfBuffer: Uint8Array;
-  try {
-    const puppeteer = await import("npm:puppeteer-core@21");
-    const browser = await (puppeteer as any).default.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      executablePath: "/usr/bin/chromium-browser",
+  if (items.length === 0) {
+    cur.ensure(18);
+    cur.page.drawText("No line items.", {
+      x: Margins.left, y: cur.y - 12,
+      font: ctx.italic, size: Fonts.bodySize, color: rgb(0.55, 0.55, 0.6),
     });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    const pdfData = await page.pdf({ format: "A4", printBackground: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
-    pdfBuffer = new Uint8Array(pdfData);
-    await browser.close();
-  } catch (_e) {
-    // Fallback: HTML
-    const htmlBytes = new TextEncoder().encode(html);
-    const path = `invoices/${school?.id ?? "school"}/${invoice_id}.html`;
-    await supabase.storage.from("receipts").upload(path, htmlBytes, { contentType: "text/html", upsert: true });
-    const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(path);
-    await supabase.from("invoices").update({ pdf_url: urlData.publicUrl }).eq("id", invoice_id);
-    return json({ pdf_url: urlData.publicUrl, format: "html" });
+    cur.advance(20);
+  } else {
+    const cols: Column<Item & { idx: number }>[] = [
+      { header: "#",           width: 28,  align: "left",  format: (r) => String(r.idx) },
+      { header: "Description", flex:  1,   align: "left",  format: (r) => r.fee_categories?.name ?? r.description ?? "Fee" },
+      { header: `Amount (${currency})`, width: 110, align: "right", format: (r) => Number(r.amount).toLocaleString("en", { minimumFractionDigits: 2 }) },
+    ];
+    drawTable(
+      ctx, cur, cols,
+      items.map((it, i) => ({ ...it, idx: i + 1 })),
+      { headerBg: primary, headerFg: rgb(1, 1, 1), altRowBg: softBg },
+    );
   }
 
-  const storagePath = `invoices/${school?.id ?? "school"}/${invoice_id}.pdf`;
-  const { error: uploadErr } = await supabase.storage
-    .from("receipts")
-    .upload(storagePath, pdfBuffer, { contentType: "application/pdf", upsert: true });
+  // Summary box (right-aligned)
+  const summaryW = 260;
+  const summaryX = A4.width - Margins.right - summaryW;
+  let rows = 1;
+  if (paidAmount > 0) rows++;
+  if (balance > 0)    rows++;
+  const summaryH = 18 * rows + 24;
 
-  if (uploadErr) return json({ error: "Upload failed: " + uploadErr.message }, 500);
+  cur.ensure(summaryH + 12);
+  cur.advance(8);
+  cur.page.drawRectangle({
+    x: summaryX, y: cur.y - summaryH,
+    width: summaryW, height: summaryH,
+    color: softBg,
+  });
 
-  const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(storagePath);
+  let sy = cur.y - 18;
+  const drawSummaryRow = (label: string, value: string, opts: { bold?: boolean; color?: ReturnType<typeof rgb>; size?: number } = {}) => {
+    const font  = opts.bold ? ctx.bold : ctx.regular;
+    const size  = opts.size ?? Fonts.bodySize;
+    const color = opts.color ?? rgb(0.1, 0.1, 0.15);
+    cur.page.drawText(label, { x: summaryX + 12, y: sy, font, size, color });
+    const w = font.widthOfTextAtSize(value, size);
+    cur.page.drawText(value, { x: summaryX + summaryW - 12 - w, y: sy, font, size, color });
+    sy -= 18;
+  };
 
-  await supabase.from("invoices").update({ pdf_url: urlData.publicUrl }).eq("id", invoice_id);
+  drawSummaryRow(
+    "Total Due",
+    `${currency} ${totalAmount.toLocaleString("en", { minimumFractionDigits: 2 })}`,
+    { bold: true, color: primary, size: Fonts.subheadSize },
+  );
+  if (paidAmount > 0) {
+    drawSummaryRow(
+      "Paid",
+      `${currency} ${paidAmount.toLocaleString("en", { minimumFractionDigits: 2 })}`,
+      { color: rgb(0.4, 0.4, 0.45) },
+    );
+  }
+  if (balance > 0) {
+    drawSummaryRow(
+      "Outstanding Balance",
+      `${currency} ${balance.toLocaleString("en", { minimumFractionDigits: 2 })}`,
+      { bold: true, color: warning },
+    );
+  }
 
-  return json({ pdf_url: urlData.publicUrl, format: "pdf" });
-});
+  cur.advance(summaryH + 8);
+
+  // Notes
+  if (invoice.notes) {
+    cur.ensure(50);
+    cur.page.drawRectangle({
+      x: Margins.left, y: cur.y - 40,
+      width: A4.width - Margins.left - Margins.right, height: 40,
+      color: softBg,
+    });
+    cur.page.drawText("Notes", {
+      x: Margins.left + 10, y: cur.y - 14,
+      font: ctx.bold, size: Fonts.smallSize, color: primary,
+    });
+    cur.page.drawText(String(invoice.notes).slice(0, 240), {
+      x: Margins.left + 10, y: cur.y - 30,
+      font: ctx.regular, size: Fonts.bodySize, color: rgb(0.3, 0.3, 0.35),
+      maxWidth: A4.width - Margins.left - Margins.right - 20,
+    });
+    cur.advance(48);
+  }
+
+  // Signature
+  cur.ensure(60);
+  const sigX = A4.width - Margins.right - 160;
+  cur.advance(36);
+  cur.page.drawLine({
+    start: { x: sigX, y: cur.y },
+    end:   { x: sigX + 160, y: cur.y },
+    thickness: 0.8, color: rgb(0.4, 0.4, 0.45),
+  });
+  cur.page.drawText("Authorised by Finance Office", {
+    x: sigX, y: cur.y - 12,
+    font: ctx.regular, size: Fonts.smallSize, color: rgb(0.4, 0.4, 0.45),
+  });
+
+  drawFooterOnAllPages(ctx, brand);
+  return new Uint8Array(await ctx.doc.save());
+}

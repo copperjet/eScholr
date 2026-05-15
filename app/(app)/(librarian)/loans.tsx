@@ -34,12 +34,14 @@ export default function LoansScreen() {
   const checkInMut = useCheckInBook(schoolId);
   const [returningId, setReturningId] = useState<string | null>(null);
 
-  const handleCheckIn = useCallback(async (txId: string) => {
-    setReturningId(txId);
+  const handleCheckIn = useCallback(async (tx: { id: string; book_id?: string; borrower_id?: string }) => {
+    setReturningId(tx.id);
     try {
       await checkInMut.mutateAsync({
-        transactionId: txId,
+        transactionId: tx.id,
         staffId: user?.staffId ?? '',
+        bookId: tx.book_id,
+        patronId: tx.borrower_id,
       });
     } catch (e: any) {
       if (Platform.OS === 'web') {
@@ -119,7 +121,7 @@ export default function LoansScreen() {
                       label="Return"
                       variant="tonal"
                       size="sm"
-                      onPress={() => handleCheckIn(tx.id)}
+                      onPress={() => handleCheckIn(tx)}
                       loading={returningId === tx.id}
                       disabled={returningId !== null}
                     />

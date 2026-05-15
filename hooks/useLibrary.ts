@@ -299,9 +299,11 @@ export function useImportBooks(schoolId: string) {
       staffId: string;
     }>) => {
       const db = supabase as any;
+      const CHUNK = 10;
       let count = 0;
-      for (const b of books) {
-        const { error } = await db.rpc('library_create_book', {
+      for (let i = 0; i < books.length; i += CHUNK) {
+        const chunk = books.slice(i, i + CHUNK);
+        const results = await Promise.all(chunk.map((b) => db.rpc('library_create_book', {
           p_school_id: schoolId,
           p_title: b.title,
           p_author: b.author ?? null,
@@ -312,9 +314,11 @@ export function useImportBooks(schoolId: string) {
           p_total_copies: b.accessionNumbers?.length ?? b.totalCopies ?? 1,
           p_staff_id: b.staffId,
           p_accession_numbers: b.accessionNumbers ?? null,
-        });
-        if (error) throw error;
-        count++;
+        })));
+        for (const r of results) {
+          if (r.error) throw r.error;
+          count++;
+        }
       }
       return { count };
     },
@@ -529,6 +533,8 @@ export function useCheckInBook(schoolId: string) {
       transactionId: string;
       staffId: string;
       notes?: string;
+      bookId?: string;
+      patronId?: string;
     }) => {
       const db = supabase as any;
       const { error } = await db.rpc('library_check_in_copy', {
@@ -539,14 +545,23 @@ export function useCheckInBook(schoolId: string) {
       });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['library-books', schoolId] });
-      qc.invalidateQueries({ queryKey: ['library-book'] });
       qc.invalidateQueries({ queryKey: ['library-transactions', schoolId] });
-      qc.invalidateQueries({ queryKey: ['library-book-transactions'] });
-      qc.invalidateQueries({ queryKey: ['library-patron-loans'] });
       qc.invalidateQueries({ queryKey: ['library-dashboard', schoolId] });
       qc.invalidateQueries({ queryKey: ['library-overdue', schoolId] });
+      if (vars.bookId) {
+        qc.invalidateQueries({ queryKey: ['library-book', vars.bookId] });
+        qc.invalidateQueries({ queryKey: ['library-book-transactions', vars.bookId] });
+      } else {
+        qc.invalidateQueries({ queryKey: ['library-book'] });
+        qc.invalidateQueries({ queryKey: ['library-book-transactions'] });
+      }
+      if (vars.patronId) {
+        qc.invalidateQueries({ queryKey: ['library-patron-loans', vars.patronId] });
+      } else {
+        qc.invalidateQueries({ queryKey: ['library-patron-loans'] });
+      }
     },
   });
 }
@@ -706,11 +721,18 @@ export function useBatchCheckOut(schoolId: string) {
       }
       return { succeeded, failed };
     },
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['library-books', schoolId] });
-      qc.invalidateQueries({ queryKey: ['library-book'] });
       qc.invalidateQueries({ queryKey: ['library-transactions', schoolId] });
       qc.invalidateQueries({ queryKey: ['library-dashboard', schoolId] });
+      const seen = new Set<string>();
+      for (const item of vars.items) {
+        if (item.bookId && !seen.has(item.bookId)) {
+          seen.add(item.bookId);
+          qc.invalidateQueries({ queryKey: ['library-book', item.bookId] });
+        }
+      }
+      qc.invalidateQueries({ queryKey: ['library-patron-loans', vars.borrowerId] });
     },
   });
 }

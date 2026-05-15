@@ -1,273 +1,297 @@
 /**
- * generate-receipt
+ * generate-receipt (v2 — pdf-lib edition)
+ *
  * POST /functions/v1/generate-receipt
- * Authorization: Bearer <user_jwt>
+ * Auth:  Bearer <SERVICE_ROLE_KEY>  (called by pdf-job-runner only)
+ * Body:  { finance_record_id: string }
  *
- * Body: { finance_record_id: string }
+ * Pipeline:
+ *   1. Mark finance_records.pdf_status='generating' on entry
+ *   2. Render receipt PDF in-process with pdf-lib (no Chrome)
+ *   3. Upload to receipts bucket via shared helper
+ *   4. Insert pdf_versions row + flip is_current
+ *   5. Mark finance_records.pdf_status='success', set pdf_url + receipt_url
  *
- * Returns: { receipt_url: string }
- *
- * Generates a payment receipt PDF using Puppeteer, uploads to
- * Supabase Storage receipts/{school_id}/{finance_record_id}.pdf
- * and returns the public URL.
+ * Failure flips pdf_status='failed'. Idempotency comes from the
+ * unique partial index on pdf_jobs(doc_type, doc_id) — caller enqueues,
+ * runner deduplicates.
  */
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { rgb } from "npm:pdf-lib@1.17.1";
+import { serviceClient, uploadPdf } from "../_shared/pdfUpload.ts";
+import {
+  insertVersion,
+  markParentFailed,
+  markParentGenerating,
+  markParentSuccess,
+  nextVersionNumber,
+} from "../_shared/pdfVersions.ts";
+import { Cursor, Fonts, Margins, A4, newDoc, parseHex } from "../_shared/pdf/layout.ts";
+import { drawFooterOnAllPages, drawHeader, drawSectionTitle, SchoolBrand } from "../_shared/pdf/branding.ts";
+import { drawInfoStrip, drawTable, Column } from "../_shared/pdf/tables.ts";
 
 const CORS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin":  "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
     status,
     headers: { ...CORS, "Content-Type": "application/json" },
   });
 }
 
+interface Txn {
+  id:       string;
+  amount:   number;
+  paid_at:  string | null;
+  note:     string | null;
+  staff:    { full_name: string | null } | null;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
-  // ── Auth check ─────────────────────────────────────────────────────────────
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) return json({ error: "Unauthorized" }, 401);
-
-  const callerClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } },
-  );
-  const { data: { user: caller } } = await callerClient.auth.getUser();
-  if (!caller) return json({ error: "Unauthorized" }, 401);
-
-  const callerRoles: string[] = (caller.app_metadata as any)?.roles ?? [];
-  const allowed = ["finance", "admin", "super_admin", "hot"];
-  if (!callerRoles.some((r) => allowed.includes(r))) {
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const token      = authHeader.replace(/^Bearer\s+/i, "");
+  if (token !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
     return json({ error: "Forbidden" }, 403);
   }
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  let finance_record_id = "";
+  const admin = serviceClient();
+
+  try {
+    const body = await req.json() as { finance_record_id?: string };
+    finance_record_id = body?.finance_record_id ?? "";
+    if (!finance_record_id) return json({ error: "finance_record_id required" }, 400);
+
+    await markParentGenerating(admin, "receipt", finance_record_id);
+
+    // ── Fetch data ──
+    const { data: record, error: recErr } = await admin
+      .from("finance_records")
+      .select(`
+        id, school_id, status, balance, updated_at,
+        students (
+          id, full_name, student_number, photo_url,
+          grades ( name ), streams ( name )
+        ),
+        semesters ( id, name, academic_years ( name ) ),
+        schools (
+          id, name, primary_color, secondary_color, logo_url, currency,
+          address, phone, email, footer_text
+        )
+      `)
+      .eq("id", finance_record_id)
+      .single();
+    if (recErr || !record) throw new Error("Finance record not found");
+
+    const { data: txnRows } = await admin
+      .from("payment_transactions")
+      .select("id, amount, paid_at, note, staff:recorded_by(full_name)")
+      .eq("finance_record_id", finance_record_id)
+      .order("paid_at", { ascending: false });
+
+    const txns: Txn[] = (txnRows ?? []) as unknown as Txn[];
+
+    const school   = (record as any).schools;
+    const student  = (record as any).students;
+    const semester = (record as any).semesters;
+    const schoolId = (record as any).school_id;
+
+    if (!schoolId) throw new Error("school_id missing on finance record");
+
+    // ── Render with pdf-lib ──
+    const bytes = await renderReceipt({
+      record,
+      txns,
+      school,
+      student,
+      semester,
+    });
+
+    // ── Version + upload ──
+    const versionNumber = await nextVersionNumber(admin, "receipt", finance_record_id);
+    const { pdfUrl }    = await uploadPdf(admin, {
+      docType:       "receipt",
+      schoolId,
+      docId:         finance_record_id,
+      versionNumber,
+      bytes,
+    });
+    await insertVersion(admin, {
+      docType:        "receipt",
+      docId:          finance_record_id,
+      schoolId,
+      versionNumber,
+      pdfUrl,
+    });
+    await markParentSuccess(admin, "receipt", finance_record_id, pdfUrl);
+
+    return json({ pdf_url: pdfUrl, receipt_url: pdfUrl, version: versionNumber });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("generate-receipt error:", msg);
+    if (finance_record_id) {
+      try { await markParentFailed(admin, "receipt", finance_record_id, msg); }
+      catch (_) { /* ignore */ }
+    }
+    return json({ error: msg }, 500);
+  }
+});
+
+interface RenderArgs {
+  record:   any;
+  txns:     Txn[];
+  school:   any;
+  student:  any;
+  semester: any;
+}
+
+async function renderReceipt(args: RenderArgs): Promise<Uint8Array> {
+  const { record, txns, school, student, semester } = args;
+  const currency = school?.currency ?? "ZMW";
+  const balance  = Number(record?.balance ?? 0);
+  const totalPaid = txns.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const receiptNo = `RCP-${String(record.id).slice(0, 8).toUpperCase()}`;
+  const issuedAt  = new Date().toLocaleDateString("en-GB", {
+    day: "2-digit", month: "long", year: "numeric",
+  });
+  const isPaid    = record?.status === "paid";
+
+  const brand: SchoolBrand = {
+    name:           school?.name           ?? "School",
+    logoUrl:        school?.logo_url       ?? null,
+    primaryColor:   school?.primary_color  ?? "#1B2A4A",
+    secondaryColor: school?.secondary_color ?? "#E8A020",
+    address:        school?.address        ?? null,
+    phone:          school?.phone          ?? null,
+    email:          school?.email          ?? null,
+    footerText:     school?.footer_text    ?? "Official Payment Receipt",
+  };
+
+  const ctx = await newDoc();
+  const cur = new Cursor(ctx);
+  const primary   = parseHex(brand.primaryColor,   rgb(0.105, 0.165, 0.290));
+  const secondary = parseHex(brand.secondaryColor, rgb(0.910, 0.627, 0.125));
+  const softBg    = rgb(0.973, 0.976, 0.984);
+
+  await drawHeader(ctx, cur, brand, "Payment Receipt");
+
+  // Receipt meta strip
+  cur.ensure(40);
+  cur.page.drawText(`RECEIPT #${receiptNo}`, {
+    x: Margins.left, y: cur.y - 14,
+    font: ctx.bold, size: Fonts.subheadSize, color: primary,
+  });
+  const issued = `Issued: ${issuedAt}`;
+  const issuedW = ctx.regular.widthOfTextAtSize(issued, Fonts.bodySize);
+  cur.page.drawText(issued, {
+    x: A4.width - Margins.right - issuedW, y: cur.y - 14,
+    font: ctx.regular, size: Fonts.bodySize, color: rgb(0.4, 0.4, 0.45),
+  });
+  const statusLbl = isPaid ? "PAID" : "BALANCE OUTSTANDING";
+  const statusW = ctx.bold.widthOfTextAtSize(statusLbl, Fonts.smallSize);
+  cur.page.drawRectangle({
+    x: A4.width - Margins.right - statusW - 14, y: cur.y - 32,
+    width: statusW + 14, height: 16,
+    color: isPaid ? rgb(0.82, 0.96, 0.89) : rgb(0.996, 0.953, 0.78),
+  });
+  cur.page.drawText(statusLbl, {
+    x: A4.width - Margins.right - statusW - 7, y: cur.y - 28,
+    font: ctx.bold, size: Fonts.smallSize,
+    color: isPaid ? rgb(0.024, 0.373, 0.275) : rgb(0.573, 0.255, 0.055),
+  });
+  cur.advance(38);
+
+  // Info strip
+  drawInfoStrip(
+    ctx, cur,
+    [
+      ["Student",       student?.full_name             ?? "—"],
+      ["Student ID",    student?.student_number        ?? "—"],
+      ["Grade / Stream", `${student?.grades?.name ?? "—"} · ${student?.streams?.name ?? "—"}`],
+      ["Semester",      semester?.name                 ?? "—"],
+    ],
+    softBg, primary,
   );
 
-  let finance_record_id: string;
-  try {
-    const body = await req.json();
-    finance_record_id = body.finance_record_id;
-    if (!finance_record_id) throw new Error("finance_record_id required");
-  } catch (e: any) {
-    return json({ error: e.message }, 400);
+  // Transactions
+  drawSectionTitle(ctx, cur, "Payment Transactions", primary, secondary);
+
+  if (txns.length === 0) {
+    cur.ensure(18);
+    cur.page.drawText("No individual transactions recorded.", {
+      x: Margins.left, y: cur.y - 12,
+      font: ctx.italic, size: Fonts.bodySize, color: rgb(0.55, 0.55, 0.6),
+    });
+    cur.advance(20);
+  } else {
+    const cols: Column<Txn & { idx: number }>[] = [
+      { header: "#",            width: 28,  align: "left",   format: (r) => String(r.idx) },
+      { header: "Date",         width: 90,  align: "left",   format: (r) => r.paid_at ? new Date(r.paid_at).toLocaleDateString("en-GB") : "—" },
+      { header: "Note",         flex:  2,   align: "left",   format: (r) => r.note ?? "—" },
+      { header: "Recorded By",  flex:  1.2, align: "left",   format: (r) => r.staff?.full_name ?? "—" },
+      { header: `Amount (${currency})`, width: 90, align: "right", format: (r) => Number(r.amount).toLocaleString("en", { minimumFractionDigits: 2 }) },
+    ];
+    drawTable(
+      ctx, cur, cols,
+      txns.map((t, i) => ({ ...t, idx: i + 1 })),
+      {
+        headerBg: primary,
+        headerFg: rgb(1, 1, 1),
+        altRowBg: softBg,
+      },
+    );
   }
 
-  // ── Fetch finance record with related data ─────────────────────────────────
-  const { data: record, error: recErr } = await supabase
-    .from("finance_records")
-    .select(`
-      id, status, balance, updated_at,
-      students (
-        id, full_name, student_number, photo_url,
-        grades ( name ), streams ( name )
-      ),
-      semesters ( id, name, academic_years ( name ) ),
-      schools (
-        id, name, primary_color, secondary_color, logo_url, currency
-      )
-    `)
-    .eq("id", finance_record_id)
-    .single();
+  // Summary box (right-aligned)
+  const summaryW = 240;
+  const summaryX = A4.width - Margins.right - summaryW;
+  const summaryH = 78;
+  cur.ensure(summaryH + 12);
+  cur.advance(8);
+  cur.page.drawRectangle({
+    x: summaryX, y: cur.y - summaryH,
+    width: summaryW, height: summaryH,
+    color: softBg,
+  });
 
-  if (recErr || !record) return json({ error: "Finance record not found" }, 404);
+  let sy = cur.y - 16;
+  const drawSummaryRow = (label: string, value: string, bold = false, color = rgb(0.1, 0.1, 0.15)) => {
+    const font = bold ? ctx.bold : ctx.regular;
+    cur.page.drawText(label, { x: summaryX + 12, y: sy, font, size: Fonts.bodySize, color });
+    const vw = font.widthOfTextAtSize(value, Fonts.bodySize);
+    cur.page.drawText(value, { x: summaryX + summaryW - 12 - vw, y: sy, font, size: Fonts.bodySize, color });
+    sy -= 18;
+  };
 
-  const { data: txns } = await supabase
-    .from("payment_transactions")
-    .select("id, amount, paid_at, note, staff:recorded_by(full_name)")
-    .eq("finance_record_id", finance_record_id)
-    .order("paid_at", { ascending: false });
+  drawSummaryRow("Total Paid",   `${currency} ${totalPaid.toLocaleString("en", { minimumFractionDigits: 2 })}`);
+  drawSummaryRow(
+    balance > 0 ? "Outstanding Balance" : "Balance",
+    `${currency} ${balance.toLocaleString("en", { minimumFractionDigits: 2 })}`,
+    true,
+    balance > 0 ? rgb(0.706, 0.325, 0.035) : rgb(0.024, 0.373, 0.275),
+  );
+  drawSummaryRow("Status", isPaid ? "Cleared" : "Pending", true, primary);
 
-  const transactions: any[] = txns ?? [];
+  cur.advance(summaryH + 8);
 
-  // ── Build receipt data ─────────────────────────────────────────────────────
-  const school: any    = record.schools as any;
-  const student: any   = record.students as any;
-  const semester: any  = record.semesters as any;
-  const primaryColor   = school?.primary_color ?? "#1B2A4A";
-  const secondaryColor = school?.secondary_color ?? "#E8A020";
-  const currency       = school?.currency ?? "ZMW";
+  // Signature line
+  cur.ensure(60);
+  const sigX = A4.width - Margins.right - 160;
+  cur.advance(36);
+  cur.page.drawLine({
+    start: { x: sigX, y: cur.y },
+    end:   { x: sigX + 160, y: cur.y },
+    thickness: 0.8, color: rgb(0.4, 0.4, 0.45),
+  });
+  cur.page.drawText("Authorised Signature", {
+    x: sigX, y: cur.y - 12,
+    font: ctx.regular, size: Fonts.smallSize, color: rgb(0.4, 0.4, 0.45),
+  });
 
-  const totalPaid   = transactions.reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0);
-  const balance     = Number(record.balance) || 0;
-  const receiptNo   = `RCP-${finance_record_id.slice(0, 8).toUpperCase()}`;
-  const issuedAt    = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
-
-  // ── HTML receipt template ──────────────────────────────────────────────────
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8" />
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 13px; color: #1F2937; background: #fff; padding: 40px; }
-  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 3px solid ${primaryColor}; }
-  .school-info h1 { font-size: 22px; font-weight: 800; color: ${primaryColor}; }
-  .school-info p  { font-size: 12px; color: #6B7280; margin-top: 4px; }
-  .receipt-meta { text-align: right; }
-  .receipt-meta h2 { font-size: 18px; font-weight: 700; color: ${primaryColor}; letter-spacing: 1px; }
-  .receipt-meta .receipt-no { font-size: 13px; color: #6B7280; margin-top: 4px; }
-  .receipt-meta .issued { font-size: 12px; color: #9CA3AF; margin-top: 2px; }
-  .status-badge { display: inline-block; padding: 4px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-top: 8px; background: ${record.status === "paid" ? "#D1FAE5" : "#FEF3C7"}; color: ${record.status === "paid" ? "#065F46" : "#92400E"}; }
-  .student-section { background: #F9FAFB; border-radius: 10px; padding: 20px; margin-bottom: 28px; display: flex; gap: 40px; }
-  .student-section .field { flex: 1; }
-  .field label { font-size: 10px; font-weight: 700; color: #9CA3AF; letter-spacing: 0.5px; text-transform: uppercase; display: block; margin-bottom: 4px; }
-  .field .value { font-size: 14px; font-weight: 600; color: #111827; }
-  .section-title { font-size: 11px; font-weight: 700; color: #9CA3AF; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 10px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-  thead tr { background: ${primaryColor}; color: #fff; }
-  thead th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; }
-  tbody tr:nth-child(even) { background: #F9FAFB; }
-  tbody td { padding: 10px 14px; font-size: 12px; border-bottom: 1px solid #F3F4F6; }
-  .amount-col { text-align: right; font-variant-numeric: tabular-nums; }
-  .summary { margin-left: auto; width: 260px; }
-  .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F3F4F6; font-size: 13px; }
-  .summary-row.total { font-weight: 800; font-size: 15px; color: ${primaryColor}; border-bottom: none; padding-top: 12px; }
-  .summary-row.balance-row { color: ${balance > 0 ? "#B45309" : "#065F46"}; font-weight: 700; }
-  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: flex-end; }
-  .footer .note { font-size: 11px; color: #9CA3AF; max-width: 300px; line-height: 1.5; }
-  .footer .sig { text-align: right; }
-  .footer .sig .sig-line { border-top: 1px solid #9CA3AF; width: 160px; margin-left: auto; margin-bottom: 4px; margin-top: 40px; }
-  .footer .sig .sig-label { font-size: 11px; color: #6B7280; }
-  .accent-bar { height: 4px; background: ${secondaryColor}; border-radius: 2px; margin-bottom: 20px; }
-</style>
-</head>
-<body>
-<div class="accent-bar"></div>
-<div class="header">
-  <div class="school-info">
-    ${school?.logo_url ? `<img src="${school.logo_url}" style="height:48px;margin-bottom:8px;" />` : ""}
-    <h1>${school?.name ?? "School"}</h1>
-    <p>Official Payment Receipt</p>
-  </div>
-  <div class="receipt-meta">
-    <h2>RECEIPT</h2>
-    <div class="receipt-no">${receiptNo}</div>
-    <div class="issued">${issuedAt}</div>
-    <div class="status-badge">${record.status === "paid" ? "PAID" : "BALANCE OUTSTANDING"}</div>
-  </div>
-</div>
-
-<div class="student-section">
-  <div class="field">
-    <label>Student Name</label>
-    <div class="value">${student?.full_name ?? "—"}</div>
-  </div>
-  <div class="field">
-    <label>Student ID</label>
-    <div class="value">${student?.student_number ?? "—"}</div>
-  </div>
-  <div class="field">
-    <label>Grade / Stream</label>
-    <div class="value">${(student?.grades as any)?.name ?? "—"} · ${(student?.streams as any)?.name ?? "—"}</div>
-  </div>
-  <div class="field">
-    <label>Semester</label>
-    <div class="value">${semester?.name ?? "—"}${semester?.academic_years ? " · " + (semester.academic_years as any).name : ""}</div>
-  </div>
-</div>
-
-<div class="section-title">Payment Transactions</div>
-${transactions.length > 0 ? `
-<table>
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>Date</th>
-      <th>Note</th>
-      <th>Recorded By</th>
-      <th class="amount-col">Amount (${currency})</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${transactions.map((t: any, i: number) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${t.paid_at ? new Date(t.paid_at).toLocaleDateString("en-GB") : "—"}</td>
-      <td>${t.note ?? "—"}</td>
-      <td>${(t.staff as any)?.full_name ?? "—"}</td>
-      <td class="amount-col">${Number(t.amount).toLocaleString("en", { minimumFractionDigits: 2 })}</td>
-    </tr>`).join("")}
-  </tbody>
-</table>
-` : `<p style="color:#9CA3AF;font-size:12px;margin-bottom:24px;">No individual transactions recorded.</p>`}
-
-<div class="summary">
-  <div class="summary-row">
-    <span>Total Paid</span>
-    <span>${currency} ${totalPaid.toLocaleString("en", { minimumFractionDigits: 2 })}</span>
-  </div>
-  <div class="summary-row balance-row">
-    <span>${balance > 0 ? "Outstanding Balance" : "Balance"}</span>
-    <span>${currency} ${balance.toLocaleString("en", { minimumFractionDigits: 2 })}</span>
-  </div>
-  <div class="summary-row total">
-    <span>Status</span>
-    <span>${record.status === "paid" ? "Cleared" : "Pending"}</span>
-  </div>
-</div>
-
-<div class="footer">
-  <div class="note">
-    This is an official receipt issued by ${school?.name ?? "the school"}.<br/>
-    Please retain this document for your records.<br/>
-    Receipt #${receiptNo} · ${issuedAt}
-  </div>
-  <div class="sig">
-    <div class="sig-line"></div>
-    <div class="sig-label">Authorised Signature</div>
-  </div>
-</div>
-</body>
-</html>`;
-
-  // ── Generate PDF via Puppeteer ─────────────────────────────────────────────
-  let pdfBuffer: Uint8Array;
-  try {
-    const puppeteer = await import("npm:puppeteer-core@21");
-    const browser = await (puppeteer as any).default.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      executablePath: "/usr/bin/chromium-browser",
-    });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    const pdfData = await page.pdf({ format: "A4", printBackground: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
-    pdfBuffer = new Uint8Array(pdfData);
-    await browser.close();
-  } catch (_e) {
-    // Fallback: return HTML as receipt if Puppeteer unavailable
-    const htmlBytes = new TextEncoder().encode(html);
-    const path = `receipts/${school?.id ?? "school"}/${finance_record_id}.html`;
-    await supabase.storage.from("receipts").upload(path, htmlBytes, {
-      contentType: "text/html",
-      upsert: true,
-    });
-    const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(path);
-    return json({ receipt_url: urlData.publicUrl, format: "html" });
-  }
-
-  // ── Upload PDF to Storage ──────────────────────────────────────────────────
-  const storagePath = `receipts/${school?.id ?? "school"}/${finance_record_id}.pdf`;
-  const { error: uploadErr } = await supabase.storage
-    .from("receipts")
-    .upload(storagePath, pdfBuffer, { contentType: "application/pdf", upsert: true });
-
-  if (uploadErr) return json({ error: "Upload failed: " + uploadErr.message }, 500);
-
-  const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(storagePath);
-
-  // ── Store URL on finance record ────────────────────────────────────────────
-  await supabase
-    .from("finance_records")
-    .update({ receipt_url: urlData.publicUrl })
-    .eq("id", finance_record_id);
-
-  return json({ receipt_url: urlData.publicUrl, format: "pdf" });
-});
+  drawFooterOnAllPages(ctx, brand);
+  return new Uint8Array(await ctx.doc.save());
+}

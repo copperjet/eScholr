@@ -21,6 +21,8 @@ export interface ReportSummary {
   overall_percentage: number | null;
   class_position: number | null;
   pdf_url: string | null;
+  pdf_status: 'none' | 'queued' | 'generating' | 'success' | 'failed' | null;
+  pdf_error: string | null;
   released_at: string | null;
   updated_at: string;
   student: {
@@ -83,7 +85,7 @@ export function useHRTStreamReports(staffId: string | null, schoolId: string, ov
 
       const { data, error } = await db
         .from('reports')
-        .select(`id, status, hrt_comment, overall_percentage, class_position, pdf_url, released_at, updated_at,
+        .select(`id, status, hrt_comment, overall_percentage, class_position, pdf_url, pdf_status, pdf_error, released_at, updated_at,
                  students ( id, full_name, student_number, photo_url ),
                  semesters ( id, name )`)
         .eq('school_id', schoolId)
@@ -174,7 +176,7 @@ export function useAdminReports(schoolId: string, status: ReportStatus | 'all', 
       const db = supabase as any;
       let q = db
         .from('reports')
-        .select(`id, status, hrt_comment, overall_percentage, class_position, pdf_url, released_at, updated_at,
+        .select(`id, status, hrt_comment, overall_percentage, class_position, pdf_url, pdf_status, pdf_error, released_at, updated_at,
                  students ( id, full_name, student_number, photo_url ),
                  semesters ( id, name )`)
         .eq('school_id', schoolId)
@@ -227,7 +229,7 @@ export function useParentReports(parentId: string | null, schoolId: string) {
 
       const { data, error } = await db
         .from('reports')
-        .select(`id, status, hrt_comment, overall_percentage, class_position, pdf_url, released_at, updated_at,
+        .select(`id, status, hrt_comment, overall_percentage, class_position, pdf_url, pdf_status, pdf_error, released_at, updated_at,
                  students ( id, full_name, student_number, photo_url ),
                  semesters ( id, name )`)
         .eq('school_id', schoolId)
@@ -245,14 +247,24 @@ export function useParentReports(parentId: string | null, schoolId: string) {
 export function useGenerateReportPDF(schoolId: string) {
   const qc = useQueryClient();
   return useMutation({
+    // Enqueues via the unified pdf_jobs queue; the runner drains it
+    // and produces a pdf_versions row. Callers should poll via usePdfStatus.
     mutationFn: async (params: { report_id: string; is_preview?: boolean }) => {
-      const { data, error } = await (supabase as any).functions.invoke('generate-report-pdf', {
-        body: params,
+      const db = supabase as any;
+      const { data, error } = await db.rpc('enqueue_pdf', {
+        p_doc_type:   'report',
+        p_doc_id:     params.report_id,
+        p_priority:   5,
+        p_is_preview: !!params.is_preview,
+        p_payload:    {},
       });
       if (error) throw error;
-      return data as { pdf_url: string; verification_token: string };
+      return { job_id: data as string };
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['hrt-reports'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hrt-reports'] });
+      qc.invalidateQueries({ queryKey: ['admin-reports'] });
+    },
   });
 }
 
@@ -328,12 +340,19 @@ export function useApproveReport(schoolId: string) {
           .eq('student_id', report.student_id)
           .eq('semester_id', report.semester_id)
           .eq('school_id', schoolId);
+
+        // 5. Recompute overall_percentage + class_position for this student's stream/semester
+        await db.rpc('recompute_report_and_rank', { p_report_id: params.reportId });
       }
 
-      // 5. Generate PDF — fire-and-forget
-      (supabase as any).functions.invoke('generate-report-pdf', {
-        body: { report_id: params.reportId, is_preview: false },
-      }).then(() => {}).catch(() => {});
+      // 6. Enqueue PDF generation (cron-driven runner picks it up)
+      await db.rpc('enqueue_pdf', {
+        p_doc_type:   'report',
+        p_doc_id:     params.reportId,
+        p_priority:   5,
+        p_is_preview: false,
+        p_payload:    {},
+      });
     },
   });
 }
@@ -497,6 +516,8 @@ function normaliseReport(r: any): ReportSummary {
     overall_percentage: r.overall_percentage ?? null,
     class_position: r.class_position ?? null,
     pdf_url: r.pdf_url ?? null,
+    pdf_status: r.pdf_status ?? null,
+    pdf_error: r.pdf_error ?? null,
     released_at: r.released_at ?? null,
     updated_at: r.updated_at,
     student: {
@@ -507,4 +528,96 @@ function normaliseReport(r: any): ReportSummary {
     },
     semester: r.semesters ? { id: r.semesters.id, name: r.semesters.name } : null,
   };
+}
+
+// ── Initialize reports for a semester ─────────────────────────────────────────
+export function useInitializeReports(schoolId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { semester_id: string; stream_id?: string | null }) => {
+      const db = supabase as any;
+      const { data, error } = await db.rpc('initialize_reports_for_semester', {
+        p_school_id:   schoolId,
+        p_semester_id: params.semester_id,
+        p_stream_id:   params.stream_id ?? null,
+      });
+      if (error) throw error;
+      return data as number;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-reports'] });
+      qc.invalidateQueries({ queryKey: ['admin-report-counts'] });
+      qc.invalidateQueries({ queryKey: ['hrt-reports'] });
+    },
+  });
+}
+
+// ── Retry PDF generation (re-queue via unified RPC, boosted priority) ────────
+export function useRetryReportPdf(schoolId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { report_id: string; is_preview?: boolean }) => {
+      const db = supabase as any;
+      const { data, error } = await db.rpc('enqueue_pdf', {
+        p_doc_type:   'report',
+        p_doc_id:     params.report_id,
+        p_priority:   3,
+        p_is_preview: !!params.is_preview,
+        p_payload:    {},
+      });
+      if (error) throw error;
+      return data as string; // job_id
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['admin-reports'] });
+      qc.invalidateQueries({ queryKey: ['hrt-reports'] });
+    },
+  });
+}
+
+// ── Subject teacher remarks ───────────────────────────────────────────────────
+export interface SubjectRemark {
+  id: string;
+  subject_id: string;
+  remark: string;
+  updated_at: string;
+}
+
+export function useReportSubjectRemarks(reportId: string | null, schoolId: string) {
+  return useQuery<SubjectRemark[]>({
+    queryKey: ['report-subject-remarks', reportId, schoolId],
+    enabled: !!reportId && !!schoolId,
+    staleTime: 1000 * 60,
+    queryFn: async () => {
+      const db = supabase as any;
+      const { data, error } = await db
+        .from('report_subject_remarks')
+        .select('id, subject_id, remark, updated_at')
+        .eq('report_id', reportId!)
+        .eq('school_id', schoolId);
+      if (error) throw error;
+      return (data ?? []) as SubjectRemark[];
+    },
+  });
+}
+
+export function useUpsertSubjectRemark(schoolId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { report_id: string; subject_id: string; remark: string; staff_id: string }) => {
+      const db = supabase as any;
+      const { error } = await db.from('report_subject_remarks').upsert({
+        school_id:  schoolId,
+        report_id:  params.report_id,
+        subject_id: params.subject_id,
+        remark:     params.remark,
+        entered_by: params.staff_id,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'report_id,subject_id' });
+      if (error) throw error;
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['report-subject-remarks', vars.report_id, schoolId] });
+    },
+  });
 }

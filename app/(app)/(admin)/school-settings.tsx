@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, Alert, TextInput,
+  TouchableOpacity, Alert, TextInput, Switch,
 } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import { router } from 'expo-router';
@@ -29,6 +29,7 @@ export default function SchoolSettingsScreen() {
   const [logoUrl, setLogoUrl]           = useState(school?.logo_url ?? '');
   const [primaryColor, setPrimary]      = useState(school?.primary_color ?? '#1B2A4A');
   const [secondaryColor, setSecondary]  = useState(school?.secondary_color ?? '#E8A020');
+  const [requiresFinance, setRequiresFinance] = useState<boolean>(!!(school as any)?.requires_finance_clearance);
   const [saving, setSaving]             = useState(false);
   const [dirty, setDirty]               = useState(false);
 
@@ -37,9 +38,10 @@ export default function SchoolSettingsScreen() {
       name !== (school?.name ?? '') ||
       logoUrl !== (school?.logo_url ?? '') ||
       primaryColor !== (school?.primary_color ?? '#1B2A4A') ||
-      secondaryColor !== (school?.secondary_color ?? '#E8A020');
+      secondaryColor !== (school?.secondary_color ?? '#E8A020') ||
+      requiresFinance !== !!(school as any)?.requires_finance_clearance;
     setDirty(changed);
-  }, [name, logoUrl, primaryColor, secondaryColor, school]);
+  }, [name, logoUrl, primaryColor, secondaryColor, requiresFinance, school]);
 
   const validate = (): string | null => {
     if (!name.trim()) return 'School name is required.';
@@ -81,6 +83,7 @@ export default function SchoolSettingsScreen() {
             logo_url: logoUrl.trim() || null,
             primary_color: primaryColor.trim() || null,
             secondary_color: secondaryColor.trim() || null,
+            requires_finance_clearance: requiresFinance,
           }),
         },
       );
@@ -193,6 +196,24 @@ export default function SchoolSettingsScreen() {
               style={{ flex: 1 }}
             />
             <View style={[styles.swatch, { backgroundColor: HEX_RE.test(secondaryColor) ? secondaryColor : colors.border }]} />
+          </View>
+        </View>
+
+        {/* Policy */}
+        <View style={[styles.card, { backgroundColor: colors.surface }, Shadow.sm]}>
+          <ThemedText variant="label" color="muted" style={styles.sectionLabel}>REPORT RELEASE POLICY</ThemedText>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flex: 1, paddingRight: Spacing.md }}>
+              <ThemedText variant="body" style={{ fontWeight: '600' }}>Require Finance Clearance</ThemedText>
+              <ThemedText variant="caption" color="muted">
+                When on, reports cannot be released until Finance clears the student. Use this for schools that hold reports for outstanding fees.
+              </ThemedText>
+            </View>
+            <Switch
+              value={requiresFinance}
+              onValueChange={setRequiresFinance}
+              trackColor={{ true: colors.brand.primary }}
+            />
           </View>
         </View>
 

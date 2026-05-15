@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, StyleSheet, SafeAreaView, ScrollView, Pressable, Alert, Linking, Platform,
 } from 'react-native';
@@ -14,7 +14,7 @@ import { Spacing, Radius, Shadow } from '../../../../constants/Typography';
 import { Colors } from '../../../../constants/Colors';
 import { haptics } from '../../../../lib/haptics';
 import { useInvoiceDetail } from '../../../../hooks/useInvoices';
-import { supabase } from '../../../../lib/supabase';
+import { useEnqueuePdf, usePdfStatus, isInFlight } from '../../../../hooks/usePdf';
 
 function statusPreset(s: string) {
   switch (s) {
@@ -36,47 +36,54 @@ export default function InvoiceDetailScreen() {
   const schoolId = user?.schoolId ?? '';
 
   const { data: invoice, isLoading, isError, refetch } = useInvoiceDetail(id ?? null, schoolId);
-  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  const enqueueInvoice = useEnqueuePdf('invoice');
+  const pdfStatus      = usePdfStatus('invoice', invoice?.id ?? '');
+  const [awaitingVersion, setAwaitingVersion] = useState<number | null>(null);
+  const generatingPdf  = enqueueInvoice.isPending || isInFlight(pdfStatus.data?.status);
 
   const handleGeneratePdf = useCallback(async () => {
     if (!invoice) return;
     haptics.medium();
-    setGeneratingPdf(true);
+    const baseline = pdfStatus.data?.versionNumber ?? 0;
     try {
-      const session = await (supabase as any).auth.getSession();
-      const token = session?.data?.session?.access_token;
-      if (!token) throw new Error('Not authenticated');
-
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-invoice-pdf`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoice_id: invoice.id }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? 'PDF generation failed');
-      haptics.success();
-      if (json.pdf_url) {
-        Alert.alert(
-          'PDF Ready',
-          'Invoice PDF generated.',
-          [
-            { text: 'Open', onPress: () => Linking.openURL(json.pdf_url) },
-            { text: 'OK' },
-          ]
-        );
-        refetch();
-      }
+      await enqueueInvoice.mutateAsync({ docId: invoice.id });
+      setAwaitingVersion(baseline);
     } catch (e: any) {
       haptics.error();
-      Alert.alert('Error', e?.message ?? 'Could not generate PDF.');
-    } finally {
-      setGeneratingPdf(false);
+      Alert.alert('Error', e?.message ?? 'Could not start PDF generation.');
     }
-  }, [invoice, refetch]);
+  }, [invoice, enqueueInvoice, pdfStatus.data?.versionNumber]);
+
+  useEffect(() => {
+    if (awaitingVersion === null) return;
+    const s = pdfStatus.data;
+    if (!s) return;
+
+    if (s.status === 'success' && (s.versionNumber ?? 0) > awaitingVersion && s.pdfUrl) {
+      const url = s.pdfUrl;
+      setAwaitingVersion(null);
+      haptics.success();
+      refetch();
+      Alert.alert(
+        'PDF Ready',
+        'Invoice PDF generated.',
+        [
+          { text: 'Open', onPress: () => Linking.openURL(url) },
+          { text: 'OK' },
+        ],
+      );
+    } else if (s.status === 'failed') {
+      setAwaitingVersion(null);
+      haptics.error();
+      Alert.alert('Error', s.lastError ?? 'PDF generation failed.');
+    }
+  }, [awaitingVersion, pdfStatus.data, refetch]);
 
   const handleOpenPdf = useCallback(() => {
-    if (invoice?.pdf_url) Linking.openURL(invoice.pdf_url);
-  }, [invoice?.pdf_url]);
+    const url = pdfStatus.data?.pdfUrl ?? invoice?.pdf_url;
+    if (url) Linking.openURL(url);
+  }, [pdfStatus.data?.pdfUrl, invoice?.pdf_url]);
 
   if (isError) {
     return (

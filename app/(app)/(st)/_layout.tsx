@@ -44,6 +44,8 @@ export default function STLayout() {
       <Tabs.Screen name="more"     options={{ title: 'More',     tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} /> }} />
       <Tabs.Screen name="marks-entry"        options={{ href: null }} />
       <Tabs.Screen name="marks-import"       options={{ href: null }} />
+      <Tabs.Screen name="subject-remarks"    options={{ href: null }} />
+      <Tabs.Screen name="biweekly-entry"     options={{ href: null }} />
       <Tabs.Screen name="daybook"            options={{ href: null }} />
       <Tabs.Screen name="messages"           options={{ href: null }} />
       <Tabs.Screen name="analysis"           options={{ href: null }} />

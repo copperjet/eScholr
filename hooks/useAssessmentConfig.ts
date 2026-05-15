@@ -10,6 +10,7 @@ export interface AssessmentTemplate {
   name: string;
   code: string;
   weight_percent: number;
+  max_marks: number;
   is_on_report: boolean;
   is_active: boolean;
   order_index: number;
@@ -29,6 +30,7 @@ export interface UpsertTemplateInput {
   name: string;
   code: string;
   weight_percent: number;
+  max_marks: number;
   is_on_report: boolean;
   is_active: boolean;
   order_index: number;
@@ -43,7 +45,7 @@ export function useAssessmentTemplates(schoolId: string) {
     queryFn: async (): Promise<AssessmentTemplate[]> => {
       const { data, error } = await (supabase as any)
         .from('assessment_templates')
-        .select('id, school_id, section_id, name, code, weight_percent, is_on_report, is_active, order_index')
+        .select('id, school_id, section_id, name, code, weight_percent, max_marks, is_on_report, is_active, order_index')
         .eq('school_id', schoolId)
         .not('code', 'is', null)
         .order('order_index');
@@ -110,6 +112,7 @@ export function useUpsertAssessmentTemplate(schoolId: string) {
         name:         input.name,
         code:         input.code.toLowerCase().trim(),
         weight_percent: input.weight_percent,
+        max_marks:    input.max_marks,
         is_on_report: input.is_on_report,
         is_active:    input.is_active,
         order_index:  input.order_index,
@@ -170,6 +173,143 @@ export function useDeleteAssessmentTemplate(schoolId: string) {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['assessment-templates', schoolId] }),
+  });
+}
+
+// ── Per-stream weight overrides ───────────────────────────────
+
+export interface StreamOverride {
+  stream_id: string;
+  weight_override: number;
+}
+
+export function useTemplateStreamOverrides(templateId: string | null) {
+  return useQuery<StreamOverride[]>({
+    queryKey: ['ats', templateId],
+    enabled: !!templateId,
+    staleTime: 1000 * 60,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('assessment_template_streams')
+        .select('stream_id, weight_override')
+        .eq('assessment_template_id', templateId!);
+      if (error) throw error;
+      return (data ?? []) as StreamOverride[];
+    },
+  });
+}
+
+export function useSchoolStreams(schoolId: string) {
+  return useQuery({
+    queryKey: ['school-streams', schoolId],
+    enabled: !!schoolId,
+    staleTime: 1000 * 60 * 10,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('streams')
+        .select('id, name, grade_id, grades ( name, school_sections ( name ) )')
+        .eq('school_id', schoolId)
+        .order('name');
+      if (error) throw error;
+      return ((data ?? []) as any[]).map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        grade_id: s.grade_id,
+        grade_name: s.grades?.name ?? '—',
+        section_name: s.grades?.school_sections?.name ?? '',
+      }));
+    },
+  });
+}
+
+export function useUpsertStreamOverride(templateId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { stream_id: string; weight_override: number | null }) => {
+      const db = supabase as any;
+      if (params.weight_override === null) {
+        await db.from('assessment_template_streams')
+          .delete()
+          .eq('assessment_template_id', templateId)
+          .eq('stream_id', params.stream_id);
+      } else {
+        await db.from('assessment_template_streams').upsert({
+          assessment_template_id: templateId,
+          stream_id:              params.stream_id,
+          weight_override:        params.weight_override,
+        }, { onConflict: 'assessment_template_id,stream_id' });
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ats', templateId] }),
+  });
+}
+
+// ── Per-student assessment overrides ──────────────────────────
+
+export interface StudentOverride {
+  assessment_template_id: string;
+  weight_override: number | null;
+  is_exempt: boolean;
+  reason: string | null;
+}
+
+export function useStudentAssessmentOverrides(
+  studentId: string | null,
+  semesterId: string | null,
+) {
+  return useQuery<StudentOverride[]>({
+    queryKey: ['sao', studentId, semesterId],
+    enabled: !!studentId && !!semesterId,
+    staleTime: 1000 * 60,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('student_assessment_overrides')
+        .select('assessment_template_id, weight_override, is_exempt, reason')
+        .eq('student_id', studentId!)
+        .eq('semester_id', semesterId!);
+      if (error) throw error;
+      return (data ?? []) as StudentOverride[];
+    },
+  });
+}
+
+export function useUpsertStudentOverride(schoolId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      student_id: string;
+      semester_id: string;
+      assessment_template_id: string;
+      weight_override: number | null;
+      is_exempt: boolean;
+      reason?: string | null;
+      staff_id: string;
+    }) => {
+      const db = supabase as any;
+      // If both default (no override + not exempt) → delete the row to keep table tidy.
+      if (!params.is_exempt && (params.weight_override === null || params.weight_override === undefined)) {
+        await db.from('student_assessment_overrides')
+          .delete()
+          .eq('student_id', params.student_id)
+          .eq('semester_id', params.semester_id)
+          .eq('assessment_template_id', params.assessment_template_id);
+        return;
+      }
+      const { error } = await db.from('student_assessment_overrides').upsert({
+        school_id:              schoolId,
+        student_id:             params.student_id,
+        semester_id:            params.semester_id,
+        assessment_template_id: params.assessment_template_id,
+        weight_override:        params.weight_override,
+        is_exempt:              params.is_exempt,
+        reason:                 params.reason ?? null,
+        created_by:             params.staff_id,
+      }, { onConflict: 'student_id,semester_id,assessment_template_id' });
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['sao', vars.student_id, vars.semester_id] });
+    },
   });
 }
 

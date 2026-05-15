@@ -144,3 +144,29 @@ export function useUpdateCreed(schoolId: string) {
     },
   });
 }
+
+// ── Update Character Framework (admin) ───────────────────────
+export function useUpdateCharacterFramework(schoolId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      is_enabled?:   boolean;
+      value_names?:  string[];
+      rating_scale?: 'cambridge' | 'developmental';
+    }) => {
+      const db = supabase as any;
+      const patch: Record<string, unknown> = {};
+      if (params.is_enabled   !== undefined) patch.is_enabled   = params.is_enabled;
+      if (params.value_names  !== undefined) patch.value_names  = params.value_names;
+      if (params.rating_scale !== undefined) patch.rating_scale = params.rating_scale;
+      const { error } = await db
+        .from('character_frameworks')
+        .update(patch)
+        .eq('school_id', schoolId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['character-framework', schoolId] });
+    },
+  });
+}

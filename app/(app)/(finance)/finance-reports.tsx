@@ -42,7 +42,7 @@ export default function FinanceReportsScreen() {
           onPress: async () => {
             haptics.medium();
             try {
-              await clearMutation.mutateAsync(report.id);
+              await clearMutation.mutateAsync({ reportId: report.id, staffId: user!.staffId! });
               haptics.success();
             } catch {
               haptics.error();

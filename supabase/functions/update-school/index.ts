@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
       renewal_date?: string;
       admissions_required_docs?: string[];
       public_admissions_documents_max_mb?: number;
+      requires_finance_clearance?: boolean;
     };
 
     if (!school_id) return json({ error: "school_id required" }, 400);
@@ -63,14 +64,15 @@ Deno.serve(async (req) => {
     // school_super_admin: branding + admissions config.
     // super_admin: all fields including billing.
     const ADMISSIONS_FIELDS = ['admissions_required_docs', 'public_admissions_documents_max_mb'];
+    const POLICY_FIELDS     = ['requires_finance_clearance'];
     let ALLOWED: string[];
     if (isPlatformAdmin) {
-      ALLOWED = ['subscription_plan', 'subscription_status', 'name', 'logo_url', 'primary_color', 'secondary_color', 'renewal_date', ...ADMISSIONS_FIELDS];
+      ALLOWED = ['subscription_plan', 'subscription_status', 'name', 'logo_url', 'primary_color', 'secondary_color', 'renewal_date', ...ADMISSIONS_FIELDS, ...POLICY_FIELDS];
     } else if (isSchoolSuperAdmin) {
-      ALLOWED = ['name', 'logo_url', 'primary_color', 'secondary_color', ...ADMISSIONS_FIELDS];
+      ALLOWED = ['name', 'logo_url', 'primary_color', 'secondary_color', ...ADMISSIONS_FIELDS, ...POLICY_FIELDS];
     } else {
       // admin
-      ALLOWED = [...ADMISSIONS_FIELDS];
+      ALLOWED = [...ADMISSIONS_FIELDS, ...POLICY_FIELDS];
     }
     const safe: Record<string, any> = {};
     for (const key of ALLOWED) {

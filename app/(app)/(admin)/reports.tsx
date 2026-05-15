@@ -22,7 +22,7 @@ import {
 } from '../../../components/ui';
 import {
   useAdminReports, useAdminReportCounts, useAdminApproveReport, useReleaseReports,
-  useReportAuditLog,
+  useReportAuditLog, useInitializeReports, useRetryReportPdf,
   STATUS_META, type ReportStatus, type ReportSummary,
 } from '../../../hooks/useReports';
 import { ReportStatusPipeline } from '../../../components/modules/ReportStatusPipeline';
@@ -53,7 +53,49 @@ function AdminReportsContent() {
   const { data: counts = {} as Partial<Record<ReportStatus, number>> } = useAdminReportCounts(schoolId);
   const approveMutation = useAdminApproveReport(schoolId);
   const releaseMutation = useReleaseReports(schoolId);
+  const initMutation    = useInitializeReports(schoolId);
+  const retryPdfMutation = useRetryReportPdf(schoolId);
   const { data: auditLog = [], isLoading: auditLoading } = useReportAuditLog(sheetReport?.id ?? null, schoolId, sheetReport?.student.id);
+
+  const handleInitialize = useCallback(() => {
+    if (!selectedSemesterId) {
+      Alert.alert('Pick a semester', 'Select a semester from the picker above first.');
+      return;
+    }
+    Alert.alert(
+      'Initialize reports?',
+      'Creates a draft report for every active student in this semester. Skips students that already have one.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Create',
+          onPress: async () => {
+            try {
+              haptics.medium();
+              const inserted = await initMutation.mutateAsync({ semester_id: selectedSemesterId });
+              haptics.success();
+              Alert.alert('Done', `${inserted} new report${inserted === 1 ? '' : 's'} created.`);
+            } catch (e: any) {
+              haptics.error();
+              Alert.alert('Error', e?.message ?? 'Could not initialize.');
+            }
+          },
+        },
+      ],
+    );
+  }, [selectedSemesterId, initMutation]);
+
+  const handleRetryPdf = useCallback(async (report: ReportSummary) => {
+    try {
+      haptics.medium();
+      await retryPdfMutation.mutateAsync({ report_id: report.id });
+      haptics.success();
+      Alert.alert('Retrying', 'PDF generation re-queued.');
+    } catch (e: any) {
+      haptics.error();
+      Alert.alert('Error', e?.message ?? 'Could not retry PDF.');
+    }
+  }, [retryPdfMutation]);
 
   const handleApprove = useCallback(async (report: ReportSummary) => {
     haptics.medium();
@@ -128,7 +170,18 @@ function AdminReportsContent() {
                 RELEASE {approvedCount}
               </ThemedText>
             </TouchableOpacity>
-          ) : null
+          ) : (
+            <TouchableOpacity
+              onPress={handleInitialize}
+              disabled={initMutation.isPending}
+              style={[styles.releaseBtn, { backgroundColor: colors.brand.primary }]}
+            >
+              <Ionicons name="add" size={13} color="#fff" />
+              <ThemedText variant="label" style={{ color: '#fff', marginLeft: 4, fontSize: 11 }}>
+                {initMutation.isPending ? 'INIT…' : 'INITIALIZE'}
+              </ThemedText>
+            </TouchableOpacity>
+          )
         }
       />
 
@@ -353,6 +406,34 @@ function AdminReportsContent() {
                   <Ionicons name="document-text-outline" size={18} color={colors.brand.primary} />
                   <ThemedText variant="body" style={{ color: colors.brand.primary, fontWeight: '600', marginLeft: 6 }}>
                     View PDF
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
+
+              {(sheetReport.pdf_status === 'failed' || sheetReport.pdf_status === 'queued' || sheetReport.pdf_status === 'generating') && (
+                <View style={[styles.commentBox, {
+                  backgroundColor: sheetReport.pdf_status === 'failed' ? Colors.semantic.errorLight : Colors.semantic.warningLight,
+                  borderColor: (sheetReport.pdf_status === 'failed' ? Colors.semantic.error : Colors.semantic.warning) + '40',
+                }]}>
+                  <ThemedText variant="bodySm" style={{
+                    color: sheetReport.pdf_status === 'failed' ? Colors.semantic.error : Colors.semantic.warning,
+                    fontWeight: '600',
+                  }}>
+                    PDF: {sheetReport.pdf_status === 'failed'
+                      ? `Failed${sheetReport.pdf_error ? ' — ' + sheetReport.pdf_error : ''}`
+                      : sheetReport.pdf_status === 'queued' ? 'Queued for generation' : 'Generating…'}
+                  </ThemedText>
+                </View>
+              )}
+              {(sheetReport.pdf_status === 'failed' || (!sheetReport.pdf_url && sheetReport.status !== 'draft')) && (
+                <TouchableOpacity
+                  onPress={() => handleRetryPdf(sheetReport)}
+                  disabled={retryPdfMutation.isPending}
+                  style={[styles.outlineBtn, { borderColor: Colors.semantic.warning }]}
+                >
+                  <Ionicons name="refresh-outline" size={18} color={Colors.semantic.warning} />
+                  <ThemedText variant="body" style={{ color: Colors.semantic.warning, fontWeight: '600', marginLeft: 6 }}>
+                    {retryPdfMutation.isPending ? 'Retrying…' : 'Retry PDF Generation'}
                   </ThemedText>
                 </TouchableOpacity>
               )}

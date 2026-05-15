@@ -33,6 +33,7 @@ import {
   useGradingScale, useMarksForAssignment, useUpdateMark, useExcuseMark,
   getGradeLabel, computeTotal, type StudentMarkRow,
 } from '../../../hooks/useMarks';
+import { useAssessmentTemplates } from '../../../hooks/useAssessmentConfig';
 import { Spacing, Radius, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
@@ -88,6 +89,12 @@ export default function MarksEntryScreen() {
     user?.schoolId ?? '',
   );
   const { data: gradingScales = [] } = useGradingScale(user?.schoolId ?? '');
+  const { data: templates = [] } = useAssessmentTemplates(user?.schoolId ?? '');
+  const maxByCode = useMemo<Record<string, number>>(() => {
+    const m: Record<string, number> = {};
+    templates.forEach((t) => { m[t.code] = t.max_marks ?? 100; });
+    return m;
+  }, [templates]);
   const updateMark = useUpdateMark(user?.schoolId ?? '', assignmentRaw?.id);
   const excuseMark = useExcuseMark(user?.schoolId ?? '');
 
@@ -161,30 +168,31 @@ export default function MarksEntryScreen() {
         });
         return;
       }
-      if (num > 100) { num = 100; setLocalEdits((prev) => ({ ...prev, [studentId]: { ...prev[studentId], [type]: '100' } })); }
+      const cap = maxByCode[type] ?? 100;
+      if (num > cap) { num = cap; setLocalEdits((prev) => ({ ...prev, [studentId]: { ...prev[studentId], [type]: String(cap) } })); }
       if (num < 0)   { num = 0;   setLocalEdits((prev) => ({ ...prev, [studentId]: { ...prev[studentId], [type]: '0' } })); }
 
       const cellKey = `${studentId}:${type}`;
       setSaveStates((prev) => ({ ...prev, [cellKey]: 'saving' }));
 
-      // Deviation check
+      // Deviation check — visible warning (insert mark_note after save when mark_id is known)
       const avg = classAverages[type];
+      let deviation: { direction: string; magnitude: number } | null = null;
       if (avg !== null && Math.abs(num - avg) > DEVIATION_THRESHOLD) {
         const direction = num > avg ? 'above' : 'below';
-        // Non-blocking: just log a mark_note (fire-and-forget)
-        (supabase as any).from('mark_notes').insert({
-          school_id:  user?.schoolId,
-          note_type:  'deviation_warning',
-          note_text:  `Mark ${num} is ${direction} class average ${avg} by ${Math.abs(num - avg)} points.`,
-          created_by: user?.staffId,
-        } as any).then(() => {});
+        deviation = { direction, magnitude: Math.abs(num - avg) };
+        haptics.warning?.();
+        Alert.alert(
+          'Unusual mark',
+          `${num} is ${deviation.magnitude.toFixed(0)} points ${direction} class average (${avg}). Double-check before submitting.`,
+        );
       }
 
       const student = students.find((s) => s.id === studentId);
       const existingMark = (student as any)?.[type];
 
       try {
-        await updateMark.mutateAsync({
+        const saved = await updateMark.mutateAsync({
           studentId,
           subjectId:      detail!.subject_id,
           streamId:       detail!.stream_id,
@@ -200,12 +208,24 @@ export default function MarksEntryScreen() {
         setTimeout(() => {
           setSaveStates((prev) => ({ ...prev, [cellKey]: 'idle' }));
         }, 2000);
+
+        // Log deviation now that mark_id is known (NOT NULL FK in schema)
+        const savedMarkId: string | undefined = (saved as any)?.id ?? existingMark?.id;
+        if (deviation && savedMarkId) {
+          (supabase as any).from('mark_notes').insert({
+            school_id:  user?.schoolId,
+            mark_id:    savedMarkId,
+            note_type:  'deviation_warning',
+            note_text:  `Mark ${num} is ${deviation.direction} class average ${avg} by ${deviation.magnitude} points.`,
+            created_by: user?.staffId,
+          } as any).then(() => {});
+        }
       } catch {
         haptics.error();
         setSaveStates((prev) => ({ ...prev, [cellKey]: 'error' }));
       }
     },
-    [localEdits, classAverages, students, detail, user, updateMark],
+    [localEdits, classAverages, students, detail, user, updateMark, maxByCode],
   );
 
   const handleExcuse = useCallback(
@@ -295,12 +315,26 @@ export default function MarksEntryScreen() {
           subtitle={`${detail?.streamName ?? '—'} · ${detail?.semesterName ?? '—'}`}
           showBack
           right={
-            <TouchableOpacity
-              onPress={() => router.push({ pathname: '/(app)/(st)/marks-import', params: { assignmentId: params.assignmentId } } as any)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="cloud-upload-outline" size={20} color={colors.brand.primary} />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: '/(app)/(st)/biweekly-entry', params: { assignmentId: params.assignmentId } } as any)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="time-outline" size={20} color={colors.brand.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: '/(app)/(st)/subject-remarks', params: { assignmentId: params.assignmentId } } as any)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.brand.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: '/(app)/(st)/marks-import', params: { assignmentId: params.assignmentId } } as any)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="cloud-upload-outline" size={20} color={colors.brand.primary} />
+              </TouchableOpacity>
+            </View>
           }
         />
 
@@ -356,6 +390,8 @@ export default function MarksEntryScreen() {
             keyboardShouldPersistTaps="handled"
             renderItem={({ item: student }) => {
               const isExcused = isExcusedStudent(student);
+              const isLocked  = student.fa1?.is_locked === true || student.fa2?.is_locked === true || student.summative?.is_locked === true;
+              const cellEditable = isWindowOpen && !isExcused && !isLocked;
 
               // Compute current values (local edit takes priority over server)
               const getValue = (type: string) => {
@@ -390,23 +426,23 @@ export default function MarksEntryScreen() {
                       ref={(r) => { inputRefs.current[cellKey] = r; }}
                       value={isExcused ? '' : val}
                       onChangeText={(v) => {
-                        if (!isWindowOpen || isExcused) return;
+                        if (!cellEditable) return;
                         const clean = v.replace(/[^0-9.]/g, '');
                         setLocalEdits((prev) => ({
                           ...prev,
                           [student.id]: { ...prev[student.id], [type]: clean },
                         }));
                       }}
-                      onBlur={() => { if (isWindowOpen && !isExcused) handleBlur(student.id, type); }}
+                      onBlur={() => { if (cellEditable) handleBlur(student.id, type); }}
                       onSubmitEditing={() => {
-                        if (isWindowOpen && !isExcused) handleBlur(student.id, type);
+                        if (cellEditable) handleBlur(student.id, type);
                         getNextRef(student.id, type)?.focus();
                       }}
                       placeholder={isExcused ? 'N/A' : '—'}
                       placeholderTextColor={isExcused ? colors.brand.primary : colors.textMuted}
                       keyboardType="decimal-pad"
                       returnKeyType={getNextRef(student.id, type) ? 'next' : 'done'}
-                      editable={isWindowOpen && !isExcused}
+                      editable={cellEditable}
                       style={[
                         styles.markInput,
                         {

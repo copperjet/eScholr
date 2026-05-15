@@ -2,7 +2,7 @@
  * Finance — Student Detail
  * Route: /(app)/(finance)/student-finance?finance_record_id=&student_name=
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -33,6 +33,7 @@ import { Spacing, Radius, Typography } from '../../../constants/Typography';
 import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 import { usePaymentMethods } from '../../../hooks/useInvoices';
+import { useEnqueuePdf, usePdfStatus, isInFlight } from '../../../hooks/usePdf';
 
 function useStudentFinance(financeRecordId: string, schoolId: string) {
   return useQuery({
@@ -165,30 +166,49 @@ export default function StudentFinanceScreen() {
     onError: () => haptics.error(),
   });
 
-  // Generate receipt PDF
-  const [generatingReceipt, setGeneratingReceipt] = useState(false);
+  // Receipt PDF — queued via unified pdf_jobs pipeline.
+  const enqueueReceipt = useEnqueuePdf('receipt');
+  const receiptStatus  = usePdfStatus('receipt', finance_record_id ?? '');
+  const [awaitingVersion, setAwaitingVersion] = useState<number | null>(null);
+  const generatingReceipt =
+    enqueueReceipt.isPending || isInFlight(receiptStatus.data?.status);
 
   const handleGenerateReceipt = async () => {
-    setGeneratingReceipt(true);
+    if (!finance_record_id) return;
     haptics.medium();
+    const baseline = receiptStatus.data?.versionNumber ?? 0;
     try {
-      const { data, error } = await (supabase as any).functions.invoke('generate-receipt', {
-        body: { finance_record_id },
-      });
-      if (error || !data?.receipt_url) throw new Error('Receipt generation failed');
-      haptics.success();
-      // Offer share + open
-      const result = await Share.share({ message: `Receipt: ${data.receipt_url}`, url: data.receipt_url }).catch(() => null);
-      if (!result || result.action === Share.dismissedAction) {
-        await WebBrowser.openBrowserAsync(data.receipt_url);
-      }
+      await enqueueReceipt.mutateAsync({ docId: finance_record_id });
+      setAwaitingVersion(baseline);
     } catch {
       haptics.error();
-      Alert.alert('Error', 'Could not generate receipt. Try again.');
-    } finally {
-      setGeneratingReceipt(false);
+      Alert.alert('Error', 'Could not start receipt generation. Try again.');
     }
   };
+
+  useEffect(() => {
+    if (awaitingVersion === null) return;
+    const s = receiptStatus.data;
+    if (!s) return;
+
+    if (s.status === 'success' && (s.versionNumber ?? 0) > awaitingVersion && s.pdfUrl) {
+      const url = s.pdfUrl;
+      setAwaitingVersion(null);
+      haptics.success();
+      queryClient.invalidateQueries({ queryKey: ['student-finance', finance_record_id] });
+      Share.share({ message: `Receipt: ${url}`, url })
+        .then((res) => {
+          if (!res || res.action === Share.dismissedAction) {
+            WebBrowser.openBrowserAsync(url);
+          }
+        })
+        .catch(() => { WebBrowser.openBrowserAsync(url); });
+    } else if (s.status === 'failed') {
+      setAwaitingVersion(null);
+      haptics.error();
+      Alert.alert('Error', s.lastError ?? 'Receipt generation failed. Try again.');
+    }
+  }, [awaitingVersion, receiptStatus.data, queryClient, finance_record_id]);
 
   const handleRecordPayment = () => {
     setAmountError('');
