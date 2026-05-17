@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "imports": {
+    "npm:puppeteer-core@22.15.0": "npm:puppeteer-core@22.15.0",
+    "npm:@supabase/supabase-js@2": "npm:@supabase/supabase-js@2"
+  },
+  "tasks": {
+    "serve": "deno serve --allow-net --allow-env --allow-read generate-report/index.ts"
+  },
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["deno.ns", "deno.unstable"],
+    "strict": true
+  }
+}

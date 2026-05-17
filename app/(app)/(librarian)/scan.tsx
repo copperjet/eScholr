@@ -1,0 +1,280 @@
+import React, { useState, useRef, useCallback } from 'react';
+import {
+  View, StyleSheet, SafeAreaView, Alert, TextInput, Animated, Platform,
+} from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useTheme } from '../../../lib/theme';
+import { useAuthStore } from '../../../stores/authStore';
+import { useBookByBarcode } from '../../../hooks/useLibrary';
+import { ThemedText, ScreenHeader, Button, Card } from '../../../components/ui';
+import { Spacing, Radius } from '../../../constants/Typography';
+
+const IS_WEB = Platform.OS === 'web';
+
+export default function ScanScreen() {
+  const { colors } = useTheme();
+  const { user } = useAuthStore();
+  const schoolId = user?.schoolId ?? '';
+  const [permission, requestPermission] = useCameraPermissions();
+  const [manualCode, setManualCode] = useState('');
+  const [detectedCode, setDetectedCode] = useState<string | null>(null);
+  const [cameraKey, setCameraKey] = useState(0);
+  const processingRef = useRef(false);
+  const webInputRef = useRef<TextInput>(null);
+  const barcodeMut = useBookByBarcode(schoolId);
+  const { returnTo, scanTarget, accessionCopyIndex } = useLocalSearchParams<{
+    returnTo?: string;
+    scanTarget?: string;
+    accessionCopyIndex?: string;
+  }>();
+  const isIsbnMode = returnTo === 'book-form' && scanTarget !== 'accession';
+  const isAccessionMode = returnTo === 'book-form' && scanTarget === 'accession';
+  const flashAnim = useRef(new Animated.Value(0)).current;
+
+  // Reset scanner each time screen focuses (fix re-scan after navigation)
+  useFocusEffect(
+    useCallback(() => {
+      processingRef.current = false;
+      setDetectedCode(null);
+      setCameraKey((k) => k + 1);
+      setManualCode('');
+
+      // Web: explicit focus — autoFocus unreliable across client-side nav.
+      // USB barcode scanners need a focused input to deliver keystrokes.
+      let focusTimer: ReturnType<typeof setTimeout> | undefined;
+      if (IS_WEB) {
+        focusTimer = setTimeout(() => {
+          webInputRef.current?.focus();
+        }, 150);
+      }
+
+      return () => {
+        if (focusTimer) clearTimeout(focusTimer);
+        processingRef.current = true; // block stray callbacks during unmount
+      };
+    }, [])
+  );
+
+  const flashGreen = useCallback(() => {
+    flashAnim.setValue(1);
+    Animated.timing(flashAnim, { toValue: 0, duration: 400, useNativeDriver: true }).start();
+  }, [flashAnim]);
+
+  const handleCode = useCallback(async (data: string) => {
+    const code = data.trim();
+    if (!code || processingRef.current) return;
+    processingRef.current = true;
+    setDetectedCode(code);
+    flashGreen();
+
+    if (isAccessionMode) {
+      router.replace({
+        pathname: '/(app)/(librarian)/book-form' as any,
+        params: { scannedAccession: code, accessionCopyIndex: accessionCopyIndex ?? '0', scanNonce: String(Date.now()) },
+      });
+      return;
+    }
+
+    if (isIsbnMode) {
+      router.replace({
+        pathname: '/(app)/(librarian)/book-form' as any,
+        params: { scannedIsbn: code, scanNonce: String(Date.now()) },
+      });
+      return;
+    }
+
+    if (returnTo === 'quick-checkout' || returnTo === 'quick-checkin') {
+      router.replace({
+        pathname: `/(app)/(librarian)/${returnTo}` as any,
+        params: { scannedBarcode: code, scanNonce: String(Date.now()) },
+      });
+      return;
+    }
+
+    try {
+      const foundBookId = await barcodeMut.mutateAsync(code);
+      if (!foundBookId) {
+        const reset = () => { processingRef.current = false; setDetectedCode(null); };
+        if (Platform.OS === 'web') { window.alert(`No book found with barcode "${code}"`); reset(); }
+        else Alert.alert('Not Found', `No book found with barcode "${code}"`, [{ text: 'OK', onPress: reset }]);
+        return;
+      }
+      router.replace({ pathname: '/(app)/(librarian)/book-detail' as any, params: { bookId: foundBookId } });
+    } catch (e: any) {
+      const reset = () => { processingRef.current = false; setDetectedCode(null); };
+      if (Platform.OS === 'web') { window.alert(e.message ?? 'Lookup failed'); reset(); }
+      else Alert.alert('Error', e.message ?? 'Lookup failed', [{ text: 'OK', onPress: reset }]);
+    }
+  }, [isIsbnMode, returnTo, barcodeMut, flashGreen]);
+
+  const handleBarCodeScanned = useCallback(({ data }: { type: string; data: string }) => {
+    handleCode(data);
+  }, [handleCode]);
+
+  // ── Web: camera scanning doesn't work — show clean input form ──
+  if (IS_WEB) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+        <ScreenHeader title={isIsbnMode ? 'Enter ISBN' : isAccessionMode ? 'Enter Accession Number' : 'Enter Barcode'} showBack />
+        <View style={styles.webContainer}>
+          <Card style={styles.webCard}>
+            <ThemedText variant="h3" style={{ marginBottom: Spacing.sm }}>
+              {isIsbnMode ? 'Enter ISBN' : isAccessionMode ? 'Enter Accession Number' : 'Enter Barcode'}
+            </ThemedText>
+            <ThemedText variant="body" color="muted" style={{ marginBottom: Spacing.lg }}>
+              {isIsbnMode
+                ? 'Camera scanning only works in the mobile app. Type the ISBN below or use a USB barcode scanner.'
+                : isAccessionMode
+                  ? 'Camera scanning only works in the mobile app. Type or scan the accession number printed on the book.'
+                  : 'Camera scanning only works in the mobile app. Type the barcode below or use a USB barcode scanner.'}
+            </ThemedText>
+
+            <TextInput
+              ref={webInputRef}
+              value={manualCode}
+              onChangeText={setManualCode}
+              placeholder={isIsbnMode ? 'e.g. 9780134685991' : isAccessionMode ? 'e.g. 2024-001' : 'e.g. ACC-00001'}
+              placeholderTextColor={colors.textMuted}
+              style={{
+                backgroundColor: colors.surface,
+                color: colors.textPrimary,
+                borderRadius: Radius.md,
+                paddingHorizontal: Spacing.base,
+                paddingVertical: Spacing.md,
+                fontSize: 18,
+                borderWidth: 1,
+                borderColor: colors.border,
+                marginBottom: Spacing.base,
+              }}
+              keyboardType="default"
+              autoCapitalize="characters"
+              autoFocus
+              onSubmitEditing={() => {
+                if (manualCode.trim()) {
+                  handleCode(manualCode.trim());
+                  setManualCode('');
+                }
+              }}
+            />
+
+            <Button
+              label={barcodeMut.isPending ? 'Looking up...' : 'Submit'}
+              onPress={() => {
+                if (manualCode.trim()) {
+                  handleCode(manualCode.trim());
+                  setManualCode('');
+                }
+              }}
+              disabled={!manualCode.trim() || barcodeMut.isPending}
+              fullWidth
+            />
+          </Card>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Native: camera with auto-scan ──
+  if (!permission) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+        <ScreenHeader title="Scan Barcode" showBack />
+        <View style={styles.center}>
+          <ThemedText variant="body" color="muted">Requesting camera permission...</ThemedText>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+        <ScreenHeader title="Scan Barcode" showBack />
+        <View style={styles.center}>
+          <ThemedText variant="body" color="muted" style={{ textAlign: 'center', marginBottom: Spacing.base }}>
+            Camera access is required to scan barcodes.
+          </ThemedText>
+          <Button label="Grant Permission" onPress={requestPermission} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.safe, { backgroundColor: '#000' }]}>
+      <ScreenHeader title="Scan Barcode" showBack tint="light" />
+
+      <View style={styles.cameraContainer}>
+        <CameraView
+          key={cameraKey}
+          style={StyleSheet.absoluteFillObject}
+          facing="back"
+          animateShutter={false}
+          barcodeScannerSettings={{ barcodeTypes: ['code128', 'ean13', 'ean8', 'qr', 'code39', 'upc_a', 'upc_e'] }}
+          onBarcodeScanned={handleBarCodeScanned}
+        />
+
+        <View style={styles.overlay} pointerEvents="none">
+          <View style={styles.scanFrame}>
+            <View style={[styles.corner, styles.cornerTL]} />
+            <View style={[styles.corner, styles.cornerTR]} />
+            <View style={[styles.corner, styles.cornerBL]} />
+            <View style={[styles.corner, styles.cornerBR]} />
+          </View>
+          <ThemedText variant="body" style={{ color: '#fff', textAlign: 'center', marginTop: Spacing.base, fontWeight: '600' }}>
+            {isIsbnMode ? 'Scan ISBN on book cover' : isAccessionMode ? 'Scan accession number label' : 'Scan accession barcode'}
+          </ThemedText>
+        </View>
+      </View>
+
+      {detectedCode && (
+        <Animated.View style={[styles.detectedBanner, { opacity: flashAnim }]} pointerEvents="none">
+          <ThemedText variant="body" style={{ color: '#fff', fontWeight: '700' }}>
+            Detected: {detectedCode}
+          </ThemedText>
+        </Animated.View>
+      )}
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe:            { flex: 1 },
+  center:          { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.screen },
+  webContainer:    { flex: 1, justifyContent: 'center', padding: Spacing.screen },
+  webCard:         { padding: Spacing.lg },
+  cameraContainer: { flex: 1, position: 'relative' },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  scanFrame: {
+    width: 300,
+    height: 180,
+    position: 'relative',
+  },
+  corner: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderColor: '#fff',
+  },
+  cornerTL: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4 },
+  cornerTR: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4 },
+  cornerBL: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4 },
+  cornerBR: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4 },
+  detectedBanner: {
+    position: 'absolute',
+    top: 80,
+    left: Spacing.screen,
+    right: Spacing.screen,
+    backgroundColor: '#22c55e',
+    borderRadius: Radius.md,
+    padding: Spacing.base,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+});

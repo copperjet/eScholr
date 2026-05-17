@@ -1,0 +1,119 @@
+============================================================
+eScholr – PROGRESS NOTES  (updated: 2026-04-28)
+============================================================
+
+── LAST COMPLETED ──────────────────────────────────────────
+Migration 043  (043_parent_access_and_integrity.sql)
+  - SECURITY DEFINER helpers: current_parent_id(), current_parent_student_ids()
+  - Parent read-only RLS on: students, homework_assignments,
+    homework_submissions, day_book_entries (send_to_parent only),
+    invoices, invoice_items, finance_records, payment_transactions,
+    emergency_contacts, subject_enrollments
+  - Trigger: spl_align_school  → forces student_parent_links.school_id = student.school_id
+  - Indexes: spl(school,student), fee_schedules(grade,stream),
+    homework(subject), homework(assigned_by), messages(student,created)
+  STATUS: committed + pushed to master
+
+── MIGRATIONS APPLIED ──────────────────────────────────────
+001–039  core schema (schools, academic structure, finance, marks,
+         attendance, daybook, homework, messaging, timetable, etc.)
+040      school_super_admin role + subjects.code column
+041      calendar_events table + timetable_documents owner_type/staff_id
+         RLS policies fixed to use JWT app_metadata (no missing helpers)
+042      timetable partial unique indexes (class vs teacher),
+         RLS widened to school_super_admin,
+         school-assets storage bucket + RLS
+043      parent read RLS + integrity helpers + hot indexes   ← latest
+
+── UI / APP CHANGES (recent, all committed) ────────────────
+- timetable.tsx         owner_type + staff_id filter; teacher label fix
+- timetable-upload.tsx  class/teacher toggle, teacher picker, label fix
+- useTimetable.ts       hook updated for owner_type/staff_id
+- (hrt)/more.tsx        "Class Timetable" + "My Timetable" menu items
+- (st)/more.tsx         same for ST role
+- (admin)/more.tsx      Governance / Operations split by role
+- (admin)/users.tsx     Users hub (Staff | Students | Parents)
+- (admin)/school-structure.tsx  full CRUD + delete guards
+- (parent)/inbox.tsx    fixed parentId bug (was using staffId)
+- roleScope.ts          updated role access matrix
+
+── WHERE TO BEGIN NEXT ─────────────────────────────────────
+Apply migrations 041-043 to Supabase production:
+  supabase db push   OR paste each file into SQL editor in order.
+
+── NEXT MIGRATION CANDIDATES ───────────────────────────────
+044  Attendance: parent read RLS (child's attendance),
+     missing idx on attendance(student_id, date)
+     (attendance table exists in 008 but no parent policy)
+
+045  Student portal: marks/reports parent read RLS
+     (marks, report_cards — currently no parent SELECT policy)
+
+046  Notifications polish: parent notification delivery
+     + unread count index
+
+047  Leave: complete approval workflow RLS review
+     (028 has triggers but staff approval policies need audit)
+
+── FUTURE FEATURES (not yet started) ───────────────────────
+- Online fee payment gateway (Stripe/Paystack hook)
+- Parent absence note / leave request
+- Teacher-parent meeting scheduler
+- Auto timetable generator (AI / constraint solver)
+- Biometric attendance integration
+- Push notifications (Expo + FCM)
+- PDF report card export
+
+── ROLES REFERENCE ─────────────────────────────────────────
+super_admin | school_super_admin | admin | principal |
+coordinator | hod | hrt | st | finance | hr |
+front_desk | parent | student
+
+── BUILD / DEPLOY ───────────────────────────────────────────
+APK:   eas build --platform android --profile preview
+Web:   (not configured)
+DB push: supabase db push  (from eScholr root, with supabase CLI)
+
+── APRIL 28, 2026 FIXES ───────────────────────────────────
+P0 SECURITY:
+- staff.tsx: replaced 'super_admin' with 'school_super_admin' in role picker
+- platform/_layout.tsx: added schoolId guard to prevent school users accessing platform routes
+- switch-role.tsx: added school_super_admin to ROLE_META, fixed single-role copy
+
+P0 DASHBOARD FIXES:
+- hrt/home.tsx: 'no assignment' now shows empty state instead of error screen
+- st/home.tsx: empty assignments shows helpful empty state
+- admin/assignments.tsx: single()→maybeSingle(), added no-semester empty state
+
+UI RESTRUCTURE:
+- admin/_layout.tsx: super admin now only shows Home + More tabs
+- admin/home.tsx: branched layout — super sees Staff/Students/Parents quick actions
+  and Staff/Students/Teachers stats; regular admin sees Students/Staff/Attendance
+- admin/home.tsx: removed Reports/DayBook/MarksMatrix from regular admin quick actions
+- frontdesk/home.tsx: removed hero + all-time stats, added Parents/Students/Applications
+- frontdesk: added students+parents access to roleScope.ts
+- lib/roleScope.ts: expanded AdminRole type to include hrt/st/finance/front_desk/hr
+
+STUDENT MANAGEMENT:
+- student-add.tsx: auto-assign student numbers (next sequential), sticky bottom Save button
+- student-add.tsx: header Save changed to checkmark icon (fixed "Sa\nve" wrapping)
+- student-import.tsx: template now uses Sharing.shareAsync for real download
+- student-add.tsx: added useNextStudentNumber hook
+
+INVITE FLOW:
+- staff.tsx: relabeled 'Send Invite' → 'Generate Login Password' with clearer dialog
+
+HRT HOME:
+- Quick actions changed to: Attendance, Day Book, Marks
+
+NEW MIGRATIONS:
+- 044_school_super_admin_cleanup.sql
+- 045_admin_dashboard_teacher_count.sql
+
+PENDING (lower priority):
+- Hard delete user edge function + UI
+- Class view model + picker for HOD/coord/principal
+- Extend calendar_events/school_structure access to admin
+- School logo on post-code splash
+
+============================================================

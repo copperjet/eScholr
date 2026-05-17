@@ -1,0 +1,33 @@
+employee_id,first_name,last_name,email,phone,role,department,subject,join_date,status,gender,date_of_birth,national_id,address
+STF001,Marcus,Adeyemi,m.adeyemi@escholr.demo,+2348012345601,principal,Administration,,2018-08-01,active,male,1972-03-15,NIN-110001,12 Adeniyi Close, Ikeja, Lagos
+STF002,Fatima,Okonkwo,f.okonkwo@escholr.demo,+2348012345602,admin,Administration,,2019-01-10,active,female,1980-07-22,NIN-110002,5 Bello Street, Surulere, Lagos
+STF003,Emmanuel,Taiwo,e.taiwo@escholr.demo,+2348012345603,hod,Sciences,Biology,2017-09-01,active,male,1975-11-04,NIN-110003,23 Unity Road, Yaba, Lagos
+STF004,Ngozi,Eze,n.eze@escholr.demo,+2348012345604,hod,Mathematics,Mathematics,2016-04-15,active,female,1974-06-18,NIN-110004,8 Palm Avenue, Mushin, Lagos
+STF005,Chukwuemeka,Nwosu,c.nwosu@escholr.demo,+2348012345605,hod,Languages,English Language,2015-09-01,active,male,1970-01-30,NIN-110005,17 Afolabi Lane, Shomolu, Lagos
+STF006,Amina,Bello,a.bello@escholr.demo,+2348012345606,coordinator,Student Affairs,,2020-03-01,active,female,1985-09-12,NIN-110006,4 Hassan Road, Ketu, Lagos
+STF007,Oluwaseun,Adebayo,o.adebayo@escholr.demo,+2348012345607,hrt,Sciences,Chemistry,2018-09-01,active,male,1982-04-25,NIN-110007,31 Olawale Drive, Gbagada, Lagos
+STF008,Blessing,Okafor,b.okafor@escholr.demo,+2348012345608,hrt,Mathematics,Further Mathematics,2019-09-01,active,female,1987-02-14,NIN-110008,9 Emeka Street, Ikorodu, Lagos
+STF009,Yusuf,Garba,y.garba@escholr.demo,+2348012345609,hrt,Languages,French,2021-01-15,active,male,1990-08-07,NIN-110009,22 Sule Close, Maryland, Lagos
+STF010,Chidinma,Obiora,c.obiora@escholr.demo,+2348012345610,hrt,Arts,Fine Art,2017-09-01,active,female,1983-12-01,NIN-110010,14 Nwosu Avenue, Oshodi, Lagos
+STF011,Taiwo,Akintunde,t.akintunde@escholr.demo,+2348012345611,st,Sciences,Physics,2020-09-01,active,male,1992-05-20,NIN-110011,6 Akintunde Street, Agege, Lagos
+STF012,Folake,Olawale,f.olawale@escholr.demo,+2348012345612,st,Sciences,Biology,2021-09-01,active,female,1993-03-11,NIN-110012,18 Olawale Close, Ifako, Lagos
+STF013,Idris,Musa,i.musa@escholr.demo,+2348012345613,st,Mathematics,Mathematics,2019-09-01,active,male,1988-10-28,NIN-110013,3 Musa Lane, Bariga, Lagos
+STF014,Adaeze,Nwachukwu,a.nwachukwu@escholr.demo,+2348012345614,st,Languages,English Language,2022-01-10,active,female,1994-07-16,NIN-110014,11 Igbo Road, Isolo, Lagos
+STF015,Segun,Fashola,s.fashola@escholr.demo,+2348012345615,st,Social Sciences,Economics,2018-09-01,active,male,1986-01-09,NIN-110015,25 Fashola Drive, Egbe, Lagos
+STF016,Hauwa,Suleiman,h.suleiman@escholr.demo,+2348012345616,st,Social Sciences,Government,2020-09-01,active,female,1991-04-03,NIN-110016,7 Suleiman Street, Ejigbo, Lagos
+STF017,Obinna,Chukwu,o.chukwu@escholr.demo,+2348012345617,st,Sciences,Chemistry,2017-09-01,active,male,1984-09-22,NIN-110017,19 Chukwu Avenue, Alimosho, Lagos
+STF018,Rukayat,Abiodun,r.abiodun@escholr.demo,+2348012345618,st,Languages,Yoruba,2021-09-01,active,female,1989-06-14,NIN-110018,2 Abiodun Close, Badagry, Lagos
+STF019,Emeka,Igwe,e.igwe@escholr.demo,+2348012345619,st,Technical,Computer Science,2019-01-15,active,male,1987-11-30,NIN-110019,30 Igwe Road, Apapa, Lagos
+STF020,Patience,Obi,p.obi@escholr.demo,+2348012345620,st,Arts,Music,2022-09-01,active,female,1995-08-05,NIN-110020,15 Obi Street, Festac, Lagos
+STF021,Babatunde,Rasaq,b.rasaq@escholr.demo,+2348012345621,st,Mathematics,Statistics,2020-09-01,active,male,1990-02-17,NIN-110021,28 Rasaq Lane, Ajegunle, Lagos
+STF022,Nkechi,Okonkwo,n.okonkwo@escholr.demo,+2348012345622,st,Social Sciences,CRS,2018-09-01,active,female,1985-12-09,NIN-110022,10 Okonkwo Road, Ibeju-Lekki, Lagos
+STF023,Sanni,Abdullahi,s.abdullahi@escholr.demo,+2348012345623,st,Physical Education,Physical Education,2021-09-01,active,male,1988-07-23,NIN-110023,20 Abdullahi Drive, Epe, Lagos
+STF024,Ifunanya,Okeke,i.okeke@escholr.demo,+2348012345624,st,Sciences,Agricultural Science,2019-09-01,active,female,1992-10-01,NIN-110024,5 Okeke Street, Lekki, Lagos
+STF025,Dotun,Adeola,d.adeola@escholr.demo,+2348012345625,st,Technical,Technical Drawing,2017-09-01,active,male,1983-04-18,NIN-110025,33 Adeola Close, Victoria Island, Lagos
+STF026,Chinyere,Amadi,c.amadi@escholr.demo,+2348012345626,finance,Finance,,2018-03-01,active,female,1981-01-27,NIN-110026,16 Amadi Road, Ikoyi, Lagos
+STF027,Abubakar,Sadiq,a.sadiq@escholr.demo,+2348012345627,hr,Human Resources,,2016-06-01,active,male,1979-05-13,NIN-110027,8 Sadiq Avenue, Magodo, Lagos
+STF028,Toyin,Ogundele,t.ogundele@escholr.demo,+2348012345628,front_desk,Front Desk,,2022-01-05,active,female,1996-03-08,NIN-110028,21 Ogundele Lane, Ojodu, Lagos
+STF029,Kazeem,Balogun,k.balogun@escholr.demo,+2348012345629,front_desk,Front Desk,,2021-06-01,active,male,1994-09-19,NIN-110029,13 Balogun Street, Ojota, Lagos
+STF030,Chisom,Nnaji,c.nnaji@escholr.demo,+2348012345630,st,Languages,Literature in English,2023-01-09,active,female,1997-11-25,NIN-110030,27 Nnaji Close, Ojokoro, Lagos
+STF031,Femi,Omotosho,f.omotosho@escholr.demo,+2348012345631,st,Social Sciences,History,2022-09-01,active,male,1991-06-30,NIN-110031,4 Omotosho Drive, Kosofe, Lagos
+STF032,Ifeoma,Nwofor,i.nwofor@escholr.demo,+2348012345632,st,Sciences,Biology,2020-01-15,active,female,1989-08-14,NIN-110032,9 Nwofor Road, Eti-Osa, Lagos

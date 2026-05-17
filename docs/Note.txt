@@ -1,0 +1,4 @@
+Subject Teachers should see result analysis per their subject
+Class teachers should see result analysis for their class
+HODs should be able to see the result analysis just for subjects in their department.
+Principals should see results analysis for their section/sections(when a principal is created, the can be assigned specific classes/sections to manage)

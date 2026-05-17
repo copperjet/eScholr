@@ -1,0 +1,50 @@
+# Dependencies - never need to read
+node_modules/
+
+# Build artifacts
+.expo/
+dist/
+build/
+
+# Lock files
+package-lock.json
+yarn.lock
+
+# Generated / binary assets
+assets/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp
+*.ttf
+*.otf
+*.woff
+*.woff2
+
+# EAS / CI config (read-only reference, not implementation)
+eas.json
+.env
+.env.*
+.env.example
+
+# Static app config (rarely changes)
+app.json
+expo-env.d.ts
+
+# Supabase migration SQL (reference only, not edited by Claude)
+supabase/migrations/
+
+# Docs (already loaded as context)
+docs/
+
+# Test snapshots / coverage
+coverage/
+__snapshots__/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

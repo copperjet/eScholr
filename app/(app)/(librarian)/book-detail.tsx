@@ -1,0 +1,298 @@
+import React, { useState } from 'react';
+import { View, ScrollView, StyleSheet, SafeAreaView, Pressable, Alert, RefreshControl, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
+import { format } from 'date-fns';
+import { useTheme } from '../../../lib/theme';
+import { useAuthStore } from '../../../stores/authStore';
+import { useLibraryBook, useBookTransactions, useDeleteBook, useCheckInBook, useUpdateCopyAccession } from '../../../hooks/useLibrary';
+import {
+  ThemedText, ScreenHeader, Card, Badge, ListItem, EmptyState,
+  ErrorState, Button, SectionHeader, Skeleton, BottomSheet, FormField,
+} from '../../../components/ui';
+import { Spacing, Radius } from '../../../constants/Typography';
+import { Colors } from '../../../constants/Colors';
+
+const STATUS_COLORS: Record<string, string> = {
+  available: Colors.semantic.success,
+  checked_out: Colors.semantic.warning,
+  lost: Colors.semantic.error,
+  damaged: '#9333EA',
+  reserved: Colors.semantic.info,
+};
+
+export default function BookDetailScreen() {
+  const { colors } = useTheme();
+  const { user } = useAuthStore();
+  const { bookId } = useLocalSearchParams<{ bookId: string }>();
+  const schoolId = user?.schoolId ?? '';
+
+  const { data: book, isLoading, isError, refetch, isFetching } = useLibraryBook(bookId ?? null);
+  const { data: transactions } = useBookTransactions(bookId ?? null, schoolId);
+  const deleteMut = useDeleteBook(schoolId);
+  const checkInMut = useCheckInBook(schoolId);
+  const updateAccessionMut = useUpdateCopyAccession(schoolId);
+
+  const [editingCopy, setEditingCopy] = useState<{ copyId: string; bookId: string; current: string } | null>(null);
+  const [newAccession, setNewAccession] = useState('');
+  const [accessionError, setAccessionError] = useState('');
+
+  const handleSaveAccession = async () => {
+    const val = newAccession.trim();
+    if (!val || !editingCopy) return;
+    setAccessionError('');
+    try {
+      await updateAccessionMut.mutateAsync({ copyId: editingCopy.copyId, bookId: editingCopy.bookId, accessionNumber: val });
+      setEditingCopy(null);
+    } catch (e: any) {
+      const msg = e.message ?? '';
+      if (msg.includes('23505') || msg.toLowerCase().includes('unique') || msg.toLowerCase().includes('duplicate')) {
+        setAccessionError('Accession number already in use.');
+      } else {
+        setAccessionError(msg || 'Save failed.');
+      }
+    }
+  };
+
+  const doDelete = async () => {
+    try {
+      await deleteMut.mutateAsync(bookId!);
+      router.back();
+    } catch (e: any) {
+      if (Platform.OS === 'web') {
+        window.alert(e.message ?? 'Could not delete book');
+      } else {
+        Alert.alert('Error', e.message ?? 'Could not delete book');
+      }
+    }
+  };
+
+  const handleDelete = () => {
+    const msg = `Are you sure you want to delete "${book?.title}"?`;
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(msg)) {
+        doDelete();
+      }
+      return;
+    }
+    Alert.alert('Delete Book', msg, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: doDelete },
+    ]);
+  };
+
+  const [returningId, setReturningId] = useState<string | null>(null);
+
+  const handleCheckIn = async (txId: string) => {
+    setReturningId(txId);
+    try {
+      await checkInMut.mutateAsync({
+        transactionId: txId,
+        staffId: user?.staffId ?? '',
+        bookId: bookId ?? undefined,
+      });
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'Check-in failed');
+    } finally {
+      setReturningId(null);
+    }
+  };
+
+  if (isError) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+        <ScreenHeader title="Book Detail" showBack />
+        <ErrorState title="Could not load book" onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+      <ScreenHeader
+        title="Book Detail"
+        showBack
+        right={
+          <Pressable onPress={() => router.push({ pathname: '/(app)/(librarian)/book-form' as any, params: { bookId } })} hitSlop={8}>
+            <Ionicons name="create-outline" size={22} color={colors.brand.primary} />
+          </Pressable>
+        }
+      />
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} tintColor={colors.brand.primary} />}
+      >
+        {isLoading ? (
+          <View style={{ padding: Spacing.screen }}>
+            <Skeleton height={200} style={{ borderRadius: Radius.lg, marginBottom: Spacing.base }} />
+          </View>
+        ) : book ? (
+          <>
+            {/* ── Book info card ── */}
+            <Card style={styles.card}>
+              <View style={styles.titleRow}>
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="h2">{book.title}</ThemedText>
+                  {book.author && <ThemedText variant="body" color="muted">{book.author}</ThemedText>}
+                </View>
+                <Badge
+                  label={book.copies && book.copies.some((c) => c.status === 'available') ? 'available' : 'checked out'}
+                  preset={book.copies && book.copies.some((c) => c.status === 'available') ? 'success' : 'warning'}
+                />
+              </View>
+
+              <View style={styles.metaGrid}>
+                {book.isbn && <MetaItem label="ISBN" value={book.isbn} />}
+                {book.publisher && <MetaItem label="Publisher" value={book.publisher} />}
+                {book.publish_year && <MetaItem label="Year" value={String(book.publish_year)} />}
+                {book.collection_name && <MetaItem label="Collection" value={book.collection_name} />}
+              </View>
+
+              {book.notes && (
+                <View style={{ marginTop: Spacing.base }}>
+                  <ThemedText variant="bodySm" color="muted">{book.notes}</ThemedText>
+                </View>
+              )}
+            </Card>
+
+            {/* ── Copies ── */}
+            <SectionHeader title={`Copies (${book.copies?.length ?? 0})`} />
+            {(book.copies ?? []).length === 0 ? (
+              <EmptyState title="No copies" description="No copies registered for this title." />
+            ) : (
+              (book.copies ?? []).map((copy) => (
+                <ListItem
+                  key={copy.id}
+                  title={copy.accession_number}
+                  subtitle={copy.barcode ? `Barcode: ${copy.barcode}` : undefined}
+                  badge={{
+                    label: copy.status.replace('_', ' '),
+                    preset: copy.status === 'available' ? 'success' : copy.status === 'checked_out' ? 'warning' : 'error',
+                  }}
+                  trailing={
+                    <Pressable
+                      hitSlop={8}
+                      onPress={() => {
+                        setAccessionError('');
+                        setNewAccession(copy.accession_number);
+                        setEditingCopy({ copyId: copy.id, bookId: book.id, current: copy.accession_number });
+                      }}
+                    >
+                      <Ionicons name="create-outline" size={18} color={colors.textMuted} />
+                    </Pressable>
+                  }
+                />
+              ))
+            )}
+
+            {/* ── Actions ── */}
+            <View style={styles.actions}>
+              {book.copies && book.copies.some((c) => c.status === 'available') && (
+                <Button
+                  label="Check Out"
+                  onPress={() => router.push({ pathname: '/(app)/(librarian)/checkout' as any, params: { bookId: book.id } })}
+                  style={{ flex: 1 }}
+                />
+              )}
+              <Button
+                label="Delete"
+                variant="danger"
+                onPress={handleDelete}
+                disabled={(transactions ?? []).some((t) => t.status === 'active' || t.status === 'overdue')}
+                style={{ flex: 1 }}
+              />
+            </View>
+            {(transactions ?? []).some((t) => t.status === 'active' || t.status === 'overdue') && (
+              <ThemedText variant="caption" style={{ color: Colors.semantic.error, textAlign: 'center', marginTop: Spacing.xs, paddingHorizontal: Spacing.screen }}>
+                Cannot delete — book has active loans. Return all copies first.
+              </ThemedText>
+            )}
+
+            {/* ── Transaction history ── */}
+            <SectionHeader title="Loan History" />
+            {(transactions ?? []).length === 0 ? (
+              <EmptyState title="No loan history" description="This book hasn't been checked out yet." />
+            ) : (
+              (transactions ?? []).map((tx) => (
+                <ListItem
+                  key={tx.id}
+                  title={tx.borrower_name ?? '—'}
+                  subtitle={`Out: ${format(new Date(tx.checked_out_at), 'dd MMM yyyy')} · Due: ${format(new Date(tx.due_date), 'dd MMM yyyy')}`}
+                  caption={tx.checked_in_at ? `Returned ${format(new Date(tx.checked_in_at), 'dd MMM yyyy')}` : undefined}
+                  badge={
+                    tx.status === 'active'
+                      ? { label: 'Active', preset: 'warning' }
+                      : tx.status === 'returned'
+                        ? { label: 'Returned', preset: 'success' }
+                        : { label: tx.status, preset: 'error' }
+                  }
+                  trailing={
+                    (tx.status === 'active' || tx.status === 'overdue') ? (
+                      <Button label="Return" variant="tonal" size="sm" onPress={() => handleCheckIn(tx.id)} loading={returningId === tx.id} disabled={returningId !== null} />
+                    ) : undefined
+                  }
+                />
+              ))
+            )}
+
+            <View style={{ height: 48 }} />
+          </>
+        ) : null}
+      </ScrollView>
+
+      {/* ── Edit accession ── */}
+      <BottomSheet
+        visible={!!editingCopy}
+        onClose={() => setEditingCopy(null)}
+        title="Edit Accession Number"
+      >
+        <View style={{ padding: Spacing.base }}>
+          <ThemedText variant="caption" color="muted" style={{ marginBottom: Spacing.sm }}>
+            Current: {editingCopy?.current}
+          </ThemedText>
+          <FormField
+            label="New Accession Number"
+            value={newAccession}
+            onChangeText={(v) => { setNewAccession(v); setAccessionError(''); }}
+            placeholder="e.g. ACC-00042"
+            autoCapitalize="characters"
+          />
+          {accessionError ? (
+            <ThemedText variant="caption" style={{ color: Colors.semantic.error, marginTop: Spacing.xs }}>
+              {accessionError}
+            </ThemedText>
+          ) : null}
+          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.base }}>
+            <Button label="Cancel" variant="secondary" onPress={() => setEditingCopy(null)} style={{ flex: 1 }} />
+            <Button
+              label="Save"
+              onPress={handleSaveAccession}
+              loading={updateAccessionMut.isPending}
+              disabled={!newAccession.trim() || newAccession.trim() === editingCopy?.current || updateAccessionMut.isPending}
+              style={{ flex: 1 }}
+            />
+          </View>
+        </View>
+      </BottomSheet>
+    </SafeAreaView>
+  );
+}
+
+function MetaItem({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.metaItem}>
+      <ThemedText variant="caption" color="muted">{label}</ThemedText>
+      <ThemedText variant="bodySm">{value}</ThemedText>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe:    { flex: 1 },
+  card:    { marginHorizontal: Spacing.screen, marginTop: Spacing.base, padding: Spacing.base, borderRadius: Radius.lg },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: Spacing.sm },
+  metaGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: Spacing.base, gap: Spacing.base },
+  metaItem: { minWidth: '40%' },
+  actions:  { flexDirection: 'row', paddingHorizontal: Spacing.screen, marginTop: Spacing.base, gap: Spacing.sm },
+});
