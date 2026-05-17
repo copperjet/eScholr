@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, ViewStyle, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../lib/theme';
 import { Radius, Spacing, Typography } from '../../constants/Typography';
@@ -56,6 +56,7 @@ export function SearchBar({
         style={[
           Typography.body,
           { flex: 1, color: colors.textPrimary, paddingVertical: 0 },
+          Platform.OS === 'web' ? ({ outlineStyle: 'none', cursor: 'text' } as any) : null,
         ]}
         returnKeyType="search"
         clearButtonMode="while-editing"

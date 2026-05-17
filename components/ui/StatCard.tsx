@@ -88,7 +88,7 @@ export function StatCard({
 
   const trendColorStandard = trend?.direction === 'up'
     ? colors.brand.primary
-    : '#DC2626';
+    : colors.semantic.error;
 
   return (
     <Wrapper style={[styles.standard, { backgroundColor: colors.surface }, Shadow.sm, style]}>

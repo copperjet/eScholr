@@ -17,7 +17,6 @@ import { supabase } from '../../../lib/supabase';
 import { ThemedText, Avatar, ScreenHeader } from '../../../components/ui';
 import { useCreateStudent, useUploadStudentPhoto } from '../../../hooks/useStudents';
 import { Spacing, Radius } from '../../../constants/Typography';
-import { Colors } from '../../../constants/Colors';
 import { haptics } from '../../../lib/haptics';
 
 type Gender = 'male' | 'female' | 'other';
@@ -171,14 +170,17 @@ export default function StudentAddScreen() {
           <TouchableOpacity
             onPress={handleSave}
             disabled={!canSave || isSaving}
+            accessibilityRole="button"
+            accessibilityLabel="Save student"
+            accessibilityState={{ disabled: !canSave || isSaving }}
             style={[styles.headerSaveBtn, { backgroundColor: canSave && !isSaving ? colors.brand.primary : colors.border }]}
           >
-            <Ionicons name="checkmark" size={20} color="#fff" />
+            <Ionicons name="checkmark" size={20} color={colors.brand.onPrimary} />
           </TouchableOpacity>
         }
       />
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* Photo picker */}
           <TouchableOpacity onPress={pickPhoto} style={styles.photoPicker}>
@@ -248,9 +250,12 @@ export default function StudentAddScreen() {
           <TouchableOpacity
             onPress={handleSave}
             disabled={!canSave || isSaving}
+            accessibilityRole="button"
+            accessibilityLabel="Save student"
+            accessibilityState={{ disabled: !canSave || isSaving, busy: isSaving }}
             style={[styles.bottomSaveBtn, { backgroundColor: canSave && !isSaving ? colors.brand.primary : colors.border }]}
           >
-            <ThemedText style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
+            <ThemedText style={{ color: colors.brand.onPrimary, fontWeight: '700', fontSize: 16 }}>
               {isSaving ? 'Saving…' : 'Save Student'}
             </ThemedText>
           </TouchableOpacity>

@@ -191,16 +191,16 @@ function LoadingState() {
   );
 }
 
-function StatCard({ label, value, color, colors }: { label: string; value: string; color: string; colors: any }) {
+const StatCard = React.memo(function StatCard({ label, value, color, colors }: { label: string; value: string; color: string; colors: any }) {
   return (
     <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: color + '40', borderWidth: 1.5 }]}>
       <ThemedText style={{ fontSize: 20, fontWeight: '800', color }}>{value}</ThemedText>
       <ThemedText variant="caption" color="muted" style={{ textAlign: 'center', marginTop: 2 }}>{label}</ThemedText>
     </View>
   );
-}
+});
 
-function SubjectRow({ subject, colors, semesterId }: {
+const SubjectRow = React.memo(function SubjectRow({ subject, colors, semesterId }: {
   subject: SubjectSummary; colors: any; semesterId: string | null;
 }) {
   const passColor = subject.passRate !== null && subject.passRate >= 70
@@ -245,7 +245,7 @@ function SubjectRow({ subject, colors, semesterId }: {
       <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginLeft: 4 }} />
     </TouchableOpacity>
   );
-}
+});
 
 export default function AdminAnalysisScreen() {
   return (

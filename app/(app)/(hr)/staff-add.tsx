@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useTheme } from '../../../lib/theme';
 import { useAuthStore } from '../../../stores/authStore';
 import {
   ScreenHeader, Button, FormField, DatePickerField, Card, SectionHeader,
+  KeyboardAwareScrollView,
 } from '../../../components/ui';
 import { Spacing, Radius } from '../../../constants/Typography';
 import { supabase } from '../../../lib/supabase';
 import { useCreateStaff } from '../../../hooks/useStaffRecords';
+import { useFocusChain } from '../../../hooks/useFocusChain';
+import { useMutationHaptics } from '../../../hooks/useMutationHaptics';
 
 export default function HRStaffAdd() {
   const { colors } = useTheme();
   const { user } = useAuthStore();
   const schoolId = user?.schoolId ?? '';
   const createMutation = useCreateStaff(schoolId);
+  useMutationHaptics(createMutation);
+  const chain = useFocusChain(7);
 
   const [fullName, setFullName]             = useState('');
   const [email, setEmail]                   = useState('');
@@ -117,32 +122,59 @@ export default function HRStaffAdd() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScreenHeader title="Add Staff Member" showBack />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <KeyboardAwareScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
 
         <SectionHeader title="Required" />
         <Card style={styles.card}>
-          <FormField label="Full Name *" value={fullName} onChangeText={setFullName} autoCapitalize="words" />
-          <FormField label="Email *"     value={email}    onChangeText={setEmail}    keyboardType="email-address" autoCapitalize="none" />
+          <FormField
+            ref={chain.ref(0)}
+            label="Full Name *" value={fullName} onChangeText={setFullName} autoCapitalize="words"
+            textContentType="name" autoComplete="name"
+            returnKeyType="next" blurOnSubmit={false} onSubmitEditing={chain.focusNext(0)}
+          />
+          <FormField
+            ref={chain.ref(1)}
+            label="Email *" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none"
+            textContentType="emailAddress" autoComplete="email"
+            returnKeyType="next" blurOnSubmit={false} onSubmitEditing={chain.focusNext(1)}
+          />
         </Card>
 
         <SectionHeader title="Role & Employment" />
         <Card style={styles.card}>
-          <FormField label="Phone"      value={phone}      onChangeText={setPhone}      keyboardType="phone-pad" />
-          <FormField label="Department" value={department} onChangeText={setDepartment} />
-          <FormField label="Position"   value={position}   onChangeText={setPosition} />
           <FormField
+            ref={chain.ref(2)}
+            label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad"
+            textContentType="telephoneNumber" autoComplete="tel"
+            returnKeyType="next" blurOnSubmit={false} onSubmitEditing={chain.focusNext(2)}
+          />
+          <FormField
+            ref={chain.ref(3)}
+            label="Department" value={department} onChangeText={setDepartment}
+            returnKeyType="next" blurOnSubmit={false} onSubmitEditing={chain.focusNext(3)}
+          />
+          <FormField
+            ref={chain.ref(4)}
+            label="Position" value={position} onChangeText={setPosition}
+            returnKeyType="next" blurOnSubmit={false} onSubmitEditing={chain.focusNext(4)}
+          />
+          <FormField
+            ref={chain.ref(5)}
             label="Staff Type"
             value={staffType}
             onChangeText={setStaffType}
             placeholder="teacher · support · substitute · administrator"
             autoCapitalize="none"
+            returnKeyType="next" blurOnSubmit={false} onSubmitEditing={chain.focusNext(5)}
           />
           <FormField
+            ref={chain.ref(6)}
             label="Employment Type"
             value={employmentType}
             onChangeText={setEmploymentType}
             placeholder="full_time · part_time · contract · substitute"
             autoCapitalize="none"
+            returnKeyType="done"
           />
         </Card>
 
@@ -162,7 +194,7 @@ export default function HRStaffAdd() {
             style={{ flex: 1 }}
           />
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

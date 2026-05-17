@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Pressable, StyleSheet, ViewStyle, Image } from 'react-native';
+import { View, Pressable, StyleSheet, ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from './ThemedText';
@@ -37,9 +38,11 @@ export function ScreenHeader({
   // Default right-slot content: the school logo if available.
   const rightContent = right ?? (school?.logo_url ? (
     <Image
-      source={{ uri: school.logo_url }}
+      source={school.logo_url}
       style={styles.logo}
-      resizeMode="contain"
+      contentFit="contain"
+      cachePolicy="memory-disk"
+      transition={120}
       accessibilityLabel={`${school.name} logo`}
     />
   ) : null);

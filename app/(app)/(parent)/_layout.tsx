@@ -8,7 +8,7 @@ import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
 
 export default function ParentLayout() {
   const { colors } = useTheme();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const showSidebar = useShouldShowSidebar();
   const financeEnabled = useIsModuleEnabled('finance');
   const announcementsEnabled = useIsModuleEnabled('announcements');

@@ -9,10 +9,9 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Avatar, ProgressBar, CardSkeleton,
-  EmptyState, ErrorState, SectionHeader, Card, IconChip,
+  EmptyState, ErrorState, SectionHeader, Card, IconChip, Stagger,
 } from '../../../components/ui';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
-import { Colors } from '../../../constants/Colors';
 
 // Avoid stale date after midnight — computed inside component via useMemo
 
@@ -126,11 +125,11 @@ export default function STHome() {
             description="You have no subject assignments for the current semester."
           />
         ) : (
-          <View style={{ paddingHorizontal: Spacing.screen, gap: Spacing.sm }}>
+          <Stagger gap={60} scaleFrom={0.97} style={{ paddingHorizontal: Spacing.screen, gap: Spacing.sm }}>
             {(data ?? []).map((a: any) => {
               const pct       = a.expected > 0 ? Math.round((a.markedCount / a.expected) * 100) : 0;
               const done      = pct === 100;
-              const barColor  = done ? Colors.semantic.success : colors.brand.primary;
+              const barColor  = done ? colors.semantic.success : colors.brand.primary;
 
               return (
                 <Pressable
@@ -145,8 +144,8 @@ export default function STHome() {
                 >
                   <View style={styles.cardTop}>
                     <IconChip
-                      icon={<Ionicons name="book-outline" size={20} color={done ? Colors.semantic.success : colors.brand.primary} />}
-                      bg={done ? Colors.semantic.successLight : colors.brand.primarySoft}
+                      icon={<Ionicons name="book-outline" size={20} color={done ? colors.semantic.success : colors.brand.primary} />}
+                      bg={done ? colors.semantic.successBg : colors.brand.primarySoft}
                       size={44}
                     />
                     <View style={{ flex: 1 }}>
@@ -164,7 +163,7 @@ export default function STHome() {
                 </Pressable>
               );
             })}
-          </View>
+          </Stagger>
         )}
 
         <View style={{ height: TAB_BAR_HEIGHT }} />

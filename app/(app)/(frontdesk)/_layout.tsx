@@ -9,7 +9,7 @@ import { useFrontDeskRealtime } from '../../../hooks/useRealtimeSync';
 
 export default function FrontDeskLayout() {
   const { colors } = useTheme();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const showSidebar = useShouldShowSidebar();
   const frontdeskEnabled = useIsModuleEnabled('frontdesk');
 

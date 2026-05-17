@@ -38,7 +38,7 @@ function nameToColor(str: string): { bg: string; fg: string } {
   return palette[Math.abs(hash) % palette.length];
 }
 
-export function Avatar({ name, photoUrl, size = 40, style }: AvatarProps) {
+export const Avatar = React.memo(function Avatar({ name, photoUrl, size = 40, style }: AvatarProps) {
   const { colors } = useTheme();
   const safeName = name || '?';
   const { bg, fg } = nameToColor(safeName);
@@ -82,7 +82,7 @@ export function Avatar({ name, photoUrl, size = 40, style }: AvatarProps) {
       </ThemedText>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   fallback: {

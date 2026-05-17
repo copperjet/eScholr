@@ -34,11 +34,11 @@ const AUDIENCE_META: Record<AnnouncementAudience, { label: string; color: string
 
 const ROLE_OPTIONS = ['admin','principal','coordinator','hrt','st','parent','finance','front_desk'];
 
-function AnnouncementCard({ item, colors, onDelete }: { item: Announcement; colors: any; onDelete: () => void }) {
+const AnnouncementCard = React.memo(function AnnouncementCard({ item, colors, onDelete }: { item: Announcement; colors: any; onDelete: (item: Announcement) => void }) {
   const meta = AUDIENCE_META[item.audience_type] ?? AUDIENCE_META.school;
   return (
     <TouchableOpacity
-      onLongPress={onDelete}
+      onLongPress={() => onDelete(item)}
       activeOpacity={0.85}
       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
@@ -72,11 +72,11 @@ function AnnouncementCard({ item, colors, onDelete }: { item: Announcement; colo
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 export default function AnnouncementsScreen() {
   const { colors } = useTheme();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const announcementsEnabled = useIsModuleEnabled('announcements');
   const schoolId = user?.schoolId ?? '';
 
@@ -137,6 +137,13 @@ export default function AnnouncementsScreen() {
     ]);
   }, [deleteMutation]);
 
+  const renderAnnouncement = useCallback(
+    ({ item }: { item: Announcement }) => (
+      <AnnouncementCard item={item} colors={colors} onDelete={handleDelete} />
+    ),
+    [colors, handleDelete],
+  );
+
   if (isError) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
@@ -167,9 +174,7 @@ export default function AnnouncementsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <AnnouncementCard item={item} colors={colors} onDelete={() => handleDelete(item)} />
-          )}
+          renderItem={renderAnnouncement}
         />
       )}
 

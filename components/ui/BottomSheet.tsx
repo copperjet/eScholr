@@ -46,6 +46,14 @@ export function BottomSheet({ visible, onClose, title, children, snapHeight = SC
     }
   }, [visible]);
 
+  // Web: dismiss on Escape key
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !visible) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [visible, onClose]);
+
   // PanResponder only works on mobile, skip on web
   const panResponder = useRef(
     Platform.OS !== 'web'
@@ -68,13 +76,9 @@ export function BottomSheet({ visible, onClose, title, children, snapHeight = SC
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      {Platform.OS !== 'web' ? (
-        <TouchableWithoutFeedback onPress={onClose}>
-          <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} />
-        </TouchableWithoutFeedback>
-      ) : (
-        <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} pointerEvents="none" />
-      )}
+      <TouchableWithoutFeedback onPress={onClose}>
+        <Animated.View style={[styles.backdrop, { backgroundColor: colors.overlay, opacity: backdropOpacity }]} />
+      </TouchableWithoutFeedback>
 
       <Animated.View
         style={[
@@ -126,7 +130,6 @@ export function BottomSheet({ visible, onClose, title, children, snapHeight = SC
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   sheet: {
     position: 'absolute',

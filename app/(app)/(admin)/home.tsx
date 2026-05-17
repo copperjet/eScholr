@@ -9,10 +9,9 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Avatar, ErrorState, StatCard, SectionHeader,
-  QuickActionCard, ListItemSkeleton, StatCardSkeleton, FadeIn,
+  QuickActionCard, StatCardSkeleton, FadeIn, Stagger,
 } from '../../../components/ui';
 import { Spacing, TAB_BAR_HEIGHT } from '../../../constants/Typography';
-import { Colors } from '../../../constants/Colors';
 import { useCanAccess } from '../../../lib/roleScope';
 import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
 import { StreamPicker } from '../../../components/modules/StreamPicker';
@@ -164,49 +163,49 @@ export default function AdminHome() {
             </View>
           ) : isSuper ? (
             // Super admin: Staff, Students, Teachers
-            <View style={styles.statRow}>
+            <Stagger horizontal gap={80} scaleFrom={0.95} style={styles.statRow}>
               <StatCard
                 label="Staff"
                 value={data?.staffCount ?? 0}
                 icon="people"
-                iconBg={Colors.semantic.infoLight}
-                iconColor={Colors.semantic.info}
+                iconBg={colors.semantic.infoBg}
+                iconColor={colors.semantic.info}
                 style={styles.statCell}
               />
               <StatCard
                 label="Students"
                 value={data?.studentCount ?? 0}
                 icon="school"
-                iconBg={Colors.semantic.successLight}
-                iconColor={Colors.semantic.success}
+                iconBg={colors.semantic.successBg}
+                iconColor={colors.semantic.success}
                 style={styles.statCell}
               />
               <StatCard
                 label="Teachers"
                 value={data?.teacherCount ?? 0}
                 icon="id-card"
-                iconBg={Colors.semantic.warningLight}
-                iconColor={Colors.semantic.warning}
+                iconBg={colors.semantic.warningBg}
+                iconColor={colors.semantic.warning}
                 style={styles.statCell}
               />
-            </View>
+            </Stagger>
           ) : (
             // Regular admin: Staff, Students, Analysis
-            <View style={styles.statRow}>
+            <Stagger horizontal gap={80} scaleFrom={0.95} style={styles.statRow}>
               <StatCard
                 label="Staff"
                 value={data?.staffCount ?? 0}
                 icon="person"
-                iconBg={Colors.semantic.infoLight}
-                iconColor={Colors.semantic.info}
+                iconBg={colors.semantic.infoBg}
+                iconColor={colors.semantic.info}
                 style={styles.statCell}
               />
               <StatCard
                 label="Students"
                 value={data?.studentCount ?? 0}
                 icon="school"
-                iconBg={Colors.semantic.successLight}
-                iconColor={Colors.semantic.success}
+                iconBg={colors.semantic.successBg}
+                iconColor={colors.semantic.success}
                 style={styles.statCell}
               />
               {examsEnabled ? (
@@ -214,8 +213,8 @@ export default function AdminHome() {
                   label="Analysis"
                   value="›"
                   icon="bar-chart"
-                  iconBg={Colors.semantic.warningLight}
-                  iconColor={Colors.semantic.warning}
+                  iconBg={colors.semantic.warningBg}
+                  iconColor={colors.semantic.warning}
                   style={styles.statCell}
                   onPress={() => router.push('/(app)/(admin)/analysis' as any)}
                 />
@@ -224,12 +223,12 @@ export default function AdminHome() {
                   label="Attendance"
                   value={attPct != null ? `${attPct}%` : '—'}
                   icon="checkmark-circle"
-                  iconBg={Colors.semantic.successLight}
-                  iconColor={Colors.semantic.success}
+                  iconBg={colors.semantic.successBg}
+                  iconColor={colors.semantic.success}
                   style={styles.statCell}
                 />
               )}
-            </View>
+            </Stagger>
           )}
         </FadeIn>
 
@@ -240,24 +239,24 @@ export default function AdminHome() {
             style={({ pressed }) => [
               styles.alertBanner,
               {
-                backgroundColor: Colors.semantic.warningLight,
-                borderColor: Colors.semantic.warning + '50',
+                backgroundColor: colors.semantic.warningBg,
+                borderColor: colors.semantic.warning + '50',
                 opacity: pressed ? 0.8 : 1,
               },
             ]}
           >
-            <Ionicons name="time-outline" size={18} color={Colors.semantic.warning} />
-            <ThemedText style={{ color: Colors.semantic.warning, fontWeight: '600', flex: 1, fontSize: 14, marginLeft: Spacing.sm }}>
+            <Ionicons name="time-outline" size={18} color={colors.semantic.warning} />
+            <ThemedText style={{ color: colors.semantic.warning, fontWeight: '600', flex: 1, fontSize: 14, marginLeft: Spacing.sm }}>
               {data?.pendingReports} report{(data?.pendingReports ?? 0) > 1 ? 's' : ''} awaiting approval
             </ThemedText>
-            <Ionicons name="chevron-forward" size={16} color={Colors.semantic.warning} />
+            <Ionicons name="chevron-forward" size={16} color={colors.semantic.warning} />
           </Pressable>
         )}
 
         {/* ── Quick actions — gated by role ── */}
         <FadeIn delay={200}>
         <SectionHeader title="Quick Actions" />
-        <View style={styles.qaGrid}>
+        <Stagger gap={55} scaleFrom={0.97} style={styles.qaGrid}>
           {isSuper ? (
             // Super admin: Enhanced quick actions
             <>
@@ -417,7 +416,7 @@ export default function AdminHome() {
               )}
             </>
           )}
-        </View>
+        </Stagger>
         </FadeIn>
 
         <View style={{ height: TAB_BAR_HEIGHT }} />

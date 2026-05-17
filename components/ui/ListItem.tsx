@@ -5,6 +5,7 @@ import { ThemedText } from './ThemedText';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { PressableScale } from './PressableScale';
+import { SwipeRow, type SwipeAction } from './SwipeRow';
 import { useTheme } from '../../lib/theme';
 import { Spacing } from '../../constants/Typography';
 
@@ -27,9 +28,12 @@ interface ListItemProps {
   style?: ViewStyle;
   /** Show a hairline separator at bottom */
   separator?: boolean;
+  /** Swipe-to-reveal actions (mobile only; web renders the row unchanged) */
+  leftActions?: SwipeAction[];
+  rightActions?: SwipeAction[];
 }
 
-export function ListItem({
+export const ListItem = React.memo(function ListItem({
   title,
   subtitle,
   caption,
@@ -43,11 +47,14 @@ export function ListItem({
   onPress,
   style,
   separator = false,
+  leftActions,
+  rightActions,
 }: ListItemProps) {
   const { colors } = useTheme();
+  const hasSwipe = !!(leftActions?.length || rightActions?.length);
 
   const inner = (
-    <View style={[styles.row, separator && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+    <View style={[styles.row, hasSwipe && { backgroundColor: colors.surface }, separator && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
       {/* Leading */}
       {(leading || avatarName) && (
         <View style={styles.leading}>
@@ -88,16 +95,29 @@ export function ListItem({
     </View>
   );
 
-  if (onPress) {
+  const body = onPress ? (
+    <PressableScale
+      onPress={onPress}
+      scaleTo={0.985}
+      accessibilityRole="button"
+      style={[styles.pressable, hasSwipe && { backgroundColor: colors.surface }, style]}
+    >
+      {inner}
+    </PressableScale>
+  ) : (
+    <View style={[hasSwipe && { backgroundColor: colors.surface }, style]}>{inner}</View>
+  );
+
+  if (hasSwipe) {
     return (
-      <PressableScale onPress={onPress} scaleTo={0.985} style={[styles.pressable, style]}>
-        {inner}
-      </PressableScale>
+      <SwipeRow leftActions={leftActions} rightActions={rightActions}>
+        {body}
+      </SwipeRow>
     );
   }
 
-  return <View style={style}>{inner}</View>;
-}
+  return body;
+});
 
 const styles = StyleSheet.create({
   pressable: { paddingHorizontal: Spacing.screen },

@@ -16,22 +16,30 @@ interface SkeletonProps {
   height?: number;
   radius?: number;
   style?: ViewStyle;
+  /** List position — offsets the shimmer phase so stacked rows desync. */
+  index?: number;
 }
 
 /**
  * Premium skeleton: a darker shimmer band sweeps across a tinted track.
  * Pure UI-thread animation — no setState churn.
  */
-export function Skeleton({ width = '100%', height = 16, radius = Radius.md, style }: SkeletonProps) {
+export function Skeleton({ width = '100%', height = 16, radius = Radius.md, style, index = 0 }: SkeletonProps) {
   const { colors } = useTheme();
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withRepeat(
-      withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      false
-    );
+    const start = () => {
+      progress.value = withRepeat(
+        withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        false
+      );
+    };
+    const offset = (index % 6) * 120;
+    if (offset === 0) { start(); return; }
+    const t = setTimeout(start, offset);
+    return () => clearTimeout(t);
   }, []);
 
   const shimmerStyle = useAnimatedStyle(() => {
@@ -81,13 +89,13 @@ export function SkeletonRow({ lines = 2 }: { lines?: number }) {
 }
 
 // Pre-built composite skeletons
-export function ListItemSkeleton() {
+export function ListItemSkeleton({ index = 0 }: { index?: number }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.md }}>
-      <Skeleton width={44} height={44} radius={22} />
+      <Skeleton index={index} width={44} height={44} radius={22} />
       <View style={{ flex: 1, gap: Spacing.sm }}>
-        <Skeleton width="65%" height={14} />
-        <Skeleton width="40%" height={12} />
+        <Skeleton index={index} width="65%" height={14} />
+        <Skeleton index={index} width="40%" height={12} />
       </View>
     </View>
   );

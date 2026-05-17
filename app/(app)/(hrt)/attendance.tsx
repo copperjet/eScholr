@@ -26,7 +26,7 @@ import { supabase } from '../../../lib/supabase';
 import { triggerAbsenceNotification } from '../../../lib/notifications';
 import {
   ThemedText, Avatar, FAB, BottomSheet,
-  Skeleton, EmptyState, ErrorState, ScreenHeader, FastList,
+  Skeleton, EmptyState, ErrorState, ScreenHeader, FastList, SwipeRow,
 } from '../../../components/ui';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors, resolveAttBg, resolveAttColor } from '../../../constants/Colors';
@@ -261,6 +261,18 @@ export default function AttendanceScreen() {
     setApPendingStatus(false);
     setSheetVisible(false);
   }, [selectedStudent, apDraftReason]);
+
+  const quickMark = useCallback((student: StudentRow, status: AttendanceStatus) => {
+    haptics.selection();
+    setLocalStatuses(prev => {
+      if (prev[student.id] === status) {
+        const next = { ...prev };
+        delete next[student.id];
+        return next;
+      }
+      return { ...prev, [student.id]: status };
+    });
+  }, []);
 
   const openStudentSheet = useCallback((student: StudentRow) => {
     if (data?.isLocked || data?.submittedByOther) return;
@@ -538,9 +550,9 @@ export default function AttendanceScreen() {
 
       {/* Exam period banner */}
       {examPeriod && (
-        <View style={[styles.examBanner, { backgroundColor: Colors.semantic.warningLight }]}>
-          <Ionicons name="school-outline" size={14} color={Colors.semantic.warning} />
-          <ThemedText variant="bodySm" style={{ color: Colors.semantic.warning, marginLeft: Spacing.sm, flex: 1 }}>
+        <View style={[styles.examBanner, { backgroundColor: colors.semantic.warningBg }]}>
+          <Ionicons name="school-outline" size={14} color={colors.semantic.warning} />
+          <ThemedText variant="bodySm" style={{ color: colors.semantic.warning, marginLeft: Spacing.sm, flex: 1 }}>
             Exam Period — {examPeriod.title}
           </ThemedText>
         </View>
@@ -555,13 +567,13 @@ export default function AttendanceScreen() {
               style={[
                 styles.progressFill,
                 {
-                  backgroundColor: allMarked ? Colors.semantic.success : colors.brand.primary,
+                  backgroundColor: allMarked ? colors.semantic.success : colors.brand.primary,
                   width: totalCount > 0 ? `${(markedCount / totalCount) * 100}%` : '0%',
                 },
               ]}
             />
           </View>
-          {allMarked && <Ionicons name="checkmark-circle" size={14} color={Colors.semantic.success} />}
+          {allMarked && <Ionicons name="checkmark-circle" size={14} color={colors.semantic.success} />}
         </View>
       )}
 
@@ -575,17 +587,17 @@ export default function AttendanceScreen() {
         </View>
       )}
       {correctionMode && within24h && (
-        <View style={[styles.infoBanner, { backgroundColor: Colors.semantic.warningLight }]}>
-          <Ionicons name="create-outline" size={14} color={Colors.semantic.warning} />
-          <ThemedText variant="bodySm" style={{ color: Colors.semantic.warning, marginLeft: Spacing.sm, flex: 1 }}>
+        <View style={[styles.infoBanner, { backgroundColor: colors.semantic.warningBg }]}>
+          <Ionicons name="create-outline" size={14} color={colors.semantic.warning} />
+          <ThemedText variant="bodySm" style={{ color: colors.semantic.warning, marginLeft: Spacing.sm, flex: 1 }}>
             Correction mode — tap any student to correct their status.
           </ThemedText>
         </View>
       )}
       {correctionMode && !within24h && (
-        <View style={[styles.infoBanner, { backgroundColor: Colors.semantic.errorLight }]}>
-          <Ionicons name="lock-closed" size={14} color={Colors.semantic.error} />
-          <ThemedText variant="bodySm" style={{ color: Colors.semantic.error, marginLeft: Spacing.sm, flex: 1 }}>
+        <View style={[styles.infoBanner, { backgroundColor: colors.semantic.errorBg }]}>
+          <Ionicons name="lock-closed" size={14} color={colors.semantic.error} />
+          <ThemedText variant="bodySm" style={{ color: colors.semantic.error, marginLeft: Spacing.sm, flex: 1 }}>
             24-hour correction window has passed. Contact Admin for amendments.
           </ThemedText>
         </View>
@@ -609,12 +621,12 @@ export default function AttendanceScreen() {
         <View style={styles.skeletonList}>
           {Array.from({ length: 8 }).map((_, i) => (
             <View key={i} style={styles.skeletonRow}>
-              <Skeleton width={40} height={40} radius={20} />
+              <Skeleton index={i} width={40} height={40} radius={20} />
               <View style={{ flex: 1, gap: 6, marginLeft: Spacing.md }}>
-                <Skeleton width="60%" height={14} />
-                <Skeleton width="30%" height={11} />
+                <Skeleton index={i} width="60%" height={14} />
+                <Skeleton index={i} width="30%" height={11} />
               </View>
-              <Skeleton width={70} height={28} radius={14} />
+              <Skeleton index={i} width={70} height={28} radius={14} />
             </View>
           ))}
         </View>
@@ -629,36 +641,52 @@ export default function AttendanceScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <StudentAttendanceRow
-              student={item}
-              status={effectiveStatuses[item.id] ?? null}
-              apReason={apReasons[item.id] ?? data?.existingApReasons?.[item.id]}
-              isReadOnly={!!isReadOnly}
-              inCorrectionMode={correctionMode && within24h}
-              scheme={scheme}
-              colors={colors}
-              onPress={() => {
-                if (correctionMode && within24h) {
-                  openCorrectionSheet(item);
-                } else if (!isReadOnly) {
-                  openStudentSheet(item);
-                }
-              }}
-            />
-          )}
+          renderItem={({ item }) => {
+            const interactive = !isReadOnly && !(correctionMode && within24h);
+            return (
+              <SwipeRow
+                leftActions={interactive ? [{
+                  label: 'Present', icon: 'checkmark-circle',
+                  color: resolveAttColor('present'),
+                  onPress: () => quickMark(item, 'present'),
+                }] : undefined}
+                rightActions={interactive ? [{
+                  label: 'Absent', icon: 'close-circle',
+                  color: resolveAttColor('absent'),
+                  onPress: () => quickMark(item, 'absent'),
+                }] : undefined}
+              >
+                <StudentAttendanceRow
+                  student={item}
+                  status={effectiveStatuses[item.id] ?? null}
+                  apReason={apReasons[item.id] ?? data?.existingApReasons?.[item.id]}
+                  isReadOnly={!!isReadOnly}
+                  inCorrectionMode={correctionMode && within24h}
+                  scheme={scheme}
+                  colors={colors}
+                  onPress={() => {
+                    if (correctionMode && within24h) {
+                      openCorrectionSheet(item);
+                    } else if (!isReadOnly) {
+                      openStudentSheet(item);
+                    }
+                  }}
+                />
+              </SwipeRow>
+            );
+          }}
         />
       )}
 
       {/* Submit error */}
       {submitError && (
-        <View style={[styles.errorBanner, { backgroundColor: Colors.semantic.errorLight }]}>
-          <Ionicons name="alert-circle-outline" size={16} color={Colors.semantic.error} />
-          <ThemedText variant="bodySm" style={{ color: Colors.semantic.error, marginLeft: Spacing.sm, flex: 1 }}>
+        <View style={[styles.errorBanner, { backgroundColor: colors.semantic.errorBg }]}>
+          <Ionicons name="alert-circle-outline" size={16} color={colors.semantic.error} />
+          <ThemedText variant="bodySm" style={{ color: colors.semantic.error, marginLeft: Spacing.sm, flex: 1 }}>
             {submitError}
           </ThemedText>
           <TouchableOpacity onPress={() => setSubmitError(null)}>
-            <Ionicons name="close" size={16} color={Colors.semantic.error} />
+            <Ionicons name="close" size={16} color={colors.semantic.error} />
           </TouchableOpacity>
         </View>
       )}
@@ -668,13 +696,13 @@ export default function AttendanceScreen() {
         <FAB
           icon={
             allMarked
-              ? <Ionicons name="checkmark" size={24} color="#fff" />
-              : <Ionicons name="send-outline" size={22} color="#fff" />
+              ? <Ionicons name="checkmark" size={24} color={colors.brand.onPrimary} />
+              : <Ionicons name="send-outline" size={22} color={colors.brand.onPrimary} />
           }
           label={submitting ? 'Saving…' : allMarked ? 'Submit Register' : `${totalCount - markedCount} not marked`}
           onPress={handleSubmit}
           disabled={!allMarked || submitting}
-          color={allMarked ? Colors.semantic.success : colors.brand.primary}
+          color={allMarked ? colors.semantic.success : colors.brand.primary}
         />
       )}
 
@@ -765,7 +793,7 @@ export default function AttendanceScreen() {
       >
         <TouchableOpacity
           onPress={() => markAll('present')}
-          style={[styles.quickPresentBtn, { backgroundColor: Colors.semantic.success }]}
+          style={[styles.quickPresentBtn, { backgroundColor: colors.semantic.success }]}
           activeOpacity={0.85}
         >
           <Ionicons name="checkmark-circle" size={20} color="#fff" />
@@ -920,7 +948,7 @@ const StudentAttendanceRow = React.memo(function StudentAttendanceRow({
         )}
       </View>
       {inCorrectionMode && (
-        <Ionicons name="create-outline" size={16} color={Colors.semantic.warning} style={{ marginLeft: 4 }} />
+        <Ionicons name="create-outline" size={16} color={colors.semantic.warning} style={{ marginLeft: 4 }} />
       )}
     </TouchableOpacity>
   );
@@ -957,8 +985,8 @@ function SubmittedView({
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <View style={styles.submittedContainer}>
-        <Animated.View style={[styles.successIcon, { backgroundColor: Colors.semantic.successLight }, iconStyle]}>
-          <Ionicons name="checkmark-circle" size={64} color={Colors.semantic.success} />
+        <Animated.View style={[styles.successIcon, { backgroundColor: colors.semantic.successBg }, iconStyle]}>
+          <Ionicons name="checkmark-circle" size={64} color={colors.semantic.success} />
         </Animated.View>
         <Animated.View style={[{ alignItems: 'center', width: '100%' }, contentStyle]}>
           <ThemedText variant="h2" style={styles.successTitle}>Register Submitted</ThemedText>

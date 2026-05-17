@@ -7,7 +7,7 @@ import { useShouldShowSidebar } from '../../../lib/responsive';
 
 export default function PlatformLayout() {
   const { colors } = useTheme();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const showSidebar = useShouldShowSidebar();
 
   // Only the platform-level super_admin (no school attached) can access this layout.

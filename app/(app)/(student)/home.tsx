@@ -9,10 +9,9 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Avatar, Card, Badge,
-  EmptyState, ErrorState, SectionHeader, StatCard,
+  EmptyState, ErrorState, SectionHeader, StatCard, Stagger,
 } from '../../../components/ui';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
-import { Colors } from '../../../constants/Colors';
 
 // TODAY computed inside component to avoid stale dates after midnight
 
@@ -79,7 +78,7 @@ function useStudentDashboard(studentId: string | null, schoolId: string) {
 }
 
 export default function StudentHome() {
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
   const { user, school } = useAuthStore();
   const TODAY = useMemo(() => format(new Date(), 'EEEE dd/MM'), []);
 
@@ -153,32 +152,32 @@ export default function StudentHome() {
             {[0,1,2].map(i => <StatCard key={i} label="—" value="—" icon="ellipse" style={styles.statCell} />)}
           </View>
         ) : (
-          <View style={styles.statRow}>
+          <Stagger horizontal gap={80} scaleFrom={0.95} style={styles.statRow}>
             <StatCard
               label="Attendance"
               value={`${data?.attendance.rate ?? 0}%`}
               icon="calendar"
-              iconBg={Colors.semantic.infoLight}
-              iconColor={Colors.semantic.info}
+              iconBg={colors.semantic.infoBg}
+              iconColor={colors.semantic.info}
               style={styles.statCell}
             />
             <StatCard
               label="Marks"
               value={`${data?.marks.length ?? 0}`}
               icon="school"
-              iconBg={Colors.semantic.successLight}
-              iconColor={Colors.semantic.success}
+              iconBg={colors.semantic.successBg}
+              iconColor={colors.semantic.success}
               style={styles.statCell}
             />
             <StatCard
               label="Days Present"
               value={`${data?.attendance.count ?? 0}`}
               icon="checkmark-circle"
-              iconBg={Colors.semantic.warningLight}
-              iconColor={Colors.semantic.warning}
+              iconBg={colors.semantic.warningBg}
+              iconColor={colors.semantic.warning}
               style={styles.statCell}
             />
-          </View>
+          </Stagger>
         )}
 
         {/* Latest Report */}
@@ -226,7 +225,7 @@ export default function StudentHome() {
 
         {/* Quick Links */}
         <SectionHeader title="Quick Links" />
-        <View style={styles.quickRow}>
+        <Stagger horizontal gap={70} scaleFrom={0.95} style={styles.quickRow}>
           <Pressable onPress={() => router.push('/(app)/(student)/timetable' as any)} style={styles.quickTile}>
             <View style={[styles.quickIcon, { backgroundColor: colors.brand.primarySoft }]}>
               <Ionicons name="calendar-outline" size={24} color={colors.brand.primary} />
@@ -245,7 +244,7 @@ export default function StudentHome() {
             </View>
             <ThemedText variant="caption" style={{ marginTop: 4 }}>Homework</ThemedText>
           </Pressable>
-        </View>
+        </Stagger>
 
         {/* Fees */}
         <SectionHeader title="Fees" action="See All" onAction={() => router.push('/(app)/(student)/fees' as any)} />
@@ -260,7 +259,7 @@ export default function StudentHome() {
           <Card style={{ marginHorizontal: Spacing.screen, padding: Spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
               <ThemedText variant="label" color="muted">OUTSTANDING</ThemedText>
-              <ThemedText variant="h4" style={{ color: data!.totalOutstanding > 0 ? Colors.semantic.error : Colors.semantic.success }}>
+              <ThemedText variant="h4" style={{ color: data!.totalOutstanding > 0 ? colors.semantic.error : colors.semantic.success }}>
                 {data?.totalOutstanding?.toLocaleString?.() ?? 0}
               </ThemedText>
             </View>

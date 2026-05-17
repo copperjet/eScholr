@@ -1,15 +1,14 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../lib/theme';
 import { ThemedText } from './ThemedText';
 import { Spacing, Radius } from '../../constants/Typography';
-import { Colors } from '../../constants/Colors';
 
 interface ErrorStateProps {
   title?: string;
   description?: string;
-  onRetry?: () => void;
+  onRetry?: () => void | Promise<unknown>;
   retryLabel?: string;
 }
 
@@ -20,22 +19,42 @@ export function ErrorState({
   retryLabel = 'Try again',
 }: ErrorStateProps) {
   const { colors } = useTheme();
+  const [retrying, setRetrying] = useState(false);
+
+  const handleRetry = async () => {
+    if (retrying || !onRetry) return;
+    try {
+      setRetrying(true);
+      await onRetry();
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <View style={[styles.iconWrap, { backgroundColor: Colors.semantic.errorLight }]}>
-        <Ionicons name="cloud-offline-outline" size={40} color={Colors.semantic.error} />
+      <View style={[styles.iconWrap, { backgroundColor: colors.semantic.errorBg }]}>
+        <Ionicons name="cloud-offline-outline" size={40} color={colors.semantic.error} />
       </View>
       <ThemedText variant="h4" style={styles.title}>{title}</ThemedText>
       <ThemedText variant="body" color="muted" style={styles.description}>{description}</ThemedText>
       {onRetry && (
         <TouchableOpacity
-          onPress={onRetry}
-          style={[styles.retryBtn, { backgroundColor: colors.brand.primary }]}
+          onPress={handleRetry}
+          disabled={retrying}
+          accessibilityRole="button"
+          accessibilityState={{ busy: retrying }}
+          style={[styles.retryBtn, { backgroundColor: colors.brand.primary, opacity: retrying ? 0.7 : 1 }]}
           activeOpacity={0.8}
         >
-          <Ionicons name="refresh-outline" size={16} color="#fff" style={{ marginRight: Spacing.sm }} />
-          <ThemedText variant="body" style={{ color: '#fff', fontWeight: '600' }}>{retryLabel}</ThemedText>
+          {retrying ? (
+            <ActivityIndicator size="small" color={colors.brand.onPrimary} style={{ marginRight: Spacing.sm }} />
+          ) : (
+            <Ionicons name="refresh-outline" size={16} color={colors.brand.onPrimary} style={{ marginRight: Spacing.sm }} />
+          )}
+          <ThemedText variant="body" style={{ color: colors.brand.onPrimary, fontWeight: '600' }}>
+            {retrying ? 'Retrying…' : retryLabel}
+          </ThemedText>
         </TouchableOpacity>
       )}
     </View>

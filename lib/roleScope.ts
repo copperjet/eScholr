@@ -117,7 +117,7 @@ export function hasMinRoleLevel(role: string | undefined, minRole: AdminRole): b
  * Returns department string if HOD, null otherwise
  */
 export function useDepartmentScope(): string | null {
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   if (user?.activeRole === 'hod') {
     return user?.department ?? null;
   }
@@ -128,7 +128,7 @@ export function useDepartmentScope(): string | null {
  * Check if current user is HOD with a valid department
  */
 export function useIsHOD(): boolean {
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   return user?.activeRole === 'hod' && !!user?.department;
 }
 
@@ -136,7 +136,7 @@ export function useIsHOD(): boolean {
  * Hook to check if user can access a feature
  */
 export function useCanAccess(feature: keyof typeof ROLE_ACCESS): boolean {
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   return canAccess(user?.activeRole, feature);
 }
 

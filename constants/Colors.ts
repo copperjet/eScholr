@@ -58,6 +58,39 @@ export const Colors = {
 export type ColorScheme = 'light' | 'dark';
 export type AttendanceStatusKey = 'present' | 'late' | 'absent' | 'ap' | 'sick' | 'unmarked';
 
+export interface SemanticColors {
+  success: string;
+  successBg: string;
+  warning: string;
+  warningBg: string;
+  error: string;
+  errorBg: string;
+  info: string;
+  infoBg: string;
+  onSemantic: string;
+}
+
+/** Scheme-correct semantic colors. Foreground hues hold on both schemes; backgrounds swap. */
+export function getSemanticColors(scheme: ColorScheme): SemanticColors {
+  const s = Colors.semantic;
+  return {
+    success:   s.success,
+    successBg: scheme === 'dark' ? s.successDark : s.successLight,
+    warning:   s.warning,
+    warningBg: scheme === 'dark' ? s.warningDark : s.warningLight,
+    error:     s.error,
+    errorBg:   scheme === 'dark' ? s.errorDark : s.errorLight,
+    info:      s.info,
+    infoBg:    scheme === 'dark' ? s.infoDark : s.infoLight,
+    onSemantic: '#FFFFFF',
+  };
+}
+
+/** Modal/scrim overlay tint per scheme. */
+export function getOverlay(scheme: ColorScheme): string {
+  return scheme === 'dark' ? 'rgba(0,0,0,0.62)' : 'rgba(0,0,0,0.45)';
+}
+
 export function resolveAttBg(status: AttendanceStatusKey, scheme: ColorScheme): string {
   if (!status) return Colors.attendance.unmarkedBg[scheme];
   const bg = Colors.attendance[`${status}Bg` as keyof typeof Colors.attendance] as any;

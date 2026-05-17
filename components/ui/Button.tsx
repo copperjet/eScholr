@@ -52,7 +52,7 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const sizeMap = {
-    sm: { height: 36, px: Spacing.md,   textSize: 13 },
+    sm: { height: 44, px: Spacing.md,   textSize: 13 },
     md: { height: 46, px: Spacing.base, textSize: 15 },
     lg: { height: 54, px: Spacing.lg,   textSize: 16 },
   };
@@ -70,7 +70,7 @@ export function Button({
       case 'ghost':
         return { bg: 'transparent', text: colors.brand.primary };
       case 'danger':
-        return { bg: '#DC2626', text: '#FFFFFF' };
+        return { bg: colors.semantic.error, text: colors.semantic.onSemantic };
     }
   };
 
@@ -80,6 +80,9 @@ export function Button({
     <Pressable
       onPress={() => { if (!isDisabled) { haptics.light(); onPress?.(); } }}
       disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
+      accessibilityLabel={label}
       style={({ pressed }) => [
         styles.base,
         {

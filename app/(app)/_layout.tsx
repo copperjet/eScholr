@@ -6,16 +6,6 @@ import { useAuthStore } from '../../stores/authStore';
 import { supabase } from '../../lib/supabase';
 import { OfflineBanner, BiometricEnrollModal } from '../../components/ui';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
 async function registerPushToken(userId: string, schoolId: string) {
   try {
     const { status: existing } = await Notifications.getPermissionsAsync();
@@ -62,6 +52,21 @@ export default function AppLayout() {
     })();
     return () => { cancelled = true; };
   }, [user?.id]);
+
+  // Deferred: register the notification handler after first paint rather
+  // than at module-import time, so it does not block initial render.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  }, []);
 
   useEffect(() => {
     if (!user) return;

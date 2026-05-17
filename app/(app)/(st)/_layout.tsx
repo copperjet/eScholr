@@ -9,7 +9,7 @@ import { useRealtimeStudents } from '../../../hooks/useRealtimeSync';
 
 export default function STLayout() {
   const { colors } = useTheme();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const showSidebar = useShouldShowSidebar();
   const examsEnabled = useIsModuleEnabled('exams');
   useRealtimeStudents(user?.schoolId ?? '');

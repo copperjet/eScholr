@@ -9,7 +9,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Card, Avatar, Badge,
-  ListItemSkeleton, ErrorState, SectionHeader, StatCard, IconChip,
+  ListItemSkeleton, ErrorState, SectionHeader, StatCard, IconChip, Stagger,
 } from '../../../components/ui';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors, resolveAttBg, resolveAttColor } from '../../../constants/Colors';
@@ -163,12 +163,12 @@ export default function HRTHome() {
               )}
             </View>
             <View style={[styles.attStatusChip, {
-              backgroundColor: submitted ? 'rgba(255,255,255,0.2)' : Colors.semantic.warningLight,
+              backgroundColor: submitted ? 'rgba(255,255,255,0.2)' : colors.semantic.warningBg,
             }]}>
               <Ionicons
                 name={submitted ? 'checkmark-circle' : 'time-outline'}
                 size={22}
-                color={submitted ? '#fff' : Colors.semantic.warning}
+                color={submitted ? '#fff' : colors.semantic.warning}
               />
             </View>
           </View>
@@ -189,9 +189,9 @@ export default function HRTHome() {
 
         {/* ── Quick actions: Attendance, Day Book, Marks ── */}
         <SectionHeader title="Quick Actions" />
-        <View style={styles.qaRow}>
+        <Stagger horizontal gap={70} scaleFrom={0.95} style={styles.qaRow}>
           {[
-            { icon: 'checkmark-circle-outline', label: 'Attendance', color: Colors.semantic.success, route: '/(app)/(hrt)/attendance' },
+            { icon: 'checkmark-circle-outline', label: 'Attendance', color: colors.semantic.success, route: '/(app)/(hrt)/attendance' },
             { icon: 'book-outline',           label: 'Day Book',   color: '#7C3AED',              route: '/(app)/(hrt)/daybook' as any },
             { icon: 'bar-chart-outline',      label: 'Marks',      color: colors.brand.primary, route: '/(app)/(hrt)/marks' },
           ].map(({ icon, label, color, route }) => (
@@ -204,15 +204,15 @@ export default function HRTHome() {
               <ThemedText style={{ fontSize: 12, fontWeight: '600', color, marginTop: 6, textAlign: 'center' }}>{label}</ThemedText>
             </Pressable>
           ))}
-        </View>
+        </Stagger>
 
         {/* ── Day Book ── */}
         <SectionHeader title="Day Book" action="See all" onAction={() => router.push('/(app)/(hrt)/daybook' as any)} />
 
         {isLoading ? (
           <>
-            <ListItemSkeleton />
-            <ListItemSkeleton />
+            <ListItemSkeleton index={0} />
+            <ListItemSkeleton index={1} />
           </>
         ) : (data?.dayBook ?? []).length === 0 ? (
           <Card variant="tinted" style={[styles.card, { alignItems: 'center', paddingVertical: Spacing.xl }]}>

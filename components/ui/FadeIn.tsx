@@ -17,6 +17,8 @@ interface FadeInProps {
   from?: 'up' | 'down' | 'none';
   /** Distance in px the element travels. Default 12. */
   distance?: number;
+  /** Scale to animate up from. e.g. 0.95 → 1. Omit for no scale. */
+  scaleFrom?: number;
   style?: ViewStyle | ViewStyle[];
   children?: React.ReactNode;
 }
@@ -32,21 +34,26 @@ export function FadeIn({
   duration = 380,
   from = 'up',
   distance = 12,
+  scaleFrom,
   style,
   children,
 }: FadeInProps) {
   const opacity = useSharedValue(0);
   const translate = useSharedValue(from === 'none' ? 0 : (from === 'up' ? distance : -distance));
+  const scale = useSharedValue(scaleFrom ?? 1);
 
   useEffect(() => {
     const easing = Easing.out(Easing.cubic);
     opacity.value = withDelay(delay, withTiming(1, { duration, easing }));
     translate.value = withDelay(delay, withTiming(0, { duration, easing }));
+    if (scaleFrom != null) {
+      scale.value = withDelay(delay, withTiming(1, { duration, easing }));
+    }
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
-    transform: [{ translateY: translate.value }],
+    transform: [{ translateY: translate.value }, { scale: scale.value }],
   }));
 
   return <Animated.View style={[animatedStyle, style as any]}>{children}</Animated.View>;

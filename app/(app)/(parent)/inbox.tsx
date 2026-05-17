@@ -22,7 +22,6 @@ import {
 import { DayBookEntryCard } from '../../../components/modules/DayBookEntryCard';
 import { useParentDayBookInbox } from '../../../hooks/useDayBook';
 import { Spacing, Radius, Shadow } from '../../../constants/Typography';
-import { Colors } from '../../../constants/Colors';
 
 type TabValue = 'daybook' | 'notifications';
 
@@ -129,10 +128,10 @@ export default function ParentInboxScreen() {
         <View style={{ padding: Spacing.base, gap: Spacing.md }}>
           {Array.from({ length: 5 }).map((_, i) => (
             <View key={i} style={styles.skeletonRow}>
-              <Skeleton width={36} height={36} radius={18} />
+              <Skeleton index={i} width={36} height={36} radius={18} />
               <View style={{ flex: 1, marginLeft: 12, gap: 6 }}>
-                <Skeleton width="55%" height={13} />
-                <Skeleton width="70%" height={11} />
+                <Skeleton index={i} width="55%" height={13} />
+                <Skeleton index={i} width="70%" height={11} />
               </View>
             </View>
           ))}

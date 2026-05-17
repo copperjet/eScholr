@@ -27,7 +27,7 @@ interface FormFieldProps extends TextInputProps {
   textarea?: boolean;
 }
 
-export function FormField({
+export const FormField = React.forwardRef<RNTextInput, FormFieldProps>(function FormField({
   label,
   helper,
   error,
@@ -39,12 +39,12 @@ export function FormField({
   secureTextEntry,
   style,
   ...props
-}: FormFieldProps) {
+}, ref) {
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
   const [hidden, setHidden] = useState(secureTextEntry ?? false);
 
-  const borderColor = error ? '#DC2626' : focused ? colors.brand.primary : colors.border;
+  const borderColor = error ? colors.semantic.error : focused ? colors.brand.primary : colors.border;
 
   return (
     <View style={[styles.wrapper, containerStyle]}>
@@ -58,6 +58,7 @@ export function FormField({
         ) : null}
 
         <RNTextInput
+          ref={ref}
           {...props}
           secureTextEntry={hidden}
           multiline={textarea}
@@ -86,13 +87,13 @@ export function FormField({
       </View>
 
       {error ? (
-        <ThemedText style={styles.error}>{error}</ThemedText>
+        <ThemedText style={[styles.error, { color: colors.semantic.error }]}>{error}</ThemedText>
       ) : helper ? (
         <ThemedText variant="caption" color="muted" style={styles.helper}>{helper}</ThemedText>
       ) : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -127,7 +128,6 @@ const styles = StyleSheet.create({
   },
   error: {
     fontSize: 12,
-    color: '#DC2626',
     marginTop: 2,
   },
 });

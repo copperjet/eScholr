@@ -5,7 +5,8 @@
  * <Tabs tabBar={(props) => <AppTabBar {...props} />} ...>
  */
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -16,6 +17,7 @@ import { Radius, Shadow, Spacing } from '../../constants/Typography';
 
 export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   // Only render visible (non-href:null) routes
   const visibleRoutes = state.routes.filter((route) => {
@@ -32,7 +34,7 @@ export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps)
   if (visibleRoutes.length === 0) return null;
 
   return (
-    <View style={styles.wrapper} pointerEvents="box-none">
+    <View style={[styles.wrapper, { bottom: Math.max(insets.bottom, 16) }]} pointerEvents="box-none">
       <Animated.View
         layout={LinearTransition.springify().damping(22).stiffness(220)}
         style={[styles.pill, { backgroundColor: colors.surface }, Shadow.lg]}
@@ -86,7 +88,6 @@ export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps)
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 28 : 16,
     left: Spacing['2xl'],
     right: Spacing['2xl'],
     alignItems: 'center',

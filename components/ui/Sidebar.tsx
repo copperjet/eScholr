@@ -127,7 +127,7 @@ export function Sidebar() {
   const { colors } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const moduleMap = useModuleMap();
 
   const activeRole = user?.activeRole ?? 'hrt';

@@ -8,7 +8,7 @@ import { useShouldShowSidebar } from '../../../lib/responsive';
 import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
 
 export default function StudentLayout() {
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const { colors } = useTheme();
   const showSidebar = useShouldShowSidebar();
   const examsEnabled = useIsModuleEnabled('exams');

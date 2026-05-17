@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, View, StyleSheet, ScrollView, ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, ScrollView, ViewStyle, Platform } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { useTheme } from '../../lib/theme';
 import { Spacing, Radius } from '../../constants/Typography';
@@ -18,12 +18,17 @@ export function Chip({ label, selected = false, onPress, style }: ChipProps) {
   return (
     <Pressable
       onPress={() => { haptics.light(); onPress?.(); }}
-      style={({ pressed }) => [
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      style={({ pressed, hovered }: any) => [
         styles.chip,
         selected
           ? { backgroundColor: colors.brand.primary, borderColor: colors.brand.primary }
           : { backgroundColor: colors.surface, borderColor: colors.border },
+        !selected && hovered ? { backgroundColor: colors.brand.primarySoft, borderColor: colors.brand.primaryMuted } : null,
         { opacity: pressed ? 0.8 : 1 },
+        Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null,
         style,
       ]}
     >
@@ -73,6 +78,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     borderWidth: 1,
     alignSelf: 'flex-start',
+    minHeight: 36,
+    justifyContent: 'center',
   },
   row: {
     flexDirection: 'row',

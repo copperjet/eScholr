@@ -9,7 +9,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { supabase } from '../../../lib/supabase';
 import {
   ThemedText, Card, Avatar, ListItemSkeleton,
-  EmptyState, ErrorState, SectionHeader, IconChip,
+  EmptyState, ErrorState, SectionHeader, IconChip, Stagger,
 } from '../../../components/ui';
 import { Spacing, Radius, Shadow, TAB_BAR_HEIGHT } from '../../../constants/Typography';
 import { Colors, resolveAttBg, resolveAttColor } from '../../../constants/Colors';
@@ -183,15 +183,15 @@ export default function ParentHome() {
         {/* ── Day Book ── */}
         <SectionHeader title="Day Book" />
         {isLoading ? (
-          <><ListItemSkeleton /><ListItemSkeleton /></>
+          <><ListItemSkeleton index={0} /><ListItemSkeleton index={1} /></>
         ) : (data?.dayBook ?? []).length === 0 ? (
           <Card variant="tinted" style={[styles.cardPad, { alignItems: 'center', paddingVertical: Spacing.xl }]}>
             <ThemedText color="muted">No updates yet.</ThemedText>
           </Card>
         ) : (
-          <View style={{ gap: Spacing.sm }}>
+          <Stagger gap={60} scaleFrom={0.97} style={{ gap: Spacing.sm }}>
             {(data!.dayBook).map((entry: any) => <DayBookRow key={entry.id} entry={entry} />)}
-          </View>
+          </Stagger>
         )}
 
         {/* ── Quick links ── */}
@@ -235,12 +235,12 @@ export default function ParentHome() {
 function ReportCard({ report }: { report: any }) {
   const { colors } = useTheme();
   const statusMap: Record<string, { label: string; color: string; icon: string }> = {
-    draft:             { label: 'Draft',                  color: colors.textMuted,        icon: 'document-outline' },
-    pending_approval:  { label: 'Pending approval',       color: Colors.semantic.warning,  icon: 'time-outline' },
-    approved:          { label: 'Approved',               color: Colors.semantic.info,     icon: 'checkmark-circle-outline' },
-    finance_pending:   { label: 'Awaiting fee clearance', color: Colors.semantic.warning,  icon: 'cash-outline' },
-    under_review:      { label: 'Under review',           color: Colors.semantic.warning,  icon: 'alert-circle-outline' },
-    released:          { label: 'Released',               color: Colors.semantic.success,  icon: 'checkmark-done-circle' },
+    draft:             { label: 'Draft',                  color: colors.textMuted,         icon: 'document-outline' },
+    pending_approval:  { label: 'Pending approval',       color: colors.semantic.warning,  icon: 'time-outline' },
+    approved:          { label: 'Approved',               color: colors.semantic.info,     icon: 'checkmark-circle-outline' },
+    finance_pending:   { label: 'Awaiting fee clearance', color: colors.semantic.warning,  icon: 'cash-outline' },
+    under_review:      { label: 'Under review',           color: colors.semantic.warning,  icon: 'alert-circle-outline' },
+    released:          { label: 'Released',               color: colors.semantic.success,  icon: 'checkmark-done-circle' },
   };
   const s        = statusMap[report.status] ?? statusMap.draft;
   const released = report.status === 'released';
@@ -264,8 +264,8 @@ function ReportCard({ report }: { report: any }) {
         </View>
         {released ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.md }}>
-            <ThemedText style={{ color: Colors.semantic.success, fontWeight: '600', fontSize: 14 }}>View full report</ThemedText>
-            <Ionicons name="chevron-forward" size={16} color={Colors.semantic.success} />
+            <ThemedText style={{ color: colors.semantic.success, fontWeight: '600', fontSize: 14 }}>View full report</ThemedText>
+            <Ionicons name="chevron-forward" size={16} color={colors.semantic.success} />
           </View>
         ) : (
           <ThemedText variant="bodySm" color="muted" style={{ marginTop: Spacing.sm }}>

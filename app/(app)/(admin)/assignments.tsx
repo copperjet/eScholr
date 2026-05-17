@@ -3,7 +3,7 @@
  * HRT stream assignments + Subject Teacher stream/subject assignments
  * for the active semester.
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, StyleSheet, SafeAreaView, FlatList,
   TouchableOpacity, ScrollView,
@@ -57,7 +57,7 @@ function useAssignmentData(schoolId: string) {
 
 export default function AssignmentsScreen() {
   const { colors } = useTheme();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const schoolId = user?.schoolId ?? '';
 
@@ -76,6 +76,27 @@ export default function AssignmentsScreen() {
   const [stStreamId, setStStreamId] = useState('');
 
   const { data, isLoading, isError, refetch } = useAssignmentData(schoolId);
+
+  // ── Memoized picker options ───────────────────────────────
+  const streamOptions = useMemo(
+    () => (data?.streams ?? []).map((s: any) => ({
+      value: s.id,
+      label: `${s.name} · ${(s.grades as any)?.name ?? ''}`,
+    })),
+    [data?.streams],
+  );
+  const staffOptions = useMemo(
+    () => (data?.staff ?? []).map((s: any) => ({ value: s.id, label: s.full_name })),
+    [data?.staff],
+  );
+  const coHrtOptions = useMemo(
+    () => [{ value: '', label: 'None' }, ...staffOptions],
+    [staffOptions],
+  );
+  const subjectOptions = useMemo(
+    () => (data?.subjects ?? []).map((s: any) => ({ value: s.id, label: s.name })),
+    [data?.subjects],
+  );
 
   // ── Mutations ─────────────────────────────────────────────
 
@@ -322,10 +343,7 @@ export default function AssignmentsScreen() {
               label="Stream *"
               value={hrtStreamId}
               onSelect={setHrtStreamId}
-              options={(data?.streams ?? []).map((s: any) => ({
-                value: s.id,
-                label: `${s.name} · ${(s.grades as any)?.name ?? ''}`,
-              }))}
+              options={streamOptions}
               placeholder="Select stream…"
               colors={colors}
             />
@@ -333,7 +351,7 @@ export default function AssignmentsScreen() {
               label="HRT (Primary) *"
               value={hrtStaffId}
               onSelect={setHrtStaffId}
-              options={(data?.staff ?? []).map((s: any) => ({ value: s.id, label: s.full_name }))}
+              options={staffOptions}
               placeholder="Select staff…"
               colors={colors}
             />
@@ -341,7 +359,7 @@ export default function AssignmentsScreen() {
               label="Co-HRT (optional)"
               value={coHrtStaffId}
               onSelect={setCoHrtStaffId}
-              options={[{ value: '', label: 'None' }, ...(data?.staff ?? []).map((s: any) => ({ value: s.id, label: s.full_name }))]}
+              options={coHrtOptions}
               placeholder="Select co-HRT…"
               colors={colors}
             />
@@ -379,7 +397,7 @@ export default function AssignmentsScreen() {
               label="Subject Teacher *"
               value={stStaffId}
               onSelect={setStStaffId}
-              options={(data?.staff ?? []).map((s: any) => ({ value: s.id, label: s.full_name }))}
+              options={staffOptions}
               placeholder="Select staff…"
               colors={colors}
             />
@@ -387,7 +405,7 @@ export default function AssignmentsScreen() {
               label="Subject *"
               value={stSubjectId}
               onSelect={setStSubjectId}
-              options={(data?.subjects ?? []).map((s: any) => ({ value: s.id, label: s.name }))}
+              options={subjectOptions}
               placeholder="Select subject…"
               colors={colors}
             />
@@ -395,10 +413,7 @@ export default function AssignmentsScreen() {
               label="Stream *"
               value={stStreamId}
               onSelect={setStStreamId}
-              options={(data?.streams ?? []).map((s: any) => ({
-                value: s.id,
-                label: `${s.name} · ${(s.grades as any)?.name ?? ''}`,
-              }))}
+              options={streamOptions}
               placeholder="Select stream…"
               colors={colors}
             />

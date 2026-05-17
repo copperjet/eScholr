@@ -3,6 +3,7 @@ import {
   View, TextInput, StyleSheet, KeyboardAvoidingView,
   Platform, Animated, Image, StatusBar, Pressable, ScrollView,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
@@ -64,7 +65,7 @@ export default function SchoolCodeScreen() {
       {foundSchool && (
         <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: foundSchool.primary_color, opacity: brandAnim, zIndex: 99, alignItems: 'center', justifyContent: 'center', gap: 16 }]} pointerEvents="none">
           {foundSchool.logo_url ? (
-            <Image source={{ uri: foundSchool.logo_url }} style={styles.schoolLogo} resizeMode="contain" />
+            <ExpoImage source={foundSchool.logo_url} style={styles.schoolLogo} contentFit="contain" cachePolicy="memory-disk" transition={120} />
           ) : (
             <Image source={require('../../assets/scholr-logo.png')} style={styles.overlayLogo} resizeMode="contain" />
           )}

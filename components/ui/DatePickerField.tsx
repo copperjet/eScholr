@@ -83,7 +83,7 @@ export function DatePickerField({
 
   const dateObj = parseDate(value);
   const displayText = value ? format(dateObj, displayFormat) : '';
-  const borderColor = error ? '#DC2626' : focused ? colors.brand.primary : colors.border;
+  const borderColor = error ? colors.semantic.error : focused ? colors.brand.primary : colors.border;
 
   const handleNativeChange = useCallback(
     (_event: any, selectedDate?: Date) => {

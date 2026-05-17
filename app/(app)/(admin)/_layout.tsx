@@ -84,7 +84,7 @@ function MobileAdminLayout({ isSuper, colors }: { isSuper: boolean; colors: any 
 
 export default function AdminLayout() {
   const { colors } = useTheme();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const showSidebar = useShouldShowSidebar();
 
   // Realtime: keep student cache fresh across all admin roles

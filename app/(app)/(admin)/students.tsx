@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, SafeAreaView, Pressable, RefreshControl, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,7 +30,7 @@ function useStreamsFilter(schoolId: string) {
 
 export default function AdminStudentsScreen() {
   const { colors } = useTheme();
-  const { user }   = useAuthStore();
+  const user       = useAuthStore((s) => s.user);
   const schoolId   = user?.schoolId ?? '';
 
   const [search, setSearch]           = useState('');
@@ -48,6 +48,42 @@ export default function AdminStudentsScreen() {
       s.full_name.toLowerCase().includes(q) || s.student_number.toLowerCase().includes(q)
     );
   }, [students, search]);
+
+  const rowCardStyle = useMemo(
+    () => [styles.rowCard, { backgroundColor: colors.surface }, Shadow.sm],
+    [colors.surface],
+  );
+
+  const renderItem = useCallback(({ item: s }: { item: any }) => (
+    <View style={rowCardStyle}>
+      <ListItem
+        title={s.full_name}
+        subtitle={[s.student_number, s.grade_name && `${s.grade_name} ${s.stream_name}`].filter(Boolean).join(' · ')}
+        avatarName={s.full_name}
+        avatarUrl={s.photo_url}
+        avatarSize={44}
+        badge={!s.is_active ? { label: 'Inactive', preset: 'neutral' } : undefined}
+        showChevron
+        onPress={() => { haptics.selection(); router.push({ pathname: '/(app)/student/[id]' as any, params: { id: s.id } }); }}
+        rightActions={[
+          {
+            label: 'Edit',
+            icon: 'pencil',
+            color: colors.brand.primary,
+            onPress: () => router.push({ pathname: '/(app)/(admin)/student-edit' as any, params: { student_id: s.id } }),
+          },
+        ]}
+        trailing={
+          <Pressable
+            onPress={() => { haptics.selection(); router.push({ pathname: '/(app)/(admin)/student-edit' as any, params: { student_id: s.id } }); }}
+            hitSlop={8}
+          >
+            <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
+          </Pressable>
+        }
+      />
+    </View>
+  ), [rowCardStyle, colors.textMuted, colors.brand.primary]);
 
   if (isError) {
     return (
@@ -121,7 +157,7 @@ export default function AdminStudentsScreen() {
       {/* ── List ── */}
       {isLoading ? (
         <View style={{ paddingHorizontal: Spacing.screen }}>
-          {Array.from({ length: 7 }).map((_, i) => <ListItemSkeleton key={i} />)}
+          {Array.from({ length: 7 }).map((_, i) => <ListItemSkeleton key={i} index={i} />)}
         </View>
       ) : filtered.length === 0 ? (
         <EmptyState
@@ -136,33 +172,12 @@ export default function AdminStudentsScreen() {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brand.primary} />}
-          renderItem={({ item: s }) => (
-            <View style={[styles.rowCard, { backgroundColor: colors.surface }, Shadow.sm]}>
-              <ListItem
-                title={s.full_name}
-                subtitle={[s.student_number, s.grade_name && `${s.grade_name} ${s.stream_name}`].filter(Boolean).join(' · ')}
-                avatarName={s.full_name}
-                avatarUrl={s.photo_url}
-                avatarSize={44}
-                badge={!s.is_active ? { label: 'Inactive', preset: 'neutral' } : undefined}
-                showChevron
-                onPress={() => { haptics.selection(); router.push({ pathname: '/(app)/student/[id]' as any, params: { id: s.id } }); }}
-                trailing={
-                  <Pressable
-                    onPress={() => { haptics.selection(); router.push({ pathname: '/(app)/(admin)/student-edit' as any, params: { student_id: s.id } }); }}
-                    hitSlop={8}
-                  >
-                    <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
-                  </Pressable>
-                }
-              />
-            </View>
-          )}
+          renderItem={renderItem}
         />
       )}
 
       <FAB
-        icon={<Ionicons name="add" size={24} color="#fff" />}
+        icon={<Ionicons name="add" size={24} color={colors.brand.onPrimary} />}
         onPress={() => { haptics.medium(); router.push('/(app)/(admin)/student-add' as any); }}
       />
     </SafeAreaView>

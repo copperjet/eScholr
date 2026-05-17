@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, StyleSheet, KeyboardAvoidingView, Platform,
-  TouchableOpacity, ScrollView, StatusBar, Pressable, Image,
+  TouchableOpacity, ScrollView, StatusBar, Pressable,
 } from 'react-native';
+import { Image } from 'expo-image';
 
 const isWeb = Platform.OS === 'web';
 import { router, useNavigation } from 'expo-router';
@@ -14,9 +15,10 @@ import { ThemedText, Button, FormField } from '../../components/ui';
 import { useTheme } from '../../lib/theme';
 import { Spacing, Radius, Shadow } from '../../constants/Typography';
 import { haptics } from '../../lib/haptics';
+import { useFocusChain } from '../../hooks/useFocusChain';
 
 export default function LoginScreen() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { school, setUser, clearSchool } = useAuthStore();
   const navigation = useNavigation();
   const canGoBack = navigation.canGoBack();
@@ -28,6 +30,7 @@ export default function LoginScreen() {
   const [loading, setLoading]   = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState<'face' | 'fingerprint' | null>(null);
+  const chain = useFocusChain(2);
 
   useEffect(() => {
     // Biometric auth not supported on web
@@ -112,9 +115,11 @@ export default function LoginScreen() {
         <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: Spacing['2xl'] }}>
           {school?.logo_url ? (
             <Image
-              source={{ uri: school.logo_url }}
+              source={school.logo_url}
               style={styles.schoolLogo}
-              resizeMode="contain"
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              transition={120}
             />
           ) : null}
           {displayName ? (
@@ -138,6 +143,7 @@ export default function LoginScreen() {
           <View style={[styles.sheet, Platform.OS !== 'web' && { flex: 1 }, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <View style={styles.form}>
               <FormField
+                ref={chain.ref(0)}
                 label="Email address"
                 placeholder="name@school.edu"
                 value={email}
@@ -146,23 +152,30 @@ export default function LoginScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                textContentType="emailAddress"
+                autoComplete="email"
                 returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={chain.focusNext(0)}
               />
               <FormField
+                ref={chain.ref(1)}
                 label="Password"
                 placeholder="••••••••"
                 value={password}
                 onChangeText={t => { setPassword(t); setError(''); }}
                 iconLeft="lock-closed-outline"
                 secureTextEntry
+                textContentType="password"
+                autoComplete="password"
                 returnKeyType="done"
                 onSubmitEditing={handleLogin}
               />
 
               {error ? (
-                <View style={[styles.errorBox, { backgroundColor: isDark ? '#7F1D1D' : '#FEE2E2' }]}>
-                  <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
-                  <ThemedText style={{ color: '#DC2626', marginLeft: 6, flex: 1, fontSize: 14 }}>{error}</ThemedText>
+                <View style={[styles.errorBox, { backgroundColor: colors.semantic.errorBg }]}>
+                  <Ionicons name="alert-circle-outline" size={16} color={colors.semantic.error} />
+                  <ThemedText style={{ color: colors.semantic.error, marginLeft: 6, flex: 1, fontSize: 14 }}>{error}</ThemedText>
                 </View>
               ) : null}
 

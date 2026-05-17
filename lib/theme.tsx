@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useColorScheme, Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { Colors, ColorScheme } from '../constants/Colors';
+import { Colors, ColorScheme, SemanticColors, getSemanticColors, getOverlay } from '../constants/Colors';
 
 export interface BrandColors {
   primary: string;
@@ -19,7 +19,7 @@ interface ThemeContextValue {
   scheme: ColorScheme;
   mode: ThemeMode;
   isDark: boolean;
-  colors: BaseColors & { brand: BrandColors };
+  colors: BaseColors & { brand: BrandColors; semantic: SemanticColors; overlay: string };
   setMode: (mode: ThemeMode) => void;
 }
 
@@ -38,7 +38,12 @@ const ThemeContext = createContext<ThemeContextValue>({
   scheme: 'light',
   mode: 'system',
   isDark: false,
-  colors: { ...Colors.light, brand: DEFAULT_BRAND },
+  colors: {
+    ...Colors.light,
+    brand: DEFAULT_BRAND,
+    semantic: getSemanticColors('light'),
+    overlay: getOverlay('light'),
+  },
   setMode: () => {},
 });
 
@@ -120,7 +125,12 @@ export function ThemeProvider({
         scheme,
         mode,
         isDark,
-        colors: { ...base, brand: resolvedBrand ?? DEFAULT_BRAND },
+        colors: {
+          ...base,
+          brand: resolvedBrand ?? DEFAULT_BRAND,
+          semantic: getSemanticColors(scheme),
+          overlay: getOverlay(scheme),
+        },
         setMode,
       };
     },

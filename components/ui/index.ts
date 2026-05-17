@@ -21,6 +21,7 @@ export { QuickActionCard } from './QuickActionCard';
 export { Chip, FilterChipRow } from './Chip';
 export { TabBar } from './TabBar';
 export { FormField } from './FormField';
+export { KeyboardAwareScrollView } from './KeyboardAwareScrollView';
 export { AppTabBar } from './AppTabBar';
 export { FastList, type FastListProps } from './FastList';
 export { BiometricEnrollModal } from './BiometricEnrollModal';
@@ -31,6 +32,8 @@ export { ResponsiveShell } from './ResponsiveShell';
 export { PressableScale } from './PressableScale';
 export { AnimatedNumber } from './AnimatedNumber';
 export { FadeIn } from './FadeIn';
+export { Stagger } from './Stagger';
+export { SwipeRow, type SwipeAction } from './SwipeRow';
 export { AcademicPeriodPicker } from './AcademicPeriodPicker';
 export { DatePickerField } from './DatePickerField';
 // Module gating system

@@ -7,7 +7,7 @@ import { useShouldShowSidebar } from '../../../lib/responsive';
 import { useIsModuleEnabled } from '../../../hooks/useSchoolModules';
 
 export default function HRLayout() {
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const { colors } = useTheme();
   const showSidebar = useShouldShowSidebar();
   const hrEnabled = useIsModuleEnabled('hr');

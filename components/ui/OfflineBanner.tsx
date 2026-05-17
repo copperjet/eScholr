@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { onlineManager } from '@tanstack/react-query';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from './ThemedText';
 import { useTheme } from '../../lib/theme';
 import { Spacing } from '../../constants/Typography';
-import { Colors } from '../../constants/Colors';
 import { supabase } from '../../lib/supabase';
 
 const PROBE_INTERVAL_MS = 20000;
@@ -27,6 +27,7 @@ async function probe(): Promise<boolean> {
 
 export function OfflineBanner() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [online, setOnline] = useState(true);
   const slide = useRef(new Animated.Value(-40)).current;
 
@@ -59,13 +60,14 @@ export function OfflineBanner() {
       style={[
         styles.banner,
         {
-          backgroundColor: Colors.semantic.warning,
+          backgroundColor: colors.semantic.warning,
+          paddingTop: insets.top + Spacing.xs,
           transform: [{ translateY: slide }],
         },
       ]}
     >
-      <Ionicons name="cloud-offline-outline" size={14} color="#fff" />
-      <ThemedText variant="caption" style={styles.text}>
+      <Ionicons name="cloud-offline-outline" size={14} color={colors.semantic.onSemantic} />
+      <ThemedText variant="caption" style={[styles.text, { color: colors.semantic.onSemantic }]}>
         You're offline — changes will sync when reconnected.
       </ThemedText>
     </Animated.View>
@@ -81,11 +83,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 44,
     paddingBottom: Spacing.xs ?? 4,
     paddingHorizontal: Spacing.base,
     gap: Spacing.sm,
     zIndex: 1000,
   },
-  text: { color: '#fff', fontWeight: '600' },
+  text: { fontWeight: '600' },
 });
